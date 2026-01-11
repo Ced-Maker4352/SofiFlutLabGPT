@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "1078813120283",
+    "project_id": "sofi-saint-app",
+    "storage_bucket": "sofi-saint-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1078813120283:android:2744ff7e5144306407a5be",
+        "android_client_info": {
+          "package_name": "com.example.sofi_saint_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyArA0oKMWs_Ic4yZUdKgXu_xNFjt1yFnAA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1078813120283:android:6415bbd68eba960107a5be",
+        "android_client_info": {
+          "package_name": "com.mycompany.CounterApp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyArA0oKMWs_Ic4yZUdKgXu_xNFjt1yFnAA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

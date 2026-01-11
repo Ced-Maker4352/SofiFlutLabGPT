@@ -1,0 +1,30 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "sofi-saint-app",
+          "appId": "1:1078813120283:android:6415bbd68eba960107a5be",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "sofi-saint-app",
+          "configurations": {
+            "android": "1:1078813120283:android:6415bbd68eba960107a5be",
+            "ios": "1:1078813120283:ios:d6cd1d3850138cbc07a5be",
+            "web": "1:1078813120283:web:3ca2ebeaf2972d2407a5be"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  }
+}

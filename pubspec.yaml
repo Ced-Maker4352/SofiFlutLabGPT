@@ -1,0 +1,64 @@
+name: sofi_test_connect
+description: Sofi Saint premium studio app
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.5.4 <4.0.0"
+
+dependencies:
+  cached_network_image: ^3.0.0
+  flutter_tts: ^4.0.0
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  firebase_core: ^4.2.1
+  firebase_auth: ^6.1.2
+  cloud_firestore: ^6.1.0
+  cloud_functions: ^6.0.4
+  firebase_storage: ^13.0.4
+  flutter_dotenv: ^5.2.1
+  google_fonts: ^6.2.1
+  http: ^1.4.0
+  image: ^4.5.4
+  image_picker: ^1.2.1
+  image_picker_web: ^4.0.0
+  file_picker: ^10.3.6
+  intl: ^0.20.2
+  audioplayers: ^6.5.1
+  just_audio: ^0.10.5
+  just_audio_web: ^0.4.16
+  share_plus: ^12.0.1
+  shared_preferences: ^2.3.2
+  speech_to_text: ^7.3.0
+  video_player: ^2.10.1
+  video_player_web: ^2.4.0
+  web: any
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/dolls/
+    - assets/dolls/base/
+    - assets/dolls/base/stage/
+    - assets/dolls/base/thumbs/
+    - assets/dolls/special/
+    - assets/dolls/special/stage/
+    - assets/dolls/special/thumbs/
+    - assets/audio/
+    - assets/top/
+    - assets/bottom/
+    - assets/bottom/background/
+    - assets/hair/
+    - assets/hats/
+    - assets/glasses/
+    - assets/shoes/
+    - assets/accessories/
+    - assets/jewelry/

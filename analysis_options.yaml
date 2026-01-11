@@ -1,0 +1,67 @@
+# This file configures the analyzer, which statically analyzes Dart code to
+# check for errors, warnings, and lints.
+#
+# The issues identified by the analyzer are surfaced in the UI of Dart-enabled
+# IDEs (https://dart.dev/tools#ides-and-editors). The analyzer can also be
+# invoked from the command line by running `flutter analyze`.
+
+# Note: We intentionally do not include `package:flutter_lints/flutter.yaml`
+# here to avoid analyzer warnings about unrecognized lint rules coming from
+# newer lint packages on this environment. Instead, we enable a conservative
+# set of stable lints directly.
+
+analyzer:
+  strong-mode:
+    implicit-casts: false
+    implicit-dynamic: false
+  errors:
+    dead_code: warning
+    unused_import: warning
+    unused_local_variable: warning
+    invalid_assignment: error
+
+linter:
+  rules:
+    - always_declare_return_types
+    - annotate_overrides
+    - avoid_empty_else
+    - avoid_init_to_null
+    - avoid_print
+    - avoid_returning_null_for_void
+    - avoid_unused_constructor_parameters
+    - await_only_futures
+    - camel_case_types
+    - cancel_subscriptions
+    - constant_identifier_names
+    - control_flow_in_finally
+    - directives_ordering
+    - empty_catches
+    - empty_constructor_bodies
+    - hash_and_equals
+    - iterable_contains_unrelated_type
+    - list_remove_unrelated_type
+    - no_duplicate_case_values
+    - no_leading_underscores_for_local_identifiers
+    - non_constant_identifier_names
+    - null_closures
+    - overridden_fields
+    - package_api_docs
+    - package_prefixed_library_names
+    - prefer_const_constructors
+    - prefer_const_literals_to_create_immutables
+    - prefer_final_fields
+    - prefer_final_locals
+    - prefer_is_empty
+    - prefer_is_not_empty
+    - sized_box_for_whitespace
+    - sort_constructors_first
+    - type_annotate_public_apis
+    - unnecessary_const
+    - unnecessary_new
+    - use_build_context_synchronously
+    - use_full_hex_values_for_flutter_colors
+    - use_key_in_widget_constructors
+    - valid_regexps
+
+# Additional information about this file can be found at
+# https://dart.dev/guides/language/analysis-options
