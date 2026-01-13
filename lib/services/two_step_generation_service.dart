@@ -1,73 +1,66 @@
-import 'dart:async';
-import 'dart:convert';
+// lib/services/two_step_generation_service.dart
+//
+// Two-step pipeline:
+// Step 1: Identity lock / full-body base
+// Step 2: Style-only edit on the locked body
 
-import 'package:flutter/foundation.dart';
-import 'package:sofi_test_connect/services/models_lab_service.dart';
+import 'dart:typed_data';
+import 'package:http/http.dart' as http;
 
-/// Steps for the two-phase generation pipeline.
-enum GenerationStep { identityFullBody }
+import 'models_lab_service.dart';
 
-class TwoStepGenerationResult {
-  final String step1FullBodyBase64;
-  final String finalStylizedBase64;
-  const TwoStepGenerationResult({required this.step1FullBodyBase64, this.finalStylizedBase64 = ''});
-}
-
-/// UI-agnostic two-step generation engine that adapts to ModelsLabService.
 class TwoStepGenerationService {
-  TwoStepGenerationService();
+  const TwoStepGenerationService();
 
-  static const String step1IdentityFullBodyPrompt = '''
-FULL BODY, head-to-toe, realistic human proportions.
-Standing upright, arms visible, legs visible, feet visible.
-Photorealistic, studio lighting, neutral background.
-Preserve facial identity exactly from the reference image.
-No cartoon, no animation, no stylization.
-''';
+  /// Step 1: Create a full-body / identity locked base from the user headshot.
+  Future<Uint8List> runStep1IdentityLock({
+    required Uint8List baseImage,
+    required String prompt,
+    String? negativePrompt,
+  }) async {
+    final finalPrompt = _mergePrompt(prompt, negativePrompt);
 
-  /// Step-1: Lock identity and produce a full-body base.
-  Future<TwoStepGenerationResult> runStep1IdentityLock({required String userHeadshotBase64}) async {
-    final step1 = await _generate(prompt: step1IdentityFullBodyPrompt, imageBase64: userHeadshotBase64);
-    if (step1.isEmpty) {
-      throw Exception('Step-1 failed: empty output');
-    }
-    return TwoStepGenerationResult(step1FullBodyBase64: step1);
+    final imageUrl = await ModelsLabService.generateFromImage(
+      initImageBytes: baseImage,
+      prompt: finalPrompt,
+    );
+
+    return _downloadBytes(imageUrl);
   }
 
-  /// Step-2: Apply theme/style prompt to a locked base image.
-  Future<String> generateStyledOnly({required String base64Image, required String prompt}) async {
-    final out = await _generate(prompt: prompt, imageBase64: base64Image);
-    if (out.isEmpty) {
-      throw Exception('Style generation failed: empty output');
-    }
-    return out;
+  /// Step 2: Apply style-only changes to an identity-locked body image.
+  Future<Uint8List> generateStyledOnly({
+    required Uint8List identityLockedImage,
+    required String prompt,
+    String? negativePrompt,
+  }) async {
+    final finalPrompt = _mergePrompt(prompt, negativePrompt);
+
+    final imageUrl = await ModelsLabService.generateFromImage(
+      initImageBytes: identityLockedImage,
+      prompt: finalPrompt,
+    );
+
+    return _downloadBytes(imageUrl);
   }
 
-  Future<String> _generate({required String prompt, required String imageBase64}) async {
-    try {
-      final Uint8List initBytes = base64Decode(imageBase64);
-      final Uint8List outBytes = await ModelsLabService.generateFromImage(initImageBytes: initBytes, prompt: prompt);
-      return base64Encode(outBytes);
-    } catch (e, st) {
-      debugPrint('TwoStepGenerationService _generate error: $e\n$st');
-      rethrow;
-    }
+  String _mergePrompt(String prompt, String? negative) {
+    final p = prompt.trim();
+    final n = (negative ?? '').trim();
+    if (n.isEmpty) return p;
+    return '$p\n\nNEGATIVE: $n';
   }
 
-  // Back-compat: simple two-step pipeline with a default Pixar-like stylization
-  static const String _defaultStep2Prompt = '''
-Pixar-style 3D character render.
-Soft cinematic lighting, smooth materials, expressive eyes.
-Preserve pose, body proportions, and outfit exactly.
-Do not crop. Do not change framing.
-''';
+  Future<Uint8List> _downloadBytes(String url) async {
+    final uri = Uri.parse(url);
+    final resp = await http.get(uri);
 
-  Future<TwoStepGenerationResult> runPipeline({required String userHeadshotBase64}) async {
-    final step1 = await _generate(prompt: step1IdentityFullBodyPrompt, imageBase64: userHeadshotBase64);
-    if (step1.isEmpty) throw Exception('Step-1 generation failed: empty output');
-    final finalImage = await _generate(prompt: _defaultStep2Prompt, imageBase64: step1);
-    if (finalImage.isEmpty) throw Exception('Step-2 generation failed: empty output');
-    return TwoStepGenerationResult(step1FullBodyBase64: step1, finalStylizedBase64: finalImage);
+    if (resp.statusCode < 200 || resp.statusCode >= 300) {
+      throw Exception(
+        'Failed to download generated image ($url): ${resp.statusCode}',
+      );
+    }
+
+    return resp.bodyBytes;
   }
 }
-

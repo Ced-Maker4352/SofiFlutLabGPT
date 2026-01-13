@@ -47,7 +47,8 @@ class SofiStudioPage extends StatefulWidget {
   State<SofiStudioPage> createState() => _SofiStudioPageState();
 }
 
-class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStateMixin, WidgetsBindingObserver {
+class _SofiStudioPageState extends State<SofiStudioPage>
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   // Pre-define all BorderRadius constants to prevent null values during rebuilds (Flutter Web crash fix)
   static const _radius24 = BorderRadius.all(Radius.circular(24));
   static const _radius20 = BorderRadius.all(Radius.circular(20));
@@ -56,12 +57,12 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
   static const _radius10 = BorderRadius.all(Radius.circular(10));
   static const _radius100 = BorderRadius.all(Radius.circular(100));
   static const _radiusTop24 = BorderRadius.vertical(top: Radius.circular(24));
-  
+
   final SofiStudioController controller = SofiStudioController();
   bool _isGenerating = false;
   // If we detect ModelsLab credit exhaustion, reflect it in UI and gate the button.
   bool _outOfCredits = false;
-  
+
   // Animation for Generate button
   AnimationController? _generateBtnController;
   Animation<double>? _generateBtnScale;
@@ -85,7 +86,7 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
   int _generationCount = 0;
   bool _showPremiumReminder = false;
   Timer? _premiumReminderTimer;
-  
+
   // Cooldown after generation to prevent rapid-fire requests
   bool _isOnCooldown = false;
   Timer? _cooldownTimer;
@@ -98,13 +99,13 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
   // Debounce timer for category selections (prevents crash from rapid taps)
   Timer? _selectionDebounceTimer;
   bool _selectionInProgress = false;
-  
+
   // Pending selection to apply after debounce
   EditCategory? _pendingCategory;
   int? _pendingOption;
 
   final TextEditingController promptController = TextEditingController();
-  
+
   // Heartbeat to detect app freeze/crash
   Timer? _heartbeatTimer;
   DateTime _lastHeartbeat = DateTime.now();
@@ -115,7 +116,7 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
 
   // First-time canvas hint overlay
   bool _showCanvasHint = false;
-  
+
   // Initial loading state - true until history is loaded
   bool _isInitialLoading = true;
 
@@ -137,34 +138,36 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
   @override
   void initState() {
     super.initState();
-    
+
     // REMOTE DEBUG LOG: Page entry
-    unawaited(RemoteDebugLogger.instance.logInteraction('PAGE_ENTER', {'page': 'SofiStudioPage'}));
-    
+    unawaited(RemoteDebugLogger.instance
+        .logInteraction('PAGE_ENTER', {'page': 'SofiStudioPage'}));
+
     // Drawer Animation
     _drawerController = AnimationController(
-      vsync: this, 
+      vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    _drawerAnimation = CurvedAnimation(parent: _drawerController, curve: Curves.easeOutCubic);
+    _drawerAnimation =
+        CurvedAnimation(parent: _drawerController, curve: Curves.easeOutCubic);
 
     controller.addListener(() {
       try {
         if (controller.isDrawerOpen) {
-          if (_drawerController.status != AnimationStatus.forward && 
+          if (_drawerController.status != AnimationStatus.forward &&
               _drawerController.status != AnimationStatus.completed) {
-             AudioService.instance.playSlideUp();
-             _drawerController.forward();
+            AudioService.instance.playSlideUp();
+            _drawerController.forward();
           }
         } else {
-          if (_drawerController.status != AnimationStatus.reverse && 
+          if (_drawerController.status != AnimationStatus.reverse &&
               _drawerController.status != AnimationStatus.dismissed) {
-             AudioService.instance.playSlideDown();
-             _drawerController.reverse().then((_) {
-               if (mounted) AudioService.instance.playPop();
-             }).catchError((e) {
-               debugPrint('[SofiStudio] Drawer animation error: $e');
-             });
+            AudioService.instance.playSlideDown();
+            _drawerController.reverse().then((_) {
+              if (mounted) AudioService.instance.playPop();
+            }).catchError((e) {
+              debugPrint('[SofiStudio] Drawer animation error: $e');
+            });
           }
         }
         // Only rebuild if mounted and drawer state actually needs UI update
@@ -183,32 +186,38 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
         if (mounted) setState(() {});
       }
     });
-    
+
     // Generate button pulse animation
-    final ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat(reverse: true);
+    final ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1200))
+      ..repeat(reverse: true);
     _generateBtnController = ctrl;
-    _generateBtnScale = Tween<double>(begin: 1.0, end: 1.05).animate(CurvedAnimation(parent: ctrl, curve: Curves.easeInOut));
-    
+    _generateBtnScale = Tween<double>(begin: 1.0, end: 1.05)
+        .animate(CurvedAnimation(parent: ctrl, curve: Curves.easeInOut));
+
     ThemeManager.instance.addListener(_onThemeChanged);
-    
+
     // Observe app lifecycle to detect backgrounding/crashes
     WidgetsBinding.instance.addObserver(this);
-    
+
     // Start heartbeat to detect freeze/crash (every 5s)
     _startHeartbeat();
-    
+
     _init();
   }
-  
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     debugPrint('\ud83d\udd04 [Lifecycle] State changed to: $state');
     try {
-      RemoteDebugLogger.instance.logInteraction('LIFECYCLE_CHANGE', {'state': state.name})
-        .timeout(const Duration(seconds: 1)).catchError((_) {});
+      RemoteDebugLogger.instance
+          .logInteraction('LIFECYCLE_CHANGE', {'state': state.name})
+          .timeout(const Duration(seconds: 1))
+          .catchError((_) {});
     } catch (_) {}
-    
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
       // App going to background - stop any ongoing work
       if (_isGenerating) {
         debugPrint('\u26a0\ufe0f [Lifecycle] App pausing while generating!');
@@ -222,25 +231,29 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
       }
     }
   }
-  
+
   void _startHeartbeat() {
     _heartbeatTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       final now = DateTime.now();
       final gap = now.difference(_lastHeartbeat).inSeconds;
-      
+
       if (gap > 15) {
         // App was likely frozen for >15s
-        debugPrint('\u26a0\ufe0f [Heartbeat] Possible freeze detected (gap: ${gap}s)');
+        debugPrint(
+            '\u26a0\ufe0f [Heartbeat] Possible freeze detected (gap: ${gap}s)');
         try {
-          RemoteDebugLogger.instance.logWarning('Possible app freeze', {
-            'gapSeconds': gap,
-            'isGenerating': _isGenerating,
-          }).timeout(const Duration(seconds: 1)).catchError((_) {});
+          RemoteDebugLogger.instance
+              .logWarning('Possible app freeze', {
+                'gapSeconds': gap,
+                'isGenerating': _isGenerating,
+              })
+              .timeout(const Duration(seconds: 1))
+              .catchError((_) {});
         } catch (_) {}
       }
-      
+
       _lastHeartbeat = now;
-      
+
       // Also log if we're in generating state for too long
       if (_isGenerating) {
         debugPrint('\ud83d\udd52 [Heartbeat] Still generating...');
@@ -252,15 +265,17 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
   void dispose() {
     // REMOTE DEBUG LOG: Page exit (may indicate crash if followed by SESSION_START)
     debugPrint('\ud83d\udea8 [Dispose] SofiStudioPage disposing');
-    unawaited(RemoteDebugLogger.instance.logInteraction('PAGE_EXIT', {'page': 'SofiStudioPage'}));
-    unawaited(RemoteDebugLogger.instance.flush()); // Ensure logs are sent before exit
-    
+    unawaited(RemoteDebugLogger.instance
+        .logInteraction('PAGE_EXIT', {'page': 'SofiStudioPage'}));
+    unawaited(
+        RemoteDebugLogger.instance.flush()); // Ensure logs are sent before exit
+
     // Remove lifecycle observer
     WidgetsBinding.instance.removeObserver(this);
-    
+
     // Stop heartbeat
     _heartbeatTimer?.cancel();
-    
+
     // Ensure any ongoing dictation is stopped to avoid dangling audio sessions
     try {
       unawaited(_speech.stop());
@@ -284,7 +299,7 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
     // PRIORITY: Load user's last image FIRST before anything else
     // This ensures we show the right image immediately without showing default doll first
     await controller.loadDolls();
-    
+
     controller.onClearGenerated = () {
       setState(() {
         generatedImageBytes = null;
@@ -299,7 +314,7 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
     try {
       final storedHistory = await CustomDollStorage.loadHistory(maxItems: 3);
       if (!mounted) return;
-      
+
       setState(() {
         _history
           ..clear()
@@ -316,7 +331,7 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
 
     // NOW start deferred/background tasks after canvas is ready
     await _checkFirstVisitHint();
-    
+
     // Initialize voice coach (non-blocking, delayed)
     Future<void>.delayed(const Duration(milliseconds: 800)).then((_) {
       if (!mounted) return;
@@ -324,21 +339,32 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
         debugPrint('[SofiStudio] VoiceCoach init error: $e\n$st');
       }));
     });
-    
+
     // Pre-cache drawer URLs only AFTER initial load is complete (delayed)
     Future<void>.delayed(const Duration(seconds: 2)).then((_) {
       if (!mounted) return;
-      unawaited(StorageService.instance.precacheDrawerUrls().catchError((e, st) {
-        debugPrint('[SofiStudio] URL precache error: $e\n$st');
-      }).then((_) async {
-        // Optional: run a quiet verification pass to ensure thumbs ↔ prompts and dolls ↔ stages map correctly
-        await Future<void>.delayed(const Duration(seconds: 1));
-        unawaited(StorageService.instance.verifyAllAssetMappings().catchError((e, st) {
-          debugPrint('[SofiStudio] Asset verify error: $e\n$st');
-        }));
-      }));
+
+      unawaited(
+        StorageService.instance
+            // UI compatibility stub — empty list is intentional
+            .precacheDrawerUrls(const []).catchError((e, st) {
+          debugPrint('[SofiStudio] URL precache error: $e\n$st');
+        }).then((_) async {
+          // Optional: run a quiet verification pass to ensure
+          // thumbs ↔ prompts and dolls ↔ stages map correctly
+          await Future<void>.delayed(const Duration(seconds: 1));
+
+          unawaited(
+            StorageService.instance
+                .verifyAllAssetMappings()
+                .catchError((e, st) {
+              debugPrint('[SofiStudio] Asset verify error: $e\n$st');
+            }),
+          );
+        }),
+      );
     });
-    
+
     // Load favorites in background after main canvas is ready
     unawaited(_loadFavorites().catchError((e) {
       debugPrint('[SofiStudio] Favorites load error: $e');
@@ -350,7 +376,8 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
       if (!kIsWeb) {
         Future<void>.delayed(const Duration(milliseconds: 600)).then((_) {
           if (!mounted) return;
-          unawaited(VoiceCoachService.instance.speakWelcomeIntro().catchError((e) {
+          unawaited(
+              VoiceCoachService.instance.speakWelcomeIntro().catchError((e) {
             debugPrint('[VoiceCoach] speakWelcomeIntro error: $e');
           }));
         });
@@ -378,7 +405,7 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
     if (!mounted) return;
     setState(() => _showCanvasHint = false);
     // Don't persist - show again on next restart
-    
+
     // On web, dismissing the hint also unlocks audio and speaks intro
     if (kIsWeb && _awaitingFirstSoundUnlock) {
       setState(() => _awaitingFirstSoundUnlock = false);
@@ -389,7 +416,8 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
     }
   }
 
-  Future<void> _setCanvasAndAutosave(Uint8List bytes, {bool pushToStacks = true}) async {
+  Future<void> _setCanvasAndAutosave(Uint8List bytes,
+      {bool pushToStacks = true}) async {
     if (!mounted) return;
     setState(() {
       generatedImageBytes = bytes;
@@ -407,42 +435,45 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
   }
 
   Future<void> _selectDollAndLoadStage(SofiDoll doll) async {
-    debugPrint('[SofiStudio] _selectDollAndLoadStage called for doll: ${doll.id}');
-    debugPrint('[SofiStudio] stagePath: ${doll.stagePath}, isStoragePath: ${doll.isStoragePath}');
-    
+    debugPrint(
+        '[SofiStudio] _selectDollAndLoadStage called for doll: ${doll.id}');
+    debugPrint(
+        '[SofiStudio] stagePath: ${doll.stagePath}, isStoragePath: ${doll.isStoragePath}');
+
     // Prevent rapid doll switching from overwhelming the system
     if (_selectionInProgress) {
       debugPrint('[SofiStudio] Selection already in progress, skipping');
       return;
     }
     _selectionInProgress = true;
-    
+
     try {
       // Update the current doll selection in controller
       controller.selectDoll(doll);
-      
+
       // Reset any custom premium style when switching base dolls
       _activeBaseStylePrompt = null;
-      
+
       debugPrint('[SofiStudio] Loading stage image from Firebase...');
-      
+
       Uint8List stageBytes;
-      
+
       // Load from Firebase Storage
       try {
         debugPrint('[LoadDoll] 🎯 Attempting to load: ${doll.stagePath}');
         stageBytes = await _loadDollImage(doll.stagePath, doll.isStoragePath)
             .timeout(const Duration(seconds: 15));
-        debugPrint('[LoadDoll] ✅ Stage image loaded successfully, bytes: ${stageBytes.length}');
+        debugPrint(
+            '[LoadDoll] ✅ Stage image loaded successfully, bytes: ${stageBytes.length}');
       } catch (loadError) {
         debugPrint('[LoadDoll] ❌ Failed to load ${doll.stagePath}: $loadError');
         rethrow;
       }
-      
+
       if (stageBytes.isEmpty) {
         throw Exception('Empty image bytes received');
       }
-      
+
       // Update canvas with the new doll image
       if (mounted) {
         setState(() {
@@ -453,31 +484,32 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
         });
         debugPrint('[SofiStudio] Canvas state updated with new doll image');
       }
-      
+
       // Save to storage in background
-      unawaited(CustomDollStorage.saveLast(stageBytes, prompt: 'Base doll: ${doll.id}')
+      unawaited(CustomDollStorage.saveLast(stageBytes,
+              prompt: 'Base doll: ${doll.id}')
           .catchError((e) => debugPrint('[Storage] Save failed: $e')));
-      
     } catch (e, stack) {
       debugPrint('❌ Failed to load stage for ${doll.id}: $e');
       debugPrint('Stack trace: $stack');
-      
+
       // Show error feedback to user
       if (mounted) {
         _showSnack('Failed to load character. Please try again.');
       }
     } finally {
       _selectionInProgress = false;
-      
-      // Keep drawer OPEN after doll selection so user can continue 
+
+      // Keep drawer OPEN after doll selection so user can continue
       // choosing clothing/options. Drawer closes on Generate or manual close.
     }
   }
 
   /// Helper to load doll image from either local assets or Firebase Storage
   Future<Uint8List> _loadDollImage(String path, bool isStorage) async {
-    debugPrint('[LoadDoll] Loading from ${isStorage ? "Firebase" : "assets"}: $path');
-    
+    debugPrint(
+        '[LoadDoll] Loading from ${isStorage ? "Firebase" : "assets"}: $path');
+
     if (isStorage) {
       try {
         // Use safe URL resolver with fallbacks for legacy paths
@@ -486,7 +518,8 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
           throw Exception('No download URL for $path');
         }
         debugPrint('[LoadDoll] Got download URL: ${url.substring(0, 50)}...');
-        final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
+        final response =
+            await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
         if (response.statusCode != 200) {
           throw Exception('HTTP ${response.statusCode}');
         }
@@ -494,13 +527,15 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
         return response.bodyBytes;
       } catch (e) {
         debugPrint('[LoadDoll] ❌ Firebase load failed: $e');
-        debugPrint('[LoadDoll] 💡 Hint: Verify this file exists in Firebase Storage: $path');
+        debugPrint(
+            '[LoadDoll] 💡 Hint: Verify this file exists in Firebase Storage: $path');
         rethrow;
       }
     } else {
       try {
         final byteData = await rootBundle.load(path);
-        debugPrint('[LoadDoll] Loaded ${byteData.lengthInBytes} bytes from assets');
+        debugPrint(
+            '[LoadDoll] Loaded ${byteData.lengthInBytes} bytes from assets');
         return byteData.buffer.asUint8List();
       } catch (e) {
         debugPrint('[LoadDoll] Asset load failed: $e');
@@ -516,31 +551,33 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
     // Store the pending selection
     _pendingCategory = category;
     _pendingOption = option;
-    
+
     // If already processing, just queue the selection
     if (_selectionInProgress) return;
-    
+
     // Cancel any existing debounce timer
     _selectionDebounceTimer?.cancel();
-    
+
     // Apply selection after a short debounce (80ms)
     _selectionDebounceTimer = Timer(const Duration(milliseconds: 80), () {
-      if (!mounted || _pendingCategory == null || _pendingOption == null) return;
+      if (!mounted || _pendingCategory == null || _pendingOption == null)
+        return;
       _applyPendingSelection();
     });
   }
-  
+
   void _applyPendingSelection() {
     if (!mounted || _pendingCategory == null || _pendingOption == null) return;
-    
+
     _selectionInProgress = true;
-    
+
     try {
       final category = _pendingCategory!;
       final option = _pendingOption!;
-      
+
       // REMOTE DEBUG LOG: Category selection
-      unawaited(RemoteDebugLogger.instance.logCategorySelection(category.name, option));
+      unawaited(RemoteDebugLogger.instance
+          .logCategorySelection(category.name, option));
 
       // Enforce single-selection per category except Accessories (can stack)
       final newPrompt = _getPrompt(category, option);
@@ -551,12 +588,14 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
         if (previous != null) {
           try {
             final prevPrompt = _getPrompt(category, previous);
-            final cleaned = _removeFragmentSafe(promptController.text, prevPrompt);
+            final cleaned =
+                _removeFragmentSafe(promptController.text, prevPrompt);
             if (cleaned != promptController.text) {
               promptController.text = cleaned;
             }
           } catch (e) {
-            debugPrint('[SofiStudio] Failed to remove previous fragment for ${category.name}: $e');
+            debugPrint(
+                '[SofiStudio] Failed to remove previous fragment for ${category.name}: $e');
           }
         }
       }
@@ -574,11 +613,11 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
           promptController.text = '$currentText, $newPrompt';
         }
       }
-      
+
       // Clear pending after applying
       _pendingCategory = null;
       _pendingOption = null;
-      
+
       if (mounted) setState(() {});
     } catch (e) {
       debugPrint('[SofiStudio] Selection error: $e');
@@ -596,9 +635,9 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
   String _removeFragmentSafe(String text, String fragment) {
     var result = text;
     String esc(String input) => input.replaceAllMapped(
-      RegExp(r'[\\.\^\$\|\?\*\+\(\)\{\}\[\]]'),
-      (m) => '\\${m[0]}',
-    );
+          RegExp(r'[\\.\^\$\|\?\*\+\(\)\{\}\[\]]'),
+          (m) => '\\${m[0]}',
+        );
 
     final frag = esc(fragment.trim());
     // Remove leading occurrence
@@ -622,9 +661,9 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
     String result = text;
 
     String esc(String input) => input.replaceAllMapped(
-      RegExp(r'[\\.\^\$\|\?\*\+\(\)\{\}\[\]]'),
-      (m) => '\\${m[0]}',
-    );
+          RegExp(r'[\\.\^\$\|\?\*\+\(\)\{\}\[\]]'),
+          (m) => '\\${m[0]}',
+        );
 
     final frag = esc(fragment.trim());
 
@@ -681,28 +720,30 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
   String _buildFinalPrompt() {
     // If we have an active premium style (transferred from Premium page), use that as the base.
     // Otherwise use the default 3D style.
-    final base = _activeBaseStylePrompt ?? '3D Sofi Studio doll, full-body view, soft shading, vibrant lighting.';
-    
+    final base = _activeBaseStylePrompt ??
+        '3D Sofi Studio doll, full-body view, soft shading, vibrant lighting.';
+
     final buffer = StringBuffer(base);
-    
+
     // Ensure space separator if needed
     if (!base.endsWith(' ')) buffer.write(' ');
-    
+
     // Use the text box as the source of truth for all edits.
     // This supports "Stacking" (multiple items) and manual edits.
     final manual = promptController.text.trim();
     if (manual.isNotEmpty) {
       buffer.write('$manual ');
     }
-    
+
     return buffer.toString();
   }
 
   Future<void> _onGeneratePressed() async {
     debugPrint('\u25b6\ufe0f [Generation] Button pressed');
-    
+
     if (_isGenerating || controller.currentDoll == null) {
-      debugPrint('\u26a0\ufe0f [Generation] Blocked: isGenerating=$_isGenerating, currentDoll=${controller.currentDoll}');
+      debugPrint(
+          '\u26a0\ufe0f [Generation] Blocked: isGenerating=$_isGenerating, currentDoll=${controller.currentDoll}');
       return;
     }
 
@@ -712,7 +753,8 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
       if (!mounted) return;
       final didSubscribe = await PaywallSheet.show(
         context,
-        message: "You're out of generation credits. Start your trial or add credits to continue.",
+        message:
+            "You're out of generation credits. Start your trial or add credits to continue.",
       );
       if (didSubscribe == true) {
         setState(() => _outOfCredits = false);
@@ -722,14 +764,14 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
       }
       return;
     }
-    
+
     // Cooldown check to prevent rapid-fire generation requests
     if (_isOnCooldown) {
       debugPrint('\u26a0\ufe0f [Generation] Blocked: On cooldown');
       _showSnack('Please wait a moment before generating again.');
       return;
     }
-    
+
     // Avoid overlapping heavy work while TTS is speaking/holding
     final vc = VoiceCoachService.instance;
     if (vc.isSpeaking || vc.isExclusiveHoldActive) {
@@ -737,17 +779,18 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
       _showSnack('One sec — finishing audio…');
       return;
     }
-    
+
     // Capture a human-readable summary up-front (no longer narrated to reduce load)
     final summary = promptController.text.trim();
     final startTime = DateTime.now();
-    
+
     debugPrint('\ud83d\udea8 [Generation] STARTING - prompt="$summary"');
-    
+
     // REMOTE DEBUG LOG: Generation started
     try {
-      await RemoteDebugLogger.instance.logGeneration('STARTED', duration: 0)
-        .timeout(const Duration(seconds: 1));
+      await RemoteDebugLogger.instance
+          .logGeneration('STARTED', duration: 0)
+          .timeout(const Duration(seconds: 1));
     } catch (e) {
       debugPrint('\u26a0\ufe0f [RemoteLog] Failed to log start: $e');
     }
@@ -758,91 +801,125 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
     } catch (e) {
       debugPrint('\u26a0\ufe0f [VoiceCoach] setGenerating error: $e');
     }
-    
+
     // SFX: start generation
     try {
       unawaited(AudioService.instance.playGenerateStart());
     } catch (e) {
       debugPrint('\u26a0\ufe0f [Audio] playGenerateStart error: $e');
     }
-    
+
     // Platform-specific memory guard before heavy work
     _prepareForGenerationMemory();
 
     setState(() => _isGenerating = true);
-    
+
     try {
       // Step 1: Load base image
       debugPrint('\ud83d\udcbe [Generation] Loading base image...');
       Uint8List baseBytes;
       try {
-        baseBytes = generatedImageBytes ?? await _loadDollImage(
-          controller.currentDoll!.stagePath,
-          controller.currentDoll!.isStoragePath,
-        ).timeout(const Duration(seconds: 10));
-        debugPrint('\u2705 [Generation] Base image loaded (${baseBytes.length} bytes)');
+        baseBytes = generatedImageBytes ??
+            await _loadDollImage(
+              controller.currentDoll!.stagePath,
+              controller.currentDoll!.isStoragePath,
+            ).timeout(const Duration(seconds: 10));
+        debugPrint(
+            '\u2705 [Generation] Base image loaded (${baseBytes.length} bytes)');
       } catch (e, st) {
-        debugPrint('\ud83d\uded1 [Generation] CRASH: Failed to load base image: $e');
-        await RemoteDebugLogger.instance.logError('Base image load failed', e, st)
-          .timeout(const Duration(seconds: 1)).catchError((_) {});
+        debugPrint(
+            '\ud83d\uded1 [Generation] CRASH: Failed to load base image: $e');
+        await RemoteDebugLogger.instance
+            .logError('Base image load failed', e, st)
+            .timeout(const Duration(seconds: 1))
+            .catchError((_) {});
         rethrow;
       }
-      
-      // Step 2: Call ModelsLab API
-      debugPrint('\ud83c\udf10 [Generation] Calling ModelsLab API...');
-      Uint8List result;
+
+      // Step 2: Call ModelsLab API (returns IMAGE URL)
+      debugPrint('🌐 [Generation] Calling ModelsLab API...');
+      String imageUrl;
       try {
-        result = await ModelsLabService.generateFromImage(
+        imageUrl = await ModelsLabService.generateFromImage(
           initImageBytes: baseBytes,
           prompt: _buildFinalPrompt(),
         ).timeout(const Duration(seconds: 60));
-        debugPrint('\u2705 [Generation] API returned result (${result.length} bytes)');
+        debugPrint('✅ [Generation] API returned URL: $imageUrl');
       } catch (e, st) {
-        debugPrint('\ud83d\uded1 [Generation] CRASH: ModelsLab API failed: $e');
-        await RemoteDebugLogger.instance.logError('ModelsLab API failed', e, st)
-          .timeout(const Duration(seconds: 1)).catchError((_) {});
+        debugPrint('🛑 [Generation] CRASH: ModelsLab API failed: $e');
+        await RemoteDebugLogger.instance
+            .logError('ModelsLab API failed', e, st)
+            .timeout(const Duration(seconds: 1))
+            .catchError((_) {});
         rethrow;
       }
-      
-      // Step 3: Process and save result
-      debugPrint('\ud83d\uddbc\ufe0f [Generation] Processing result...');
+
+      // Step 3: Download image bytes from returned URL
+      debugPrint('📥 [Generation] Downloading generated image...');
+      Uint8List result;
+      try {
+        final response = await http
+            .get(Uri.parse(imageUrl))
+            .timeout(const Duration(seconds: 30));
+
+        if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
+          throw Exception('Image download failed (${response.statusCode})');
+        }
+
+        result = response.bodyBytes;
+        debugPrint('✅ [Generation] Image downloaded (${result.length} bytes)');
+      } catch (e, st) {
+        debugPrint('🛑 [Generation] CRASH: Failed to download image: $e');
+        await RemoteDebugLogger.instance
+            .logError('Image download failed', e, st)
+            .timeout(const Duration(seconds: 1))
+            .catchError((_) {});
+        rethrow;
+      }
+
+      // Step 4: Process and save result
+      debugPrint('🖼️ [Generation] Processing result...');
       try {
         await _setGeneratedImage(result);
-        debugPrint('\u2705 [Generation] Result processed and saved');
+        debugPrint('✅ [Generation] Result processed and saved');
       } catch (e, st) {
-        debugPrint('\ud83d\uded1 [Generation] CRASH: Failed to process result: $e');
-        await RemoteDebugLogger.instance.logError('Result processing failed', e, st)
-          .timeout(const Duration(seconds: 1)).catchError((_) {});
+        debugPrint('🛑 [Generation] CRASH: Failed to process result: $e');
+        await RemoteDebugLogger.instance
+            .logError('Result processing failed', e, st)
+            .timeout(const Duration(seconds: 1))
+            .catchError((_) {});
         rethrow;
       }
-      
+
       // SUCCESS PATH
       final duration = DateTime.now().difference(startTime).inMilliseconds;
       debugPrint('\ud83c\udf89 [Generation] SUCCESS in ${duration}ms');
-      
+
       try {
-        await RemoteDebugLogger.instance.logGeneration('SUCCESS', duration: duration)
-          .timeout(const Duration(seconds: 1));
+        await RemoteDebugLogger.instance
+            .logGeneration('SUCCESS', duration: duration)
+            .timeout(const Duration(seconds: 1));
       } catch (e) {
         debugPrint('\u26a0\ufe0f [RemoteLog] Failed to log success: $e');
       }
-      
+
       // SFX: success
       try {
         unawaited(AudioService.instance.playSuccess());
       } catch (e) {
         debugPrint('\u26a0\ufe0f [Audio] playSuccess error: $e');
       }
-      
+
       // Voice Coach: short success response only (no prompt narration)
-      unawaited(Future<void>.delayed(const Duration(milliseconds: 200), () async {
+      unawaited(
+          Future<void>.delayed(const Duration(milliseconds: 200), () async {
         try {
           await VoiceCoachService.instance.onGenerationSuccess();
         } catch (e) {
           debugPrint('[VoiceCoach] onGenerationSuccess error: $e');
         }
       }));
-      
+
       // Reset both text and selections so the next generation is clean
       selectedOptions.updateAll((key, value) => null);
       promptController.clear();
@@ -856,10 +933,10 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
           debugPrint('\u26a0\ufe0f [PremiumReminder] Error: $e');
         }
       }
-      
+
       // Auto-close drawer to reveal the new image on canvas
       _closeDrawer();
-      
+
       // Start cooldown timer to prevent rapid-fire generation
       _startGenerationCooldown();
     } catch (e, st) {
@@ -867,28 +944,30 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
       final duration = DateTime.now().difference(startTime).inMilliseconds;
       debugPrint('\ud83d\uded1 [Generation] FAILED after ${duration}ms: $e');
       debugPrint('Stack trace: $st');
-      
+
       try {
-        await RemoteDebugLogger.instance.logGeneration('FAILED', duration: duration, error: e.toString())
-          .timeout(const Duration(seconds: 1));
-        await RemoteDebugLogger.instance.logError('Generation failed', e, st)
-          .timeout(const Duration(seconds: 1));
+        await RemoteDebugLogger.instance
+            .logGeneration('FAILED', duration: duration, error: e.toString())
+            .timeout(const Duration(seconds: 1));
+        await RemoteDebugLogger.instance
+            .logError('Generation failed', e, st)
+            .timeout(const Duration(seconds: 1));
       } catch (logErr) {
         debugPrint('\u26a0\ufe0f [RemoteLog] Failed to log error: $logErr');
       }
-      
+
       // SFX: error
       try {
         unawaited(AudioService.instance.playError());
       } catch (audioErr) {
         debugPrint('\u26a0\ufe0f [Audio] playError failed: $audioErr');
       }
-      
+
       // Voice Coach: explain and nudge
       unawaited(VoiceCoachService.instance.onGenerationError().catchError((ve) {
         debugPrint('[VoiceCoach] onGenerationError error: $ve');
       }));
-      
+
       // Special handling: Out of credits
       final msg = e.toString().toLowerCase();
       if (msg.contains('out of credits')) {
@@ -900,7 +979,8 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
         if (mounted) {
           final didSubscribe = await PaywallSheet.show(
             context,
-            message: "You're out of generation credits. Start your trial or add credits to continue.",
+            message:
+                "You're out of generation credits. Start your trial or add credits to continue.",
           );
           if (didSubscribe == true && mounted) {
             setState(() => _outOfCredits = false);
@@ -926,7 +1006,7 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
       } catch (e) {
         debugPrint('\u26a0\ufe0f [VoiceCoach] setGenerating(false) error: $e');
       }
-      
+
       // Post-generation memory cleanup (A approach)
       _cleanupAfterGeneration();
     }
@@ -936,20 +1016,21 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
   void _onGenerate() {
     _onGeneratePressed();
   }
-  
+
   /// Start a cooldown period after generation to prevent rapid-fire requests.
   /// This helps iPhone Safari stay stable by allowing memory to settle.
   void _startGenerationCooldown() {
     _cooldownTimer?.cancel();
     setState(() => _isOnCooldown = true);
-    
+
     _cooldownTimer = Timer(_cooldownDuration, () {
       if (mounted) {
         setState(() => _isOnCooldown = false);
         debugPrint('✅ [Generation] Cooldown ended, ready for next generation');
       }
     });
-    debugPrint('⏱️ [Generation] Cooldown started (${_cooldownDuration.inSeconds}s)');
+    debugPrint(
+        '⏱️ [Generation] Cooldown started (${_cooldownDuration.inSeconds}s)');
   }
 
   /// Reduce memory pressure just before starting a heavy generation.
@@ -970,14 +1051,14 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
         final provider = MemoryImage(bytes);
         provider.evict();
       }
-      
+
       // Use PerformanceService for additional cleanup (A approach)
       unawaited(PerformanceService.instance.prepareForGeneration());
     } catch (e) {
       debugPrint('⚠️ Memory prep failed: $e');
     }
   }
-  
+
   /// Called after generation completes to free memory (A approach).
   void _cleanupAfterGeneration() {
     try {
@@ -988,8 +1069,9 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
   }
 
   Future<void> _setGeneratedImage(Uint8List bytes) async {
-    debugPrint('\ud83d\uddbc\ufe0f [SetImage] Processing ${bytes.length} bytes');
-    
+    debugPrint(
+        '\ud83d\uddbc\ufe0f [SetImage] Processing ${bytes.length} bytes');
+
     try {
       debugPrint('\u2702\ufe0f [SetImage] Starting auto-crop...');
       final trimmed = await _autoCropDarkBorders(
@@ -997,70 +1079,85 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
         darknessThreshold: 45,
         maxBorderFractionPerSide: 0.45,
       ).timeout(const Duration(seconds: 15));
-      
-      debugPrint('\u2705 [SetImage] Crop complete (${trimmed.length} bytes), saving...');
+
+      debugPrint(
+          '\u2705 [SetImage] Crop complete (${trimmed.length} bytes), saving...');
       await _setCanvasAndAutosave(trimmed);
-      
+
       debugPrint('\ud83d\udcbe [SetImage] Persisting to storage...');
       unawaited(CustomDollStorage.saveLast(trimmed, prompt: _buildFinalPrompt())
-        .catchError((e) => debugPrint('\u26a0\ufe0f [Storage] Save failed: $e')));
-      
+          .catchError(
+              (e) => debugPrint('\u26a0\ufe0f [Storage] Save failed: $e')));
+
       debugPrint('\u2705 [SetImage] Complete');
     } catch (e) {
-      debugPrint('\u26a0\ufe0f [SetImage] Trim/crop failed, using original: $e');
+      debugPrint(
+          '\u26a0\ufe0f [SetImage] Trim/crop failed, using original: $e');
       try {
-        await RemoteDebugLogger.instance.logWarning('Image crop failed', {'error': e.toString()})
-          .timeout(const Duration(seconds: 1)).catchError((_) {});
+        await RemoteDebugLogger.instance
+            .logWarning('Image crop failed', {'error': e.toString()})
+            .timeout(const Duration(seconds: 1))
+            .catchError((_) {});
       } catch (_) {}
-      
+
       await _setCanvasAndAutosave(bytes);
       unawaited(CustomDollStorage.saveLast(bytes, prompt: _buildFinalPrompt())
-        .catchError((e) => debugPrint('\u26a0\ufe0f [Storage] Save failed: $e')));
+          .catchError(
+              (e) => debugPrint('\u26a0\ufe0f [Storage] Save failed: $e')));
     }
   }
-
 
   /// Crops uniformly dark margins (e.g., black letterboxing) from an image.
   Future<Uint8List> _autoCropDarkBorders(
     Uint8List input, {
-    int darknessThreshold = 45, // Increased from 32 to catch lighter blacks/artifacts
-    double maxBorderFractionPerSide = 0.45, // Increased from 0.3 to allow larger crops
+    int darknessThreshold =
+        45, // Increased from 32 to catch lighter blacks/artifacts
+    double maxBorderFractionPerSide =
+        0.45, // Increased from 0.3 to allow larger crops
   }) async {
     try {
       debugPrint('\ud83d\udd0d [Crop] Decoding image codec...');
-      final ui.Codec codec = await ui.instantiateImageCodec(input)
-        .timeout(const Duration(seconds: 10));
-      
+      final ui.Codec codec = await ui
+          .instantiateImageCodec(input)
+          .timeout(const Duration(seconds: 10));
+
       debugPrint('\ud83d\udd0d [Crop] Getting frame...');
-      final ui.FrameInfo frame = await codec.getNextFrame()
-        .timeout(const Duration(seconds: 5));
-      
+      final ui.FrameInfo frame =
+          await codec.getNextFrame().timeout(const Duration(seconds: 5));
+
       final ui.Image image = frame.image;
       final int w = image.width;
       final int h = image.height;
       debugPrint('\ud83d\udd0d [Crop] Image dimensions: ${w}x$h');
-      
+
       // Sanity check for memory safety
-      if (w * h > 16777216) { // 4096x4096 limit
-        debugPrint('\u26a0\ufe0f [Crop] Image too large (${w}x$h), skipping crop');
-        await RemoteDebugLogger.instance.logWarning('Image too large for crop', {
-          'width': w,
-          'height': h,
-          'pixels': w * h,
-        }).timeout(const Duration(seconds: 1)).catchError((_) {});
+      if (w * h > 16777216) {
+        // 4096x4096 limit
+        debugPrint(
+            '\u26a0\ufe0f [Crop] Image too large (${w}x$h), skipping crop');
+        await RemoteDebugLogger.instance
+            .logWarning('Image too large for crop', {
+              'width': w,
+              'height': h,
+              'pixels': w * h,
+            })
+            .timeout(const Duration(seconds: 1))
+            .catchError((_) {});
         return input;
       }
-      
+
       debugPrint('\ud83d\udd0d [Crop] Converting to RGBA bytes...');
-      final ByteData? bd = await image.toByteData(format: ui.ImageByteFormat.rawRgba)
-        .timeout(const Duration(seconds: 10));
-      
+      final ByteData? bd = await image
+          .toByteData(format: ui.ImageByteFormat.rawRgba)
+          .timeout(const Duration(seconds: 10));
+
       if (bd == null) {
         debugPrint('\u26a0\ufe0f [Crop] toByteData returned null');
         return input;
       }
-      
-      debugPrint('\ud83d\udd0d [Crop] Got ${bd.lengthInBytes} bytes of RGBA data');
+
+      debugPrint(
+          '\ud83d\udd0d [Crop] Got ${bd.lengthInBytes} bytes of RGBA data');
 
       final Uint8List rgba = bd.buffer.asUint8List();
       bool rowIsDark(int y) {
@@ -1120,11 +1217,15 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
         bottom--;
       }
       // Scan left
-      while (left < right && (left - 0) < maxCropX && colIsDark(left, top, bottom)) {
+      while (left < right &&
+          (left - 0) < maxCropX &&
+          colIsDark(left, top, bottom)) {
         left++;
       }
       // Scan right
-      while (right > left && (w - 1 - right) < maxCropX && colIsDark(right, top, bottom)) {
+      while (right > left &&
+          (w - 1 - right) < maxCropX &&
+          colIsDark(right, top, bottom)) {
         right--;
       }
 
@@ -1136,13 +1237,16 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
 
       final ui.PictureRecorder recorder = ui.PictureRecorder();
       final ui.Canvas canvas = ui.Canvas(recorder);
-      final ui.Rect src = ui.Rect.fromLTWH(left.toDouble(), top.toDouble(), newW.toDouble(), newH.toDouble());
-      final ui.Rect dst = ui.Rect.fromLTWH(0, 0, newW.toDouble(), newH.toDouble());
+      final ui.Rect src = ui.Rect.fromLTWH(
+          left.toDouble(), top.toDouble(), newW.toDouble(), newH.toDouble());
+      final ui.Rect dst =
+          ui.Rect.fromLTWH(0, 0, newW.toDouble(), newH.toDouble());
       final ui.Paint paint = ui.Paint();
       canvas.drawImageRect(image, src, dst, paint);
       final ui.Picture picture = recorder.endRecording();
       final ui.Image cropped = await picture.toImage(newW, newH);
-      final ByteData? png = await cropped.toByteData(format: ui.ImageByteFormat.png);
+      final ByteData? png =
+          await cropped.toByteData(format: ui.ImageByteFormat.png);
       if (png == null) return input;
       return png.buffer.asUint8List();
     } catch (e) {
@@ -1174,7 +1278,8 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
       backgroundColor: Colors.transparent,
       builder: (_) => SofiHistorySheet(
         history: _history,
-        onSelect: (bytes) async => _setCanvasAndAutosave(bytes, pushToStacks: false),
+        onSelect: (bytes) async =>
+            _setCanvasAndAutosave(bytes, pushToStacks: false),
         onDelete: (bytes) async {
           await CustomDollStorage.deleteFromHistory(bytes);
           setState(() {
@@ -1213,7 +1318,7 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
           );
           debugPrint('✅ Share result: ${result.status}');
           // Check if sharing actually worked
-          if (result.status == ShareResultStatus.success || 
+          if (result.status == ShareResultStatus.success ||
               result.status == ShareResultStatus.dismissed) {
             return;
           }
@@ -1227,9 +1332,9 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
           debugPrint('❌ shareXFiles failed: $e');
           // Try text-only share as fallback
           try {
-              await SharePlus.instance.share(
+            await SharePlus.instance.share(
               ShareParams(
-                  text: 'Check out my creation made with Sofi Saint!',
+                text: 'Check out my creation made with Sofi Saint!',
                 subject: 'Sofi Saint Creation',
               ),
             );
@@ -1245,9 +1350,9 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
         }
       } else {
         // No image yet: share text only
-              await SharePlus.instance.share(
+        await SharePlus.instance.share(
           ShareParams(
-                  text: 'Check out Sofi Saint - AI Fashion Studio!',
+            text: 'Check out Sofi Saint - AI Fashion Studio!',
             subject: 'Sofi Saint',
           ),
         );
@@ -1264,12 +1369,13 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
       final premiumService = PremiumService();
       await premiumService.initialize();
       if (!context.mounted) return;
-      
+
       if (!premiumService.isPremium) {
         // Require subscription before entering the Premium Studio
         final didSubscribe = await PaywallSheet.show(
           context,
-          message: 'Premium required for this feature. Start your 3-Day Free Trial!',
+          message:
+              'Premium required for this feature. Start your 3-Day Free Trial!',
         );
         // Re-check state after sheet closes
         await premiumService.initialize();
@@ -1390,7 +1496,8 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
         final XFile? photo = await picker.pickImage(source: ImageSource.camera);
         if (photo != null) imageBytes = await photo.readAsBytes();
       } else if (selection == 1) {
-        final XFile? photo = await picker.pickImage(source: ImageSource.gallery);
+        final XFile? photo =
+            await picker.pickImage(source: ImageSource.gallery);
         if (photo != null) imageBytes = await photo.readAsBytes();
       } else {
         // Use current canvas logic
@@ -1398,14 +1505,16 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
         if (imageBytes == null) {
           final doll = controller.currentDoll;
           if (doll != null) {
-            imageBytes = await _loadDollImage(doll.stagePath, doll.isStoragePath);
+            imageBytes =
+                await _loadDollImage(doll.stagePath, doll.isStoragePath);
           }
         }
       }
 
       if (selection != 3 && imageBytes == null) {
         if (selection == 2 && mounted) {
-           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No canvas image available.')));
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('No canvas image available.')));
         }
         return;
       }
@@ -1414,7 +1523,8 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
         headshotBase64 = base64Encode(imageBytes);
       }
 
-      final premiumPaths = controller.premiumDolls.map((d) => d.stagePath).toList();
+      final premiumPaths =
+          controller.premiumDolls.map((d) => d.stagePath).toList();
 
       if (!mounted) return;
       final result = await Navigator.push<dynamic>(
@@ -1430,26 +1540,26 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
       );
 
       if (result == null) return;
-      
+
       // Handle both legacy String return (just in case) and new Map return
       String? returnedBase64;
       String? returnedPrompt;
-      
+
       if (result is Map) {
         returnedBase64 = result['image'] as String?;
         returnedPrompt = result['prompt'] as String?;
       } else if (result is String) {
         returnedBase64 = result;
       }
-      
+
       if (returnedBase64 == null) return;
-      
+
       await _setCanvasAndAutosave(base64Decode(returnedBase64));
-      
+
       // If we got a prompt back, store it as the active base style
       if (returnedPrompt != null && returnedPrompt.isNotEmpty) {
         setState(() => _activeBaseStylePrompt = returnedPrompt);
-          debugPrint('Activated premium style prompt override');
+        debugPrint('Activated premium style prompt override');
       }
     } catch (e) {
       debugPrint('❌ Failed to open Premium Studio: $e');
@@ -1458,7 +1568,7 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
 
   Future<void> _onMicPressed() async {
     debugPrint('\ud83c\udfa4 [Mic] Button pressed');
-    
+
     // Block mic while TTS is active/holding to prevent overlap
     final vc = VoiceCoachService.instance;
     if (vc.isSpeaking || vc.isExclusiveHoldActive) {
@@ -1466,16 +1576,19 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
       _showSnack('Hold on — audio playing…');
       return;
     }
-    
+
     // Detect iOS Safari web specifically
     final isIOSWeb = kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    
-    debugPrint('\ud83c\udfa4 [Mic] State: kIsWeb=$kIsWeb, platform=$defaultTargetPlatform, listening=$_listening');
-    
+
+    debugPrint(
+        '\ud83c\udfa4 [Mic] State: kIsWeb=$kIsWeb, platform=$defaultTargetPlatform, listening=$_listening');
+
     // REMOTE DEBUG LOG: Mic pressed
     try {
-      await RemoteDebugLogger.instance.logMic('PRESSED', 'kIsWeb: $kIsWeb, platform: $defaultTargetPlatform, isIOSWeb: $isIOSWeb, listening: $_listening')
-        .timeout(const Duration(seconds: 1));
+      await RemoteDebugLogger.instance
+          .logMic('PRESSED',
+              'kIsWeb: $kIsWeb, platform: $defaultTargetPlatform, isIOSWeb: $isIOSWeb, listening: $_listening')
+          .timeout(const Duration(seconds: 1));
     } catch (e) {
       debugPrint('\u26a0\ufe0f [RemoteLog] Failed to log mic press: $e');
     }
@@ -1484,76 +1597,91 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
       if (!_listening) {
         // On web (including iOS Safari), we need to ensure proper initialization
         // The speech_to_text package uses the Web Speech API which iOS Safari supports
-        debugPrint('[Speech] Attempting to initialize... kIsWeb=$kIsWeb, platform=$defaultTargetPlatform');
-        
+        debugPrint(
+            '[Speech] Attempting to initialize... kIsWeb=$kIsWeb, platform=$defaultTargetPlatform');
+
         bool available = false;
         String? initError;
-        
+
         try {
           debugPrint('\ud83c\udfa4 [Mic] Calling _speech.initialize()...');
-          available = await _speech.initialize(
-            onError: (error) {
-              debugPrint('\ud83d\uded1 [Speech] onError callback: ${error.errorMsg} (permanent: ${error.permanent})');
-              try {
-                RemoteDebugLogger.instance.logMic('LISTEN_ERROR', '${error.errorMsg} (permanent: ${error.permanent})')
-                  .timeout(const Duration(seconds: 1)).catchError((_) {});
-              } catch (_) {}
-              if (mounted) setState(() => _listening = false);
-              if (error.permanent) {
-                _showSnack('Mic error: ${error.errorMsg}');
-              }
-            },
-            onStatus: (status) {
-              debugPrint('\ud83d\udd0a [Speech] onStatus: $status');
-              if (status == 'notListening' && mounted) {
-                setState(() => _listening = false);
-              }
-            },
-            debugLogging: true, // Enable debug logging for troubleshooting
-          ).timeout(const Duration(seconds: 10));
+          available = await _speech
+              .initialize(
+                onError: (error) {
+                  debugPrint(
+                      '\ud83d\uded1 [Speech] onError callback: ${error.errorMsg} (permanent: ${error.permanent})');
+                  try {
+                    RemoteDebugLogger.instance
+                        .logMic('LISTEN_ERROR',
+                            '${error.errorMsg} (permanent: ${error.permanent})')
+                        .timeout(const Duration(seconds: 1))
+                        .catchError((_) {});
+                  } catch (_) {}
+                  if (mounted) setState(() => _listening = false);
+                  if (error.permanent) {
+                    _showSnack('Mic error: ${error.errorMsg}');
+                  }
+                },
+                onStatus: (status) {
+                  debugPrint('\ud83d\udd0a [Speech] onStatus: $status');
+                  if (status == 'notListening' && mounted) {
+                    setState(() => _listening = false);
+                  }
+                },
+                debugLogging: true, // Enable debug logging for troubleshooting
+              )
+              .timeout(const Duration(seconds: 10));
           debugPrint('\u2705 [Mic] initialize() complete');
         } catch (initEx) {
           initError = initEx.toString();
           debugPrint('\ud83d\uded1 [Speech] initialize() threw: $initEx');
         }
-        
-        debugPrint('\ud83d\udd0d [Speech] initialize result: available=$available, initError=$initError');
+
+        debugPrint(
+            '\ud83d\udd0d [Speech] initialize result: available=$available, initError=$initError');
         try {
-          await RemoteDebugLogger.instance.logMic('INIT_RESULT', 'available: $available, error: $initError')
-            .timeout(const Duration(seconds: 1));
+          await RemoteDebugLogger.instance
+              .logMic('INIT_RESULT', 'available: $available, error: $initError')
+              .timeout(const Duration(seconds: 1));
         } catch (e) {
           debugPrint('\u26a0\ufe0f [RemoteLog] Failed to log init result: $e');
         }
-        
+
         if (!available) {
           debugPrint('\u274c [Mic] Not available');
           // Provide more specific feedback for iOS web
           if (isIOSWeb) {
-            _showSnack('Voice dictation requires Safari permissions. Try the native app for best results.');
+            _showSnack(
+                'Voice dictation requires Safari permissions. Try the native app for best results.');
           } else {
             _showSnack('Mic not available. Check browser permissions.');
           }
           return;
         }
-        
+
         setState(() => _listening = true);
         debugPrint('\ud83c\udfa4 [Speech] Starting to listen...');
-        
+
         try {
-          await _speech.listen(
-            onResult: (result) {
-              debugPrint('\ud83d\udde3\ufe0f [Speech] onResult: ${result.recognizedWords} (final: ${result.finalResult})');
-              if (mounted) setState(() => promptController.text = result.recognizedWords);
-            },
-            listenOptions: SpeechListenOptions(
-              listenMode: ListenMode.dictation,
-              partialResults: true,
-              cancelOnError: true,
-            ),
-            listenFor: const Duration(seconds: 30),
-            pauseFor: const Duration(seconds: 3),
-          ).timeout(const Duration(seconds: 35));
-          
+          await _speech
+              .listen(
+                onResult: (result) {
+                  debugPrint(
+                      '\ud83d\udde3\ufe0f [Speech] onResult: ${result.recognizedWords} (final: ${result.finalResult})');
+                  if (mounted)
+                    setState(
+                        () => promptController.text = result.recognizedWords);
+                },
+                listenOptions: SpeechListenOptions(
+                  listenMode: ListenMode.dictation,
+                  partialResults: true,
+                  cancelOnError: true,
+                ),
+                listenFor: const Duration(seconds: 30),
+                pauseFor: const Duration(seconds: 3),
+              )
+              .timeout(const Duration(seconds: 35));
+
           debugPrint('\u2705 [Speech] listen() called successfully');
         } catch (listenEx) {
           debugPrint('\ud83d\uded1 [Speech] listen() threw: $listenEx');
@@ -1567,34 +1695,36 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
     } catch (e, st) {
       debugPrint('\ud83d\uded1 [Speech] CRASH: mic press failed: $e');
       debugPrint('Stack: $st');
-      
+
       // REMOTE DEBUG LOG: Mic error
       try {
-        await RemoteDebugLogger.instance.logError('Mic press failed', e, st)
-          .timeout(const Duration(seconds: 2));
+        await RemoteDebugLogger.instance
+            .logError('Mic press failed', e, st)
+            .timeout(const Duration(seconds: 2));
       } catch (logErr) {
         debugPrint('\u26a0\ufe0f [RemoteLog] Failed to log mic error: $logErr');
       }
-      
+
       if (isIOSWeb) {
-        _showSnack('Voice input unavailable in iOS preview. Works in native app.');
+        _showSnack(
+            'Voice input unavailable in iOS preview. Works in native app.');
       } else {
         _showSnack('Mic not supported or permission denied.');
       }
-      
+
       try {
         await _speech.stop();
       } catch (stopErr) {
         debugPrint('\u26a0\ufe0f [Speech] stop() error: $stopErr');
       }
-      
+
       if (mounted) setState(() => _listening = false);
     }
   }
 
   Future<void> _toggleFavorite() async {
     if (generatedImageBytes == null) return;
-    
+
     // If already favorited, just show message (unsave is complex without ID tracking)
     if (_isFavorited) {
       _showSnack('Already in your favorites');
@@ -1608,10 +1738,10 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
         timestamp: DateTime.now(),
       );
       await FavoritesManager.addFavorite(outfit);
-      
+
       // Reload or locally update favorites
       await _loadFavorites();
-      
+
       if (mounted) {
         setState(() => _isFavorited = true);
         _showSnack('Saved to Favorites');
@@ -1629,16 +1759,17 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
     final theme = ThemeManager.instance.current;
     // Updated background color to blend with stage
     return Scaffold(
-      backgroundColor: theme.backgroundColor, 
+      backgroundColor: theme.backgroundColor,
       resizeToAvoidBottomInset: true,
       body: Stack(
         children: [
           // 1. Full Screen Background Layer (if needed, but currently just color)
-          
+
           // 2. Centered Content (Tablet View Constraint)
           Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 800), // Max tablet width
+              constraints:
+                  const BoxConstraints(maxWidth: 800), // Max tablet width
               child: Stack(
                 children: [
                   // Main layout: Header at top, Stage fills the rest
@@ -1648,7 +1779,7 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
                       Expanded(child: _stage(current)),
                     ],
                   ),
-                  
+
                   // Floating undo/redo/history just above the footer
                   Positioned(
                     right: 16,
@@ -1686,9 +1817,11 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
                         ],
                       ),
                     ),
-                  
+
                   // Floating Prompt Preview (above footer)
-                  if (promptController.text.isNotEmpty && !_isGenerating && !controller.isDrawerOpen)
+                  if (promptController.text.isNotEmpty &&
+                      !_isGenerating &&
+                      !controller.isDrawerOpen)
                     Positioned(
                       left: 24,
                       right: 24,
@@ -1708,7 +1841,8 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
                   AnimatedBuilder(
                     animation: _drawerAnimation,
                     builder: (context, child) {
-                      if (_drawerAnimation.value == 0) return const SizedBox.shrink();
+                      if (_drawerAnimation.value == 0)
+                        return const SizedBox.shrink();
                       return Positioned.fill(
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
@@ -1717,22 +1851,26 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
                             _closeDrawer();
                           },
                           child: Container(
-                            color: Colors.black.withValues(alpha: 0.25 * _drawerAnimation.value),
+                            color: Colors.black.withValues(
+                                alpha: 0.25 * _drawerAnimation.value),
                           ),
                         ),
                       );
                     },
                   ),
-                    
+
                   // Bottom Drawer (Animated)
                   AnimatedBuilder(
                     animation: _drawerAnimation,
                     builder: (context, child) {
-                      if (_drawerAnimation.value == 0) return const SizedBox.shrink();
-                      
-                      final double sheetHeight = MediaQuery.of(context).size.height * 0.75;
-                      final double offset = sheetHeight * (1 - _drawerAnimation.value);
-                      
+                      if (_drawerAnimation.value == 0)
+                        return const SizedBox.shrink();
+
+                      final double sheetHeight =
+                          MediaQuery.of(context).size.height * 0.75;
+                      final double offset =
+                          sheetHeight * (1 - _drawerAnimation.value);
+
                       return Positioned(
                         key: const ValueKey('sofi_drawer'),
                         left: 0,
@@ -1755,7 +1893,7 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
                       );
                     },
                   ),
-                    
+
                   if (_isGenerating) _spinner(),
 
                   // One-time transparent tap catcher to unlock audio on iPhone Safari/web.
@@ -1768,8 +1906,11 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
                           setState(() => _awaitingFirstSoundUnlock = false);
                           // Play a subtle click to initialize audio route, then speak intro
                           AudioService.instance.playClick();
-                          unawaited(VoiceCoachService.instance.speakWelcomeIntro().catchError((e) {
-                            debugPrint('[VoiceCoach] speakWelcomeIntro error: $e');
+                          unawaited(VoiceCoachService.instance
+                              .speakWelcomeIntro()
+                              .catchError((e) {
+                            debugPrint(
+                                '[VoiceCoach] speakWelcomeIntro error: $e');
                           }));
                         },
                         child: Container(
@@ -1779,11 +1920,15 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
                     ),
 
                   // First-time canvas hint overlay
-                  if (_showCanvasHint && !_isGenerating && !controller.isDrawerOpen)
+                  if (_showCanvasHint &&
+                      !_isGenerating &&
+                      !controller.isDrawerOpen)
                     _buildCanvasHintOverlay(),
 
                   // Premium reminder popup (every 2 generations)
-                  if (_showPremiumReminder && !_isGenerating && !controller.isDrawerOpen)
+                  if (_showPremiumReminder &&
+                      !_isGenerating &&
+                      !controller.isDrawerOpen)
                     _buildPremiumReminderOverlay(),
                 ],
               ),
@@ -1797,7 +1942,7 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
   Widget _header() {
     final theme = ThemeManager.instance.current;
     final bool isDark = theme.type == AppThemeType.black;
-    
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       decoration: BoxDecoration(
@@ -1823,7 +1968,9 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    border: Border.all(color: isDark ? Colors.white54 : Colors.white, width: 1.5),
+                    border: Border.all(
+                        color: isDark ? Colors.white54 : Colors.white,
+                        width: 1.5),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.1),
@@ -1832,7 +1979,8 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
                       ),
                     ],
                   ),
-                  child: const Icon(Icons.auto_awesome, color: Colors.white, size: 18),
+                  child: const Icon(Icons.auto_awesome,
+                      color: Colors.white, size: 18),
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -1847,7 +1995,7 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
               ],
             ),
           ),
-          
+
           // Center: Design Studio Pill
           GestureDetector(
             onTap: () async {
@@ -1857,7 +2005,8 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.white,
+                color:
+                    isDark ? Colors.white.withValues(alpha: 0.1) : Colors.white,
                 borderRadius: _radius20,
                 boxShadow: isDark ? null : SofiStudioTheme.softShadow,
                 border: isDark ? Border.all(color: Colors.white24) : null,
@@ -1872,7 +2021,7 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
               ),
             ),
           ),
-          
+
           // Right: Action Buttons
           Align(
             alignment: Alignment.centerRight,
@@ -1883,7 +2032,9 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
                   _isFavorited ? Icons.favorite : Icons.favorite_border,
                   'Save',
                   _toggleFavorite,
-                  color: _isFavorited ? const Color(0xFFe94560) : theme.headerTextColor,
+                  color: _isFavorited
+                      ? const Color(0xFFe94560)
+                      : theme.headerTextColor,
                 ),
                 const SizedBox(width: 8),
                 _PremiumEntryButton(onTap: _openPremium),
@@ -1895,11 +2046,12 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
     );
   }
 
-  Widget _headerBtn(IconData icon, String label, VoidCallback onTap, {Color? color}) {
+  Widget _headerBtn(IconData icon, String label, VoidCallback onTap,
+      {Color? color}) {
     final theme = ThemeManager.instance.current;
     final bool isDark = theme.type == AppThemeType.black;
     final effectiveColor = color ?? theme.headerTextColor;
-    
+
     return GestureDetector(
       onTap: () async {
         await AudioService.instance.playClick();
@@ -1909,7 +2061,9 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.5),
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.1)
+              : Colors.white.withValues(alpha: 0.5),
           borderRadius: _radius10,
           border: Border.all(color: isDark ? Colors.white24 : Colors.black12),
         ),
@@ -1921,9 +2075,9 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
 
   Widget _stage(SofiDoll? current) {
     // Increase edge bleed slightly to be safe
-    const double edgeBleed = 1.05; 
+    const double edgeBleed = 1.05;
     final theme = ThemeManager.instance.current;
-    
+
     // While initial loading, show a clean loading state instead of default doll
     if (_isInitialLoading) {
       return Container(
@@ -1936,7 +2090,7 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
         ),
       );
     }
-    
+
     final Widget image = generatedImageBytes != null
         ? Image.memory(
             generatedImageBytes!,
@@ -1975,15 +2129,15 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
     final theme = ThemeManager.instance.current;
     final bool isDark = theme.type == AppThemeType.black;
     final text = promptController.text;
-    
+
     return AnimatedOpacity(
       duration: const Duration(milliseconds: 200),
       opacity: text.isNotEmpty ? 1.0 : 0.0,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isDark 
-              ? Colors.black.withValues(alpha: 0.75) 
+          color: isDark
+              ? Colors.black.withValues(alpha: 0.75)
               : Colors.white.withValues(alpha: 0.9),
           borderRadius: _radius16,
           border: Border.all(
@@ -2002,8 +2156,8 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
             Icon(
               _listening ? Icons.mic : Icons.format_quote,
               size: 16,
-              color: _listening 
-                  ? theme.accentColor 
+              color: _listening
+                  ? theme.accentColor
                   : (isDark ? Colors.white54 : Colors.black38),
             ),
             const SizedBox(width: 8),
@@ -2044,7 +2198,7 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
     final theme = ThemeManager.instance.current;
     final bool isDark = theme.type == AppThemeType.black;
     final bool isIOSWeb = kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    
+
     return SafeArea(
       top: false,
       child: Padding(
@@ -2066,11 +2220,12 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
           child: ClipRRect(
             borderRadius: _radius100,
             child: BackdropFilter(
-              filter: ui.ImageFilter.blur(sigmaX: isIOSWeb ? 5 : 10, sigmaY: isIOSWeb ? 5 : 10),
+              filter: ui.ImageFilter.blur(
+                  sigmaX: isIOSWeb ? 5 : 10, sigmaY: isIOSWeb ? 5 : 10),
               child: Container(
                 padding: const EdgeInsets.only(left: 8, right: 8),
-                color: isDark 
-                    ? Colors.black.withValues(alpha: 0.6) 
+                color: isDark
+                    ? Colors.black.withValues(alpha: 0.6)
                     : theme.headerColor.withValues(alpha: 0.85),
                 child: Row(
                   children: [
@@ -2084,13 +2239,13 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
                         controller.openDrawer();
                       },
                     ),
-                    
+
                     // Text Field
                     Expanded(
                       child: TextField(
                         controller: promptController,
                         style: GoogleFonts.poppins(
-                          color: isDark ? Colors.white : Colors.black87, 
+                          color: isDark ? Colors.white : Colors.black87,
                           fontSize: 15,
                         ),
                         maxLines: 1,
@@ -2100,14 +2255,15 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
                             color: isDark ? Colors.white38 : Colors.black38,
                           ),
                           border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                          contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 8),
                           isDense: true,
                         ),
                         textInputAction: TextInputAction.go,
                         onSubmitted: (_) => _onGeneratePressed(),
                       ),
                     ),
-                    
+
                     // Voice Coach Settings
                     IconButton(
                       tooltip: 'Voice Coach',
@@ -2154,7 +2310,9 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
                     IconButton(
                       tooltip: _listening ? 'Stop' : 'Dictate',
                       icon: Icon(_listening ? Icons.mic : Icons.mic_none),
-                      color: _listening ? theme.accentColor : (isDark ? Colors.white70 : Colors.black54),
+                      color: _listening
+                          ? theme.accentColor
+                          : (isDark ? Colors.white70 : Colors.black54),
                       onPressed: () async {
                         await AudioService.instance.playClick();
                         await _onMicPressed();
@@ -2165,27 +2323,34 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
 
                     // Generate / Get Credits Button with pulse animation
                     ScaleTransition(
-                      scale: _isGenerating ? const AlwaysStoppedAnimation(1.0) : (_generateBtnScale ?? const AlwaysStoppedAnimation(1.0)),
+                      scale: _isGenerating
+                          ? const AlwaysStoppedAnimation(1.0)
+                          : (_generateBtnScale ??
+                              const AlwaysStoppedAnimation(1.0)),
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          onTap: _isGenerating ? null : () async {
-                            HapticFeedback.mediumImpact();
-                            if (_outOfCredits) {
-                              // Open paywall directly when credits are exhausted
-                              if (!context.mounted) return;
-                              final didSubscribe = await PaywallSheet.show(
-                                context,
-                                message: "You're out of generation credits. Start your trial or add credits to continue.",
-                              );
-                              if (didSubscribe == true && mounted) {
-                                setState(() => _outOfCredits = false);
-                                _showSnack('Thanks! Try again.');
-                              }
-                              return;
-                            }
-                            _onGeneratePressed();
-                          },
+                          onTap: _isGenerating
+                              ? null
+                              : () async {
+                                  HapticFeedback.mediumImpact();
+                                  if (_outOfCredits) {
+                                    // Open paywall directly when credits are exhausted
+                                    if (!context.mounted) return;
+                                    final didSubscribe =
+                                        await PaywallSheet.show(
+                                      context,
+                                      message:
+                                          "You're out of generation credits. Start your trial or add credits to continue.",
+                                    );
+                                    if (didSubscribe == true && mounted) {
+                                      setState(() => _outOfCredits = false);
+                                      _showSnack('Thanks! Try again.');
+                                    }
+                                    return;
+                                  }
+                                  _onGeneratePressed();
+                                },
                           borderRadius: _radius24,
                           splashColor: Colors.white.withValues(alpha: 0.2),
                           highlightColor: Colors.white.withValues(alpha: 0.1),
@@ -2196,29 +2361,38 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
                               vertical: 10,
                             ),
                             decoration: BoxDecoration(
-                              gradient: _isGenerating ? null : SofiStudioTheme.brandGradient,
-                              color: _isGenerating ? Colors.grey.shade400 : null,
+                              gradient: _isGenerating
+                                  ? null
+                                  : SofiStudioTheme.brandGradient,
+                              color:
+                                  _isGenerating ? Colors.grey.shade400 : null,
                               borderRadius: _radius24,
-                          boxShadow: _isIOSWeb
-                              ? null
-                              : [
-                                  BoxShadow(
-                                    color: (_isGenerating ? Colors.grey : SofiStudioTheme.purple).withValues(alpha: 0.35),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 3),
-                                  )
-                                ],
+                              boxShadow: _isIOSWeb
+                                  ? null
+                                  : [
+                                      BoxShadow(
+                                        color: (_isGenerating
+                                                ? Colors.grey
+                                                : SofiStudioTheme.purple)
+                                            .withValues(alpha: 0.35),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 3),
+                                      )
+                                    ],
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 if (_isGenerating)
                                   const SizedBox(
-                                    width: 16, height: 16,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2, color: Colors.white),
                                   )
                                 else if (_outOfCredits) ...[
-                                  const Icon(Icons.lock, size: 16, color: Colors.white),
+                                  const Icon(Icons.lock,
+                                      size: 16, color: Colors.white),
                                   const SizedBox(width: 6),
                                   Text(
                                     'Get Credits',
@@ -2229,7 +2403,8 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
                                     ),
                                   ),
                                 ] else ...[
-                                  const Icon(Icons.auto_awesome, size: 16, color: Colors.white),
+                                  const Icon(Icons.auto_awesome,
+                                      size: 16, color: Colors.white),
                                   const SizedBox(width: 6),
                                   Text(
                                     'Generate',
@@ -2276,7 +2451,10 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
           decoration: BoxDecoration(
             color: Colors.black.withValues(alpha: 0.10),
             borderRadius: _radius24,
-            border: isIOSWeb ? null : Border.all(color: Colors.black.withValues(alpha: 0.20), width: 1),
+            border: isIOSWeb
+                ? null
+                : Border.all(
+                    color: Colors.black.withValues(alpha: 0.20), width: 1),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -2388,7 +2566,8 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
 
   Widget _spinner() {
     // Collect premium doll paths for fallback
-    final premiumPaths = controller.premiumDolls.map((d) => d.stagePath).toList();
+    final premiumPaths =
+        controller.premiumDolls.map((d) => d.stagePath).toList();
 
     return Positioned.fill(
       child: GenerationLoader(
@@ -2413,7 +2592,7 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
   void _showPremiumReminderPopup() {
     _premiumReminderTimer?.cancel();
     setState(() => _showPremiumReminder = true);
-    
+
     // Auto-dismiss after 10 seconds
     _premiumReminderTimer = Timer(const Duration(seconds: 10), () {
       if (mounted) {
@@ -2514,7 +2693,8 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
                     _openPremium();
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: _radius20,
@@ -2567,7 +2747,9 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
               Icon(
                 icon,
                 size: 24,
-                color: isPrimary ? const Color(0xFF9B59B6) : const Color(0xFF333333),
+                color: isPrimary
+                    ? const Color(0xFF9B59B6)
+                    : const Color(0xFF333333),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -2578,7 +2760,8 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
                       label,
                       style: TextStyle(
                         fontSize: 16,
-                        fontWeight: isPrimary ? FontWeight.w600 : FontWeight.w500,
+                        fontWeight:
+                            isPrimary ? FontWeight.w600 : FontWeight.w500,
                         color: const Color(0xFF1A1A1A),
                       ),
                     ),
@@ -2597,7 +2780,8 @@ class _SofiStudioPageState extends State<SofiStudioPage> with TickerProviderStat
               ),
               Icon(
                 Icons.chevron_right,
-                color: isPrimary ? const Color(0xFF9B59B6) : Colors.grey.shade400,
+                color:
+                    isPrimary ? const Color(0xFF9B59B6) : Colors.grey.shade400,
               ),
             ],
           ),
@@ -2614,21 +2798,28 @@ class _HistoryButton extends StatefulWidget {
   final bool enabled;
   final VoidCallback onTap;
 
-  const _HistoryButton({required this.icon, required this.tooltip, required this.enabled, required this.onTap});
+  const _HistoryButton(
+      {required this.icon,
+      required this.tooltip,
+      required this.enabled,
+      required this.onTap});
 
   @override
   State<_HistoryButton> createState() => _HistoryButtonState();
 }
 
-class _HistoryButtonState extends State<_HistoryButton> with SingleTickerProviderStateMixin {
+class _HistoryButtonState extends State<_HistoryButton>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _scale;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 80));
-    _scale = Tween<double>(begin: 1.0, end: 0.85).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _controller = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 80));
+    _scale = Tween<double>(begin: 1.0, end: 0.85)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -2672,7 +2863,8 @@ class _FrostyCircleButton extends StatelessWidget {
   final IconData icon;
   final String tooltip;
   final VoidCallback? onTap;
-  const _FrostyCircleButton({required this.icon, required this.tooltip, this.onTap});
+  const _FrostyCircleButton(
+      {required this.icon, required this.tooltip, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -2690,7 +2882,8 @@ class _FrostyCircleButton extends StatelessWidget {
               borderRadius: _SofiStudioPageState._radius24,
               border: (kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
                   ? null
-                  : Border.all(color: Colors.black.withValues(alpha: 0.20), width: 1),
+                  : Border.all(
+                      color: Colors.black.withValues(alpha: 0.20), width: 1),
             ),
             child: IconButton(
               icon: Icon(icon, size: 20, color: Colors.black87),
@@ -2830,7 +3023,8 @@ class _HintButton extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.black38),
+            const Icon(Icons.arrow_forward_ios,
+                size: 14, color: Colors.black38),
           ],
         ),
       ),

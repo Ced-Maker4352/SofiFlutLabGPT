@@ -1,14 +1,15 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:firebase_core/firebase_core.dart';
 
 import 'firebase_options.dart';
 import 'package:sofi_test_connect/presentation/splash/splash_page.dart';
-import 'package:sofi_test_connect/services/remote_debug_logger.dart';
 import 'package:sofi_test_connect/services/performance_service.dart';
+import 'package:sofi_test_connect/services/remote_debug_logger.dart';
 import 'package:sofi_test_connect/utils/web_history_fix.dart';
 
 Future<void> main() async {
@@ -25,15 +26,13 @@ Future<void> main() async {
   BindingBase.debugZoneErrorsAreFatal = true;
   WidgetsFlutterBinding.ensureInitialized();
 
-  // iOS-specific optimizations
+  // iOS / mobile optimizations
   if (!kIsWeb) {
-    // Lock orientation to portrait for consistent UX on iPhone
     await SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
     ]);
-    
-    // Set iOS status bar style
+
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
@@ -44,22 +43,32 @@ Future<void> main() async {
   }
 
   // Load environment variables
+  //
+  // IMPORTANT (DreamFlow/Web):
+  // Flutter web serves assets under /assets/ automatically.
+  // If you pass "assets/.env", the browser often fetches "assets/assets/.env".
+  // Since web is already using an inline ModelsLab key, treat .env as truly optional
+  // and avoid noisy stack traces on web.
   try {
-    await dotenv.load(fileName: "assets/.env");
-    debugPrint('[dotenv] Loaded assets/.env');
-  } catch (e, st) {
-    // Do not crash the app if .env is missing; continue with defaults
+    if (kIsWeb) {
+      await dotenv.load(fileName: '.env'); // ✅ web-safe (optional)
+      debugPrint('[dotenv] Loaded .env (web)');
+    } else {
+      await dotenv.load(fileName: 'assets/.env'); // ✅ mobile/desktop
+      debugPrint('[dotenv] Loaded assets/.env');
+    }
+  } catch (e) {
+    // Do not crash the app if .env is missing; continue with defaults.
     debugPrint('[dotenv] Skipping .env load (optional). Error: $e');
-    debugPrint('[dotenv] Stack: $st');
   }
 
+  // Firebase init
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
     debugPrint('[Firebase] initializeApp OK');
   } catch (e, st) {
-    // Surface the error but don’t abort; UI can still render and features may degrade
     debugPrint('[Firebase] initializeApp failed: $e');
     debugPrint('Stack: $st');
   }
@@ -76,11 +85,12 @@ Future<void> main() async {
   // Helpful: print which Firebase project this build is actually using
   try {
     final app = Firebase.app();
-    debugPrint('[Firebase] app="${app.name}" projectId="${app.options.projectId}"');
+    debugPrint(
+        '[Firebase] app="${app.name}" projectId="${app.options.projectId}"');
   } catch (e) {
     debugPrint('[Firebase] Failed to read app/options: $e');
   }
-  
+
   // Initialize remote debug logger (non-fatal)
   try {
     await RemoteDebugLogger.instance.initialize();
@@ -89,48 +99,56 @@ Future<void> main() async {
     debugPrint('[RemoteDebugLogger] init failed: $e');
     debugPrint('Stack: $st');
   }
-  
-  // Initialize performance service (loads saved settings for iOS stability)
+
+  // Initialize performance service
   try {
     await PerformanceService.instance.initialize();
-    debugPrint('[PerformanceService] initialized, performanceMode=${PerformanceService.instance.performanceMode}');
+    debugPrint(
+      '[PerformanceService] initialized, performanceMode=${PerformanceService.instance.performanceMode}',
+    );
   } catch (e) {
     debugPrint('[PerformanceService] init failed: $e');
   }
 
-  // Set up Flutter error handler with guaranteed logging
+  // Flutter framework errors
   FlutterError.onError = (FlutterErrorDetails details) {
-    // Always print locally first
     debugPrint('🛑 FLUTTER ERROR: ${details.exceptionAsString()}');
     debugPrint('Stack: ${details.stack}');
     FlutterError.presentError(details);
-    
-    // Try to log remotely, but don't let it block or fail
+
     try {
-      RemoteDebugLogger.instance.logFatal(
-        'Flutter Error: ${details.exceptionAsString()}',
-        details.exception,
-        details.stack,
-      ).timeout(const Duration(seconds: 2)).catchError((e) {
-        debugPrint('⚠️ Remote log failed: $e');
+      RemoteDebugLogger.instance
+          .logFatal(
+            'Flutter Error: ${details.exceptionAsString()}',
+            details.exception,
+            details.stack,
+          )
+          .timeout(const Duration(seconds: 2))
+          .catchError((Object err) {
+        debugPrint('⚠️ Remote log failed: $err');
       });
-    } catch (e) {
-      debugPrint('⚠️ Remote log exception: $e');
+    } catch (err) {
+      debugPrint('⚠️ Remote log exception: $err');
     }
   };
 
-  // Catch framework-independent errors (PlatformDispatcher)
+  // Non-framework errors (platform dispatcher)
   PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
     debugPrint('🛑 PLATFORM ERROR: $error');
     debugPrint('Stack: $stack');
+
     try {
-      RemoteDebugLogger.instance.logFatal('PlatformDispatcher Error', error, stack)
-        .timeout(const Duration(seconds: 2))
-        .catchError((e) => debugPrint('⚠️ Remote log failed: $e'));
-    } catch (e) {
-      debugPrint('⚠️ Remote log exception: $e');
+      RemoteDebugLogger.instance
+          .logFatal('PlatformDispatcher Error', error, stack)
+          .timeout(const Duration(seconds: 2))
+          .catchError((Object err) {
+        debugPrint('⚠️ Remote log failed: $err');
+      });
+    } catch (err) {
+      debugPrint('⚠️ Remote log exception: $err');
     }
-    return true; // prevents default crash logging from duplicating
+
+    return true;
   };
 
   runApp(const SofiSaintApp());
@@ -152,13 +170,11 @@ class SofiSaintApp extends StatelessWidget {
           secondary: Colors.purpleAccent,
           surface: Colors.grey[900]!,
         ),
-        // iOS-friendly styling
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.transparent,
           elevation: 0,
           systemOverlayStyle: SystemUiOverlayStyle.light,
         ),
-        // Cupertino-style page transitions on iOS
         pageTransitionsTheme: const PageTransitionsTheme(
           builders: {
             TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
@@ -167,16 +183,14 @@ class SofiSaintApp extends StatelessWidget {
         ),
       ),
       home: const SplashPage(),
-      // Enable iOS-style scroll physics globally
       scrollBehavior: const _IOSScrollBehavior(),
     );
   }
 }
 
-/// Custom scroll behavior for iOS-like bouncy physics
 class _IOSScrollBehavior extends ScrollBehavior {
   const _IOSScrollBehavior();
-  
+
   @override
   ScrollPhysics getScrollPhysics(BuildContext context) {
     return const BouncingScrollPhysics();

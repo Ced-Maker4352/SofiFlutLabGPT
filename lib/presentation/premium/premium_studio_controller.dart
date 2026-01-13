@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
+
 import '../../services/two_step_generation_service.dart';
 
 class PremiumStudioController extends ChangeNotifier {
@@ -10,20 +12,27 @@ class PremiumStudioController extends ChangeNotifier {
   bool _isLoading = false;
   bool _bodyLocked = false;
 
-  String? step1Image;
-  String? finalImage;
+  Uint8List? _identityLockedImage;
+  Uint8List? _finalStyledImage;
 
   bool get isLoading => _isLoading;
   bool get bodyLocked => _bodyLocked;
 
-  Future<void> runStep1(String headshotBase64) async {
+  Uint8List? get identityLockedImage => _identityLockedImage;
+  Uint8List? get finalStyledImage => _finalStyledImage;
+
+  Future<void> runStep1({
+    required Uint8List baseImage,
+    required String identityPrompt,
+  }) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      final result = await _service.runPipeline(userHeadshotBase64: headshotBase64);
-      step1Image = result.step1FullBodyBase64;
-      finalImage = result.finalStylizedBase64;
+      _identityLockedImage = await _service.runStep1IdentityLock(
+        baseImage: baseImage,
+        prompt: identityPrompt,
+      );
       _bodyLocked = true;
     } catch (e) {
       debugPrint('❌ PremiumStudioController.runStep1 failed: $e');
@@ -31,5 +40,33 @@ class PremiumStudioController extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> runStep2({
+    required String stylePrompt,
+  }) async {
+    if (_identityLockedImage == null) return;
+
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      _finalStyledImage = await _service.generateStyledOnly(
+        identityLockedImage: _identityLockedImage!,
+        prompt: stylePrompt,
+      );
+    } catch (e) {
+      debugPrint('❌ PremiumStudioController.runStep2 failed: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  void reset() {
+    _identityLockedImage = null;
+    _finalStyledImage = null;
+    _bodyLocked = false;
+    notifyListeners();
   }
 }
