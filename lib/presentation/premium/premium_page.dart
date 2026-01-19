@@ -236,18 +236,18 @@ Do not crop or zoom.
                 const Center(
                   child: Text(
                     'Select Photo',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
                   ),
                 ),
                 const SizedBox(height: 12),
                 ListTile(
-                  leading: const Icon(Icons.camera_alt_outlined),
-                  title: const Text('Take Photo'),
+                  leading: const Icon(Icons.camera_alt_outlined, color: Color(0xFF333333)),
+                  title: const Text('Take Photo', style: TextStyle(color: Color(0xFF333333))),
                   onTap: () => Navigator.pop(ctx, 0),
                 ),
                 ListTile(
-                  leading: const Icon(Icons.photo_library_outlined),
-                  title: const Text('Choose from Gallery'),
+                  leading: const Icon(Icons.photo_library_outlined, color: Color(0xFF333333)),
+                  title: const Text('Choose from Gallery', style: TextStyle(color: Color(0xFF333333))),
                   onTap: () => Navigator.pop(ctx, 1),
                 ),
               ],
@@ -518,6 +518,7 @@ Do not crop or zoom.
                         child: Text(
                           'Refine Crop',
                           style: TextStyle(
+                            color: Color(0xFF333333),
                               fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -814,8 +815,9 @@ Do not crop or zoom.
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Premium Theme'),
-        content: const Text('This style is part of a premium theme pack.'),
+        backgroundColor: Colors.white,
+        title: const Text('Premium Theme', style: TextStyle(color: Color(0xFF333333))),
+        content: const Text('This style is part of a premium theme pack.', style: TextStyle(color: Color(0xFF333333))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -873,6 +875,7 @@ Do not crop or zoom.
                               .headlineSmall
                               ?.copyWith(
                                 fontWeight: FontWeight.bold,
+                                color: const Color(0xFF333333),
                               ),
                         ),
                       ),
@@ -896,7 +899,7 @@ Do not crop or zoom.
                   const SizedBox(height: 24),
                   const Text(
                     'Choose a style',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF333333)),
                   ),
                   const SizedBox(height: 12),
                   Wrap(
@@ -1034,63 +1037,46 @@ Do not crop or zoom.
               Column(
                 children: [
                   Expanded(
-                    child: styledBytes == null
-                        ? Column(
-                            children: [
-                              _PromoCarousel(
-                                  onDiscoverThemeSelected: _openThemeSheet),
-                              Expanded(
-                                child: Center(
-                                  child: _needsUpload
-                                      ? _buildUploadPrompt()
-                                      : lockedBodyBytes != null
-                                          ? Padding(
-                                              padding:
-                                                  const EdgeInsets.all(16.0),
-                                              child: Stack(
-                                                alignment: Alignment.topRight,
-                                                children: [
-                                                  AspectRatio(
-                                                    aspectRatio: 3 / 4,
-                                                    child: StageImage(
-                                                        base64: _b64(
-                                                            lockedBodyBytes)!),
-                                                  ),
-                                                  Padding(
-                                                    padding:
-                                                        const EdgeInsets.all(
-                                                            8.0),
-                                                    child: FloatingActionButton
-                                                        .small(
-                                                      heroTag:
-                                                          'change_photo_btn',
-                                                      onPressed: _resetIdentity,
-                                                      backgroundColor:
-                                                          Colors.white,
-                                                      foregroundColor:
-                                                          Colors.black,
-                                                      tooltip: 'Change Photo',
-                                                      child: const Icon(
-                                                          Icons.edit),
-                                                    ),
-                                                  ),
-                                                ],
+                    child: Column(
+                      children: [
+                        if (styledBytes == null)
+                          _PromoCarousel(
+                              onDiscoverThemeSelected: _openThemeSheet),
+                        Expanded(
+                          child: styledBytes == null
+                              ? (_needsUpload
+                                  ? Center(child: _buildUploadPrompt())
+                                  : lockedBodyBytes != null
+                                      ? Stack(
+                                          children: [
+                                            Positioned.fill(
+                                              child: StageImage(
+                                                  base64: _b64(lockedBodyBytes)!),
+                                            ),
+                                            Positioned(
+                                              top: 8,
+                                              right: 8,
+                                              child: FloatingActionButton.small(
+                                                heroTag: 'change_photo_btn',
+                                                onPressed: _resetIdentity,
+                                                backgroundColor: Colors.white,
+                                                foregroundColor: Colors.black,
+                                                tooltip: 'Change Photo',
+                                                child: const Icon(Icons.edit),
                                               ),
-                                            )
-                                          : const SizedBox.shrink(),
+                                            ),
+                                          ],
+                                        )
+                                      : const SizedBox.shrink())
+                              : SizedBox.expand(
+                                  child: StageImage(
+                                    base64: _b64(styledBytes)!,
+                                    fit: BoxFit.cover,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          )
-                        : Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: AspectRatio(
-                                aspectRatio: 3 / 4,
-                                child: StageImage(base64: _b64(styledBytes)!),
-                              ),
-                            ),
-                          ),
+                        ),
+                      ],
+                    ),
                   ),
 
                   // Bottom Controls

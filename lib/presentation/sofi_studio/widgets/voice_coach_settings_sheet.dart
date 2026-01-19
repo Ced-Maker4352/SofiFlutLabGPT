@@ -101,7 +101,7 @@ class _VoiceCoachSettingsSheetState extends State<VoiceCoachSettingsSheet> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Voice Coach', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                        const Text('Voice Coach', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: SofiStudioTheme.charcoal)),
                         Switch(
                           value: _enabled,
                           activeColor: SofiStudioTheme.purple,
@@ -116,7 +116,7 @@ class _VoiceCoachSettingsSheetState extends State<VoiceCoachSettingsSheet> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Say my name', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                        const Text('Say my name', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: SofiStudioTheme.charcoal)),
                         Switch(
                           value: _sayName,
                           activeColor: SofiStudioTheme.blue,
@@ -131,9 +131,12 @@ class _VoiceCoachSettingsSheetState extends State<VoiceCoachSettingsSheet> {
                     TextField(
                       controller: _nameCtrl,
                       textInputAction: TextInputAction.next,
+                      style: const TextStyle(color: SofiStudioTheme.charcoal),
                       decoration: const InputDecoration(
                         labelText: 'Preferred name',
                         hintText: 'e.g., Sophie',
+                        labelStyle: TextStyle(color: SofiStudioTheme.charcoal),
+                        hintStyle: TextStyle(color: Colors.grey),
                         border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                         isDense: true,
                       ),
@@ -144,9 +147,12 @@ class _VoiceCoachSettingsSheetState extends State<VoiceCoachSettingsSheet> {
                     TextField(
                       controller: _phoneticCtrl,
                       textInputAction: TextInputAction.done,
+                      style: const TextStyle(color: SofiStudioTheme.charcoal),
                       decoration: const InputDecoration(
                         labelText: 'Phonetic spelling (optional)',
                         hintText: 'e.g., Saw-fee',
+                        labelStyle: TextStyle(color: SofiStudioTheme.charcoal),
+                        hintStyle: TextStyle(color: Colors.grey),
                         border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                         isDense: true,
                       ),
