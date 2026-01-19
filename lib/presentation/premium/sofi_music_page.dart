@@ -12,9 +12,19 @@ class SofiMusicPage extends StatefulWidget {
 class _SofiMusicPageState extends State<SofiMusicPage> with SingleTickerProviderStateMixin {
   // Sofi Saint tracks (cloud paths)
   final List<Map<String, String>> _tracks = [
-    {'title': 'All Night (Instrumental)', 'artist': 'Sofi Saint', 'cloudPath': 'audio/Sofi Saint - All Night  INSTRO.mp3', 'duration': '3:42'},
-    {'title': 'No Time Left', 'artist': 'Sofi Saint', 'cloudPath': 'audio/Sofi Saint NO TIME LEFT - No Time Left.mp3', 'duration': '4:15'},
-    {'title': 'Be Still', 'artist': 'Sofi Saint', 'cloudPath': 'audio/01 - Sofi Saint - Be Still.mp3', 'duration': '3:58'},
+    {'title': 'Down Boy', 'artist': 'Sofi Saint', 'cloudPath': 'audio/Sofi Music/01 Sofi Saint - Down Boy.m4a'},
+    {'title': '3 AM', 'artist': 'Sofi Saint', 'cloudPath': 'audio/Sofi Music/01 3 AM.m4a'},
+    {'title': 'All in the Head', 'artist': 'Sofi Saint', 'cloudPath': 'audio/Sofi Music/01 Sofi Saint - All in the Head.m4a'},
+    {'title': 'Perfect Legacy', 'artist': 'Sofi Saint', 'cloudPath': 'audio/Sofi Music/01 Sofi Saint - Perfect Legacy.m4a'},
+    {'title': 'QRED (Queen Ready Everyday)', 'artist': 'Sofi Saint', 'cloudPath': 'audio/Sofi Music/01 Sofi Saint - QRED ( Queen Ready Everyday )( Round ).mp3'},
+    {'title': 'Tabanka', 'artist': 'Sofi Saint', 'cloudPath': 'audio/Sofi Music/01 Sofi Saint - Tabanka.mp3'},
+    {'title': 'Them so Jealous', 'artist': 'Sofi Saint', 'cloudPath': 'audio/Sofi Music/01 Sofi Saint - Them so Jealous.m4a'},
+    {'title': 'Winner 2022', 'artist': 'Sofi Saint', 'cloudPath': 'audio/Sofi Music/01 Sofi Saint - Winner 2022 (M).mp3'},
+    {'title': 'Them So Jealous (Remix)', 'artist': 'Sofi Saint feat. Kjigga', 'cloudPath': 'audio/Sofi Music/01 Them So Jealous (feat. Kjigga) [Remix].m4a'},
+    {'title': 'Watch My Body', 'artist': 'Sofi Saint', 'cloudPath': 'audio/Sofi Music/01 Watch My Body.m4a'},
+    {'title': 'Die 4 U', 'artist': 'Sofi Saint feat. Mick Monday', 'cloudPath': 'audio/Sofi Music/03 Die 4 U (feat. Mick Monday).m4a'},
+    {'title': 'No Regrets', 'artist': 'Sofi Saint', 'cloudPath': 'audio/Sofi Music/SOFI SAINT - NO REGRETS MASTER.m4a'},
+    {'title': 'Redemption', 'artist': 'Sofi Saint', 'cloudPath': 'audio/Sofi Music/Sofi Saint - Redemption (M).mp3'},
   ];
 
   // Cached download URLs
@@ -61,6 +71,14 @@ class _SofiMusicPageState extends State<SofiMusicPage> with SingleTickerProvider
     _player.durationStream.listen((dur) {
       if (!mounted) return;
       setState(() => _duration = dur ?? Duration.zero);
+    });
+
+    // Auto-play next track when current finishes
+    _player.processingStateStream.listen((state) {
+      if (!mounted) return;
+      if (state == ProcessingState.completed && _currentTrackIndex != -1) {
+        _skipNext();
+      }
     });
 
     // Pre-fetch URLs in background
@@ -309,13 +327,7 @@ class _SofiMusicPageState extends State<SofiMusicPage> with SingleTickerProvider
               : const Icon(Icons.music_note_rounded, color: Colors.white70, size: 24),
         ),
         title: Text(track['title']!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: isCurrent ? const Color(0xFFE040FB) : Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
-        subtitle: Row(
-          children: [
-            Text(track['artist']!, style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 13)),
-            const SizedBox(width: 8),
-            Text(track['duration']!, style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12)),
-          ],
-        ),
+        subtitle: Text(track['artist']!, style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 13)),
         trailing: isLoading
             ? const SizedBox(width: 40, height: 40, child: Padding(padding: EdgeInsets.all(8), child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFE040FB))))
             : IconButton(
