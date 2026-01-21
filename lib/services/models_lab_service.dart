@@ -11,10 +11,20 @@ class ModelsLabService {
 
   static Uri _generateUri() => Uri.parse('$_backendBaseUrl/generateImageFunc');
 
+  /// Default negative prompt to prevent common issues like facial distortion
+  static const String _defaultNegativePrompt = 
+    'distorted face, distorted eyes, asymmetrical eyes, cross-eyed, uneven eyes, '
+    'distorted lips, distorted mouth, distorted nose, deformed face, '
+    'blurry face, low quality face, bad anatomy, extra limbs, '
+    'mutated hands, bad hands, bad fingers, fused fingers, '
+    'ugly, deformed, noisy, blurry, low quality, grainy, '
+    'unnatural skin, unnatural creases, wrinkled clothing artifacts';
+
   /// One-step image-to-image generation
   static Future<String> generateFromImage({
     required Uint8List initImageBytes,
     required String prompt,
+    String? negativePrompt,
   }) async {
     if (initImageBytes.isEmpty) {
       throw Exception('Init image bytes are empty');
@@ -23,6 +33,11 @@ class ModelsLabService {
     final String initImageDataUrl =
         'data:image/png;base64,${base64Encode(initImageBytes)}';
 
+    // Combine custom negative prompt with defaults
+    final effectiveNegativePrompt = negativePrompt != null && negativePrompt.isNotEmpty
+        ? '$negativePrompt, $_defaultNegativePrompt'
+        : _defaultNegativePrompt;
+
     final response = await http.post(
       _generateUri(),
       headers: const {
@@ -30,6 +45,7 @@ class ModelsLabService {
       },
       body: jsonEncode({
         'prompt': prompt,
+        'negative_prompt': effectiveNegativePrompt,
         'init_image': initImageDataUrl,
         'model_id': 'seededit-i2i',
       }),

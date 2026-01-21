@@ -40,6 +40,20 @@ import 'widgets/generation_loader.dart';
 import 'widgets/voice_coach_settings_sheet.dart';
 import 'widgets/sofi_settings_sheet.dart';
 
+
+class _QuickMood {
+  final String id;
+  final String label;
+  final IconData icon;
+  final String promptFragment;
+  const _QuickMood({
+    required this.id,
+    required this.label,
+    required this.icon,
+    required this.promptFragment,
+  });
+}
+
 class SofiStudioPage extends StatefulWidget {
   const SofiStudioPage({super.key});
 
@@ -77,6 +91,10 @@ class _SofiStudioPageState extends State<SofiStudioPage>
   Uint8List? generatedImageBytes;
   final List<Uint8List> _history = [];
   final List<Uint8List> _redoStack = [];
+  
+  // CRITICAL: Store the ORIGINAL base doll image to prevent generation drift.
+  // This ensures we always generate from a clean source, not from previous outputs.
+  Uint8List? _originalBaseDollBytes;
 
   // ignore: unused_field
   List<FavoriteOutfit> _favorites = [];
@@ -95,6 +113,76 @@ class _SofiStudioPageState extends State<SofiStudioPage>
   // When set, this overrides the default "3D Sofi Studio doll..." base prompt
   // allowing premium styles (e.g. Comic Book) to persist during editing.
   String? _activeBaseStylePrompt;
+
+  // ================================
+  // QUICK MOOD (Startup-ready)
+  // ================================
+  // Mood is a LIGHT style layer (lighting/palette/vibe) — not a full prompt rewrite.
+  // It must NEVER be stacked/duplicated inside the free-form text field.
+  //
+  // Default mood is always active so the user never sees a “blank direction” state.
+  static const List<_QuickMood> _quickMoods = [
+    _QuickMood(
+      id: 'glow',
+      label: 'Glow',
+      icon: Icons.auto_awesome,
+      // Warm, upbeat, safe default (no brand/celebrity references).
+      promptFragment:
+          'bright joyful mood, warm studio lighting, soft glow, clean cinematic color, high-quality render',
+    ),
+    _QuickMood(
+      id: 'noir',
+      label: 'Noir',
+      icon: Icons.nights_stay,
+      promptFragment:
+          'moody noir vibe, low-key lighting, subtle shadows, high contrast, refined cinematic tone',
+    ),
+    _QuickMood(
+      id: 'pastel',
+      label: 'Pastel',
+      icon: Icons.palette,
+      promptFragment:
+          'pastel palette, soft airy lighting, gentle gradients, dreamy boutique style, clean background',
+    ),
+    _QuickMood(
+      id: 'street',
+      label: 'Street',
+      icon: Icons.flash_on,
+      promptFragment:
+          'urban street style vibe, crisp lighting, modern editorial look, sharp details, confident energy',
+    ),
+    _QuickMood(
+      id: 'lux',
+      label: 'Lux',
+      icon: Icons.diamond,
+      promptFragment:
+          'luxury fashion mood, premium materials, glossy highlights, elegant studio lighting, high-end editorial finish',
+    ),
+  ];
+
+  // Always keep one active mood.
+  String _activeMoodId = 'glow';
+
+  _QuickMood get _activeMood =>
+      _quickMoods.firstWhere((m) => m.id == _activeMoodId,
+          orElse: () => _quickMoods.first);
+
+  void _setQuickMood(String moodId) {
+    if (_activeMoodId == moodId) return;
+    setState(() => _activeMoodId = moodId);
+
+    // REMOTE DEBUG LOG: Mood changed (non-blocking)
+    unawaited(RemoteDebugLogger.instance.logInteraction('MOOD_CHANGED', {
+      'moodId': moodId,
+      'label': _activeMood.label,
+    }).catchError((_) {}));
+
+    // Subtle feedback
+    try {
+      unawaited(AudioService.instance.playClick());
+    } catch (_) {}
+  }
+
 
   // Debounce timer for category selections (prevents crash from rapid taps)
   Timer? _selectionDebounceTimer;
@@ -303,6 +391,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
     controller.onClearGenerated = () {
       setState(() {
         generatedImageBytes = null;
+        _originalBaseDollBytes = null; // Also clear original base on reset
         _history.clear();
         _redoStack.clear();
         _activeBaseStylePrompt = null;
@@ -321,9 +410,28 @@ class _SofiStudioPageState extends State<SofiStudioPage>
           ..addAll(storedHistory);
         if (_history.isNotEmpty) {
           generatedImageBytes = _history.last;
+          // NOTE: We intentionally do NOT set _originalBaseDollBytes here.
+          // History images are previous outputs. To prevent drift, we'll load
+          // the original base from the current doll on first generation.
         }
         _isInitialLoading = false; // Canvas is now ready to display
       });
+      
+      // Load the original base doll in background to prevent drift
+      if (controller.currentDoll != null) {
+        try {
+          final baseDollBytes = await _loadDollImage(
+            controller.currentDoll!.stagePath,
+            controller.currentDoll!.isStoragePath,
+          ).timeout(const Duration(seconds: 10));
+          if (mounted) {
+            _originalBaseDollBytes = baseDollBytes;
+            debugPrint('[SofiStudio] ✅ Preloaded original base doll for drift prevention');
+          }
+        } catch (e) {
+          debugPrint('[SofiStudio] ⚠️ Could not preload base doll: $e');
+        }
+      }
     } catch (e) {
       debugPrint('[SofiStudio] History load error: $e');
       if (mounted) setState(() => _isInitialLoading = false);
@@ -474,15 +582,18 @@ class _SofiStudioPageState extends State<SofiStudioPage>
         throw Exception('Empty image bytes received');
       }
 
-      // Update canvas with the new doll image
+      // Update canvas with the new doll image AND store as original base
       if (mounted) {
         setState(() {
           generatedImageBytes = stageBytes;
+          // CRITICAL: Store this as the original base to prevent generation drift
+          _originalBaseDollBytes = stageBytes;
           _history.add(stageBytes);
           _redoStack.clear();
           _isFavorited = false;
         });
         debugPrint('[SofiStudio] Canvas state updated with new doll image');
+        debugPrint('[SofiStudio] ✅ Original base doll stored (${stageBytes.length} bytes) - will use for all generations');
       }
 
       // Save to storage in background
@@ -728,11 +839,20 @@ class _SofiStudioPageState extends State<SofiStudioPage>
     // Ensure space separator if needed
     if (!base.endsWith(' ')) buffer.write(' ');
 
+    // CRITICAL: Add identity preservation instructions to prevent facial drift
+    buffer.write('IMPORTANT: Preserve the exact facial features, eye shape, eye color, lip shape, skin tone, and hairstyle from the original image. ');
+    buffer.write('Only modify the clothing and accessories as specified. ');
+    buffer.write('Keep the character\'s identity, proportions, and pose consistent. ');
+
+
+    // QUICK MOOD LAYER (single source of truth)
+    // Keep this separate from the manual text field to prevent prompt stacking chaos.
+    buffer.write('Mood style: ${_activeMood.promptFragment}. ');
     // Use the text box as the source of truth for all edits.
     // This supports "Stacking" (multiple items) and manual edits.
     final manual = promptController.text.trim();
     if (manual.isNotEmpty) {
-      buffer.write('$manual ');
+      buffer.write('Outfit changes: $manual ');
     }
 
     return buffer.toString();
@@ -816,16 +936,32 @@ class _SofiStudioPageState extends State<SofiStudioPage>
 
     try {
       // Step 1: Load base image
+      // CRITICAL FIX: Always use the ORIGINAL base doll image, NOT the previous generation output.
+      // This prevents "generation drift" where artifacts compound with each generation.
       debugPrint('\ud83d\udcbe [Generation] Loading base image...');
       Uint8List baseBytes;
       try {
-        baseBytes = generatedImageBytes ??
-            await _loadDollImage(
-              controller.currentDoll!.stagePath,
-              controller.currentDoll!.isStoragePath,
-            ).timeout(const Duration(seconds: 10));
+        // Priority order:
+        // 1. Original base doll (stored when doll was selected) - PREFERRED
+        // 2. Load fresh from doll's stage path - FALLBACK
+        // NEVER use generatedImageBytes as base - that causes drift!
+        if (_originalBaseDollBytes != null && _originalBaseDollBytes!.isNotEmpty) {
+          baseBytes = _originalBaseDollBytes!;
+          debugPrint(
+              '\u2705 [Generation] Using ORIGINAL base doll (${baseBytes.length} bytes) - drift prevention active');
+        } else {
+          // Fallback: Load the doll's stage image fresh
+          debugPrint('[Generation] ⚠️ No stored original, loading fresh from doll stage...');
+          baseBytes = await _loadDollImage(
+            controller.currentDoll!.stagePath,
+            controller.currentDoll!.isStoragePath,
+          ).timeout(const Duration(seconds: 10));
+          // Store it for future generations
+          _originalBaseDollBytes = baseBytes;
+          debugPrint('[Generation] ✅ Fresh base loaded and stored for future generations');
+        }
         debugPrint(
-            '\u2705 [Generation] Base image loaded (${baseBytes.length} bytes)');
+            '\u2705 [Generation] Base image ready (${baseBytes.length} bytes)');
       } catch (e, st) {
         debugPrint(
             '\ud83d\uded1 [Generation] CRASH: Failed to load base image: $e');
@@ -1076,8 +1212,8 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       debugPrint('\u2702\ufe0f [SetImage] Starting auto-crop...');
       final trimmed = await _autoCropDarkBorders(
         bytes,
-        darknessThreshold: 45,
-        maxBorderFractionPerSide: 0.45,
+        darknessThreshold: 25, // REDUCED from 45 to avoid catching facial shadows
+        maxBorderFractionPerSide: 0.20, // REDUCED from 0.45 to be more conservative
       ).timeout(const Duration(seconds: 15));
 
       debugPrint(
@@ -1108,12 +1244,13 @@ class _SofiStudioPageState extends State<SofiStudioPage>
   }
 
   /// Crops uniformly dark margins (e.g., black letterboxing) from an image.
+  /// CONSERVATIVE SETTINGS to preserve facial features and avoid quality loss.
   Future<Uint8List> _autoCropDarkBorders(
     Uint8List input, {
     int darknessThreshold =
-        45, // Increased from 32 to catch lighter blacks/artifacts
+        25, // Conservative: only pure black/very dark pixels
     double maxBorderFractionPerSide =
-        0.45, // Increased from 0.3 to allow larger crops
+        0.20, // Conservative: max 20% crop per side
   }) async {
     try {
       debugPrint('\ud83d\udd0d [Crop] Decoding image codec...');
@@ -1178,8 +1315,8 @@ class _SofiStudioPageState extends State<SofiStudioPage>
             darkCount++;
           }
         }
-        // Consider the row dark if > 90% of considered pixels are dark (was 95%)
-        return darkCount >= (w * 0.90).floor();
+        // STRICTER: 95% of pixels must be dark (restored from 90%)
+        return darkCount >= (w * 0.95).floor();
       }
 
       bool colIsDark(int x, int top, int bottom) {
@@ -1197,7 +1334,8 @@ class _SofiStudioPageState extends State<SofiStudioPage>
             darkCount++;
           }
         }
-        return darkCount >= ((bottom - top + 1) * 0.90).floor();
+        // STRICTER: 95% of pixels must be dark
+        return darkCount >= ((bottom - top + 1) * 0.95).floor();
       }
 
       int top = 0;
@@ -1232,8 +1370,18 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       final int newW = (right - left + 1).clamp(1, w);
       final int newH = (bottom - top + 1).clamp(1, h);
 
+      // SAFETY: Only crop if we're removing more than 5% total area
+      // This prevents unnecessary re-encoding for minimal crops
+      final double cropPercentage = 1.0 - ((newW * newH) / (w * h));
+      if (cropPercentage < 0.05) {
+        debugPrint('\ud83d\udd0d [Crop] Minimal crop detected (${(cropPercentage * 100).toStringAsFixed(1)}%), keeping original to preserve quality');
+        return input;
+      }
+
       // If nothing cropped, return original
       if (newW == w && newH == h) return input;
+
+      debugPrint('\ud83d\udd0d [Crop] Cropping from ${w}x$h to ${newW}x$newH (${(cropPercentage * 100).toStringAsFixed(1)}% reduction)');
 
       final ui.PictureRecorder recorder = ui.PictureRecorder();
       final ui.Canvas canvas = ui.Canvas(recorder);
@@ -1241,7 +1389,12 @@ class _SofiStudioPageState extends State<SofiStudioPage>
           left.toDouble(), top.toDouble(), newW.toDouble(), newH.toDouble());
       final ui.Rect dst =
           ui.Rect.fromLTWH(0, 0, newW.toDouble(), newH.toDouble());
-      final ui.Paint paint = ui.Paint();
+      
+      // QUALITY FIX: Use high-quality filtering to preserve details
+      final ui.Paint paint = ui.Paint()
+        ..filterQuality = FilterQuality.high
+        ..isAntiAlias = true;
+      
       canvas.drawImageRect(image, src, dst, paint);
       final ui.Picture picture = recorder.endRecording();
       final ui.Image cropped = await picture.toImage(newW, newH);
@@ -1829,6 +1982,15 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                       child: _buildPromptPreview(),
                     ),
 
+                  // Quick Mood Bar (always available, no drawer required)
+                  if (!_isGenerating && !controller.isDrawerOpen)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 86, // sits just above the footer pill
+                      child: _buildQuickMoodBar(),
+                    ),
+
                   // Floating "Giant Pill" Footer
                   Positioned(
                     left: 0,
@@ -1938,6 +2100,187 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       ),
     );
   }
+
+
+  Widget _buildStartupStagePlaceholder() {
+    final theme = ThemeManager.instance.current;
+    final bool isDark = theme.type == AppThemeType.black;
+
+    // A lightweight “canvas is alive” stage with the active mood,
+    // designed to avoid blocking first render (no images, no network).
+    return Container(
+      color: theme.backgroundColor,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDark
+                      ? [
+                          Colors.black.withValues(alpha: 0.90),
+                          Colors.black.withValues(alpha: 0.75),
+                          theme.accentColor.withValues(alpha: 0.15),
+                        ]
+                      : [
+                          theme.headerColor.withValues(alpha: 0.95),
+                          theme.backgroundColor.withValues(alpha: 0.95),
+                          theme.accentColor.withValues(alpha: 0.10),
+                        ],
+                ),
+              ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.center,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _activeMood.icon,
+                  size: 40,
+                  color: isDark ? Colors.white70 : Colors.black54,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  _activeMood.label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white70 : Colors.black54,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Ready to generate',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: isDark ? Colors.white38 : Colors.black38,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickMoodBar() {
+    final theme = ThemeManager.instance.current;
+    final bool isDark = theme.type == AppThemeType.black;
+    final bool isIOSWeb = kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: ClipRRect(
+        borderRadius: _radius20,
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(
+            sigmaX: isIOSWeb ? 5 : 10,
+            sigmaY: isIOSWeb ? 5 : 10,
+          ),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.black.withValues(alpha: 0.45)
+                  : theme.headerColor.withValues(alpha: 0.78),
+              borderRadius: _radius20,
+              border: Border.all(
+                color: isDark ? Colors.white24 : Colors.black12,
+              ),
+              boxShadow: isIOSWeb
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      )
+                    ],
+            ),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                children: [
+                  Text(
+                    'Mood',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white54 : Colors.black54,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  ..._quickMoods.map((m) {
+                    final bool active = m.id == _activeMoodId;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: GestureDetector(
+                        onTap: () => _setQuickMood(m.id),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 7),
+                          decoration: BoxDecoration(
+                            borderRadius: _radius16,
+                            color: active
+                                ? theme.accentColor.withValues(alpha: isDark ? 0.28 : 0.18)
+                                : (isDark
+                                    ? Colors.white.withValues(alpha: 0.06)
+                                    : Colors.white.withValues(alpha: 0.60)),
+                            border: Border.all(
+                              color: active
+                                  ? theme.accentColor.withValues(alpha: 0.55)
+                                  : (isDark ? Colors.white24 : Colors.black12),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                m.icon,
+                                size: 14,
+                                color: active
+                                    ? theme.accentColor
+                                    : (isDark ? Colors.white54 : Colors.black45),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                m.label,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: active
+                                      ? (isDark
+                                          ? Colors.white
+                                          : Colors.black87)
+                                      : (isDark
+                                          ? Colors.white70
+                                          : Colors.black54),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
 
   Widget _header() {
     final theme = ThemeManager.instance.current;
@@ -2078,17 +2421,10 @@ class _SofiStudioPageState extends State<SofiStudioPage>
     const double edgeBleed = 1.05;
     final theme = ThemeManager.instance.current;
 
-    // While initial loading, show a clean loading state instead of default doll
+    // While initial loading, show an instant “studio-ready” placeholder
+    // (canvas visible immediately, mood already active).
     if (_isInitialLoading) {
-      return Container(
-        color: theme.backgroundColor,
-        child: const Center(
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.white54),
-          ),
-        ),
-      );
+      return _buildStartupStagePlaceholder();
     }
 
     final Widget image = generatedImageBytes != null
