@@ -9,8 +9,11 @@ import 'package:firebase_storage/firebase_storage.dart';
 
 import 'package:sofi_test_connect/services/audio_service.dart';
 
-// ✅ CORRECT + FINAL import (facade file)
+// Mood entry
 import 'package:sofi_test_connect/presentation/mood/mood_camera_entry_page.dart';
+
+// 🚀 FINAL DESTINATION
+import 'package:sofi_test_connect/presentation/sofi_studio/sofi_studio_page.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -39,7 +42,6 @@ class _SplashPageState extends State<SplashPage> {
     await _ensureFirebaseAuth();
     if (!mounted) return;
 
-    // 🔊 Audio handling
     if (kIsWeb) {
       if (!AudioService.instance.isWebAudioUnlocked) {
         setState(() => _needsWebAudioUnlock = true);
@@ -48,9 +50,7 @@ class _SplashPageState extends State<SplashPage> {
       }
     } else {
       Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) {
-          AudioService.instance.playStartup();
-        }
+        if (mounted) AudioService.instance.playStartup();
       });
     }
 
@@ -62,20 +62,15 @@ class _SplashPageState extends State<SplashPage> {
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) {
         await FirebaseAuth.instance.signInAnonymously();
-        debugPrint('[Auth] Signed in anonymously');
-      } else {
-        debugPrint('[Auth] Already signed in: ${currentUser.uid}');
       }
-    } catch (e) {
-      debugPrint('[Auth] Failed to sign in: $e');
-    }
+    } catch (_) {}
   }
 
   void _startMinimumTimer() {
-    Timer(const Duration(seconds: 10), () {
+    Timer(const Duration(seconds: 10), () async {
       if (!mounted) return;
       setState(() => _minimumTimeElapsed = true);
-      _checkAndNavigate();
+      await _checkAndNavigate();
     });
   }
 
@@ -99,41 +94,52 @@ class _SplashPageState extends State<SplashPage> {
         ..setVolume(kIsWeb ? 0.0 : 1.0)
         ..play()
         ..addListener(_videoListener);
-    } catch (e) {
-      debugPrint('[Splash] Video init failed: $e');
+    } catch (_) {
       if (mounted) setState(() => _isInitialized = true);
     }
   }
 
-  void _videoListener() {
+  void _videoListener() async {
     if (_hasController &&
         _controller.value.position >= _controller.value.duration &&
         _controller.value.duration > Duration.zero) {
-      _checkAndNavigate();
+      await _checkAndNavigate();
     }
   }
 
-  void _checkAndNavigate() {
-    if (_minimumTimeElapsed && !_hasNavigated && mounted) {
-      _hasNavigated = true;
+  /// ✅ THIS IS THE FIX
+  Future<void> _checkAndNavigate() async {
+    if (!_minimumTimeElapsed || _hasNavigated || !mounted) return;
+    _hasNavigated = true;
 
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (_, __, ___) => const MoodCameraEntryPage(),
-          transitionsBuilder: (_, animation, __, child) =>
-              FadeTransition(opacity: animation, child: child),
-          transitionDuration: const Duration(milliseconds: 400),
+    // 1️⃣ OPEN MOOD PAGE (DO NOT REPLACE)
+    final result = await Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => const MoodCameraEntryPage(),
+        transitionsBuilder: (_, animation, __, child) =>
+            FadeTransition(opacity: animation, child: child),
+        transitionDuration: const Duration(milliseconds: 400),
+      ),
+    );
+
+    if (!mounted) return;
+
+    // 2️⃣ OPEN SOFI STUDIO (REPLACE)
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => SofiStudioPage(
+          initialMood: result?['mood'] as String?,
+          selfieBytes: result?['selfieBytes'],
+          selfiePath: result?['selfiePath'],
         ),
-      );
-    }
+      ),
+    );
   }
 
   Future<void> _handleAudioUnlock() async {
     if (!kIsWeb || !_needsWebAudioUnlock) return;
-
     await AudioService.instance.unlockWebAudio();
     if (!mounted) return;
-
     setState(() => _needsWebAudioUnlock = false);
     unawaited(AudioService.instance.playStartup());
   }
@@ -165,25 +171,17 @@ class _SplashPageState extends State<SplashPage> {
               Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  children: [
+                  children: const [
                     Text(
                       'Sofi Saint',
                       style: TextStyle(
                         fontSize: 56,
                         fontWeight: FontWeight.w900,
-                        color: const Color(0xFFFFD700),
-                        letterSpacing: 1.5,
-                        shadows: [
-                          Shadow(
-                            offset: Offset.zero,
-                            blurRadius: 20,
-                            color: Colors.purpleAccent,
-                          ),
-                        ],
+                        color: Color(0xFFFFD700),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
+                    SizedBox(height: 8),
+                    Text(
                       'Imagine Create Become',
                       style: TextStyle(
                         fontSize: 20,
@@ -191,13 +189,6 @@ class _SplashPageState extends State<SplashPage> {
                         color: Colors.purpleAccent,
                       ),
                     ),
-                    if (kIsWeb && _needsWebAudioUnlock) ...[
-                      const SizedBox(height: 24),
-                      const Text(
-                        'Tap anywhere to enable sound',
-                        style: TextStyle(color: Colors.white54),
-                      ),
-                    ],
                   ],
                 ),
               ),

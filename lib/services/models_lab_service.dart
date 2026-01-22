@@ -5,26 +5,32 @@ import 'package:http/http.dart' as http;
 class ModelsLabService {
   ModelsLabService._();
 
-  // Cloud Run backend
+  // Cloud Run backend (DO NOT CHANGE)
   static const String _backendBaseUrl =
       'https://us-central1-sofi-saint-app.cloudfunctions.net';
 
-  static Uri _generateUri() => Uri.parse('$_backendBaseUrl/generateImageFunc');
+  static Uri _generateUri() =>
+      Uri.parse('$_backendBaseUrl/generateImageFunc');
 
   /// Default negative prompt to prevent common issues like facial distortion
-  static const String _defaultNegativePrompt = 
-    'distorted face, distorted eyes, asymmetrical eyes, cross-eyed, uneven eyes, '
-    'distorted lips, distorted mouth, distorted nose, deformed face, '
-    'blurry face, low quality face, bad anatomy, extra limbs, '
-    'mutated hands, bad hands, bad fingers, fused fingers, '
-    'ugly, deformed, noisy, blurry, low quality, grainy, '
-    'unnatural skin, unnatural creases, wrinkled clothing artifacts';
+  static const String _defaultNegativePrompt =
+      'distorted face, distorted eyes, asymmetrical eyes, cross-eyed, uneven eyes, '
+      'distorted lips, distorted mouth, distorted nose, deformed face, '
+      'blurry face, low quality face, bad anatomy, extra limbs, '
+      'mutated hands, bad hands, bad fingers, fused fingers, '
+      'ugly, deformed, noisy, blurry, low quality, grainy, '
+      'unnatural skin, unnatural creases, wrinkled clothing artifacts';
 
-  /// One-step image-to-image generation
+  /// ONE-STEP IMAGE-TO-IMAGE GENERATION (BACKWARD SAFE)
   static Future<String> generateFromImage({
     required Uint8List initImageBytes,
     required String prompt,
+
+    // OPTIONAL — SAFE EXTENSIONS
     String? negativePrompt,
+    double? strength,
+    double? guidanceScale,
+    int? steps,
   }) async {
     if (initImageBytes.isEmpty) {
       throw Exception('Init image bytes are empty');
@@ -34,21 +40,41 @@ class ModelsLabService {
         'data:image/png;base64,${base64Encode(initImageBytes)}';
 
     // Combine custom negative prompt with defaults
-    final effectiveNegativePrompt = negativePrompt != null && negativePrompt.isNotEmpty
-        ? '$negativePrompt, $_defaultNegativePrompt'
-        : _defaultNegativePrompt;
+    final effectiveNegativePrompt =
+        negativePrompt != null && negativePrompt.isNotEmpty
+            ? '$negativePrompt, $_defaultNegativePrompt'
+            : _defaultNegativePrompt;
+
+    /// BUILD REQUEST BODY — ONLY ADD SAFE FIELDS
+    final Map<String, dynamic> body = {
+      'prompt': prompt,
+      'negative_prompt': effectiveNegativePrompt,
+      'init_image': initImageDataUrl,
+
+      // REQUIRED BY YOUR BACKEND — DO NOT CHANGE
+      'model_id': 'seededit-i2i',
+    };
+
+    // OPTIONAL TRANSFORMATION CONTROLS
+    // These are only added if provided.
+    if (strength != null) {
+      body['strength'] = strength;
+    }
+
+    if (guidanceScale != null) {
+      body['guidance_scale'] = guidanceScale;
+    }
+
+    if (steps != null) {
+      body['steps'] = steps;
+    }
 
     final response = await http.post(
       _generateUri(),
       headers: const {
         'Content-Type': 'application/json',
       },
-      body: jsonEncode({
-        'prompt': prompt,
-        'negative_prompt': effectiveNegativePrompt,
-        'init_image': initImageDataUrl,
-        'model_id': 'seededit-i2i',
-      }),
+      body: jsonEncode(body),
     );
 
     if (response.statusCode != 200) {

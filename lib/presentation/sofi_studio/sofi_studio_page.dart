@@ -39,6 +39,7 @@ import 'widgets/sofi_history_sheet.dart';
 import 'widgets/generation_loader.dart';
 import 'widgets/voice_coach_settings_sheet.dart';
 import 'widgets/sofi_settings_sheet.dart';
+import 'dart:typed_data';
 
 
 class _QuickMood {
@@ -55,7 +56,17 @@ class _QuickMood {
 }
 
 class SofiStudioPage extends StatefulWidget {
-  const SofiStudioPage({super.key});
+  /// 🔑 Passed from MoodCameraEntryPage via Splash
+  final String? initialMood;
+  final Uint8List? selfieBytes;
+  final String? selfiePath;
+
+  const SofiStudioPage({
+    super.key,
+    this.initialMood,
+    this.selfieBytes,
+    this.selfiePath,
+  });
 
   @override
   State<SofiStudioPage> createState() => _SofiStudioPageState();
@@ -386,6 +397,26 @@ class _SofiStudioPageState extends State<SofiStudioPage>
   Future<void> _init() async {
     // PRIORITY: Load user's last image FIRST before anything else
     // This ensures we show the right image immediately without showing default doll first
+  // ================================
+  // QUICK MOOD HANDOFF (ENTRY OVERRIDE)
+  // ================================
+  if (widget.selfieBytes != null) {
+    debugPrint('[QuickMood] 🔥 Entry from Mood flow with selfie');
+
+    // Treat selfie as the ORIGINAL base to prevent drift
+    _originalBaseDollBytes = widget.selfieBytes;
+    generatedImageBytes = widget.selfieBytes;
+
+    // Preselect mood (light style layer only)
+    if (widget.initialMood != null) {
+      _activeMoodId = widget.initialMood!;
+      debugPrint('[QuickMood] Mood preselected: ${widget.initialMood}');
+    }
+
+    // Canvas is ready immediately
+    _isInitialLoading = false;
+  }
+
     await controller.loadDolls();
 
     controller.onClearGenerated = () {
@@ -935,60 +966,90 @@ class _SofiStudioPageState extends State<SofiStudioPage>
     setState(() => _isGenerating = true);
 
     try {
-      // Step 1: Load base image
-      // CRITICAL FIX: Always use the ORIGINAL base doll image, NOT the previous generation output.
-      // This prevents "generation drift" where artifacts compound with each generation.
-      debugPrint('\ud83d\udcbe [Generation] Loading base image...');
-      Uint8List baseBytes;
-      try {
-        // Priority order:
-        // 1. Original base doll (stored when doll was selected) - PREFERRED
-        // 2. Load fresh from doll's stage path - FALLBACK
-        // NEVER use generatedImageBytes as base - that causes drift!
-        if (_originalBaseDollBytes != null && _originalBaseDollBytes!.isNotEmpty) {
-          baseBytes = _originalBaseDollBytes!;
-          debugPrint(
-              '\u2705 [Generation] Using ORIGINAL base doll (${baseBytes.length} bytes) - drift prevention active');
-        } else {
-          // Fallback: Load the doll's stage image fresh
-          debugPrint('[Generation] ⚠️ No stored original, loading fresh from doll stage...');
-          baseBytes = await _loadDollImage(
-            controller.currentDoll!.stagePath,
-            controller.currentDoll!.isStoragePath,
-          ).timeout(const Duration(seconds: 10));
-          // Store it for future generations
-          _originalBaseDollBytes = baseBytes;
-          debugPrint('[Generation] ✅ Fresh base loaded and stored for future generations');
-        }
-        debugPrint(
-            '\u2705 [Generation] Base image ready (${baseBytes.length} bytes)');
-      } catch (e, st) {
-        debugPrint(
-            '\ud83d\uded1 [Generation] CRASH: Failed to load base image: $e');
-        await RemoteDebugLogger.instance
-            .logError('Base image load failed', e, st)
-            .timeout(const Duration(seconds: 1))
-            .catchError((_) {});
-        rethrow;
-      }
+      // ================================
+// STEP 1: SELECT INIT IMAGE SOURCE
+// ================================
+// Priority:
+// 1️⃣ Selfie from Mood flow (if present)
+// 2️⃣ Original base doll (drift-safe)
+// 3️⃣ Freshly loaded doll stage (fallback)
+
+debugPrint('[Generation] Selecting init image source...');
+Uint8List baseBytes;
+
+if (widget.selfieBytes != null && widget.selfieBytes!.isNotEmpty) {
+  // ✅ SELFIE FLOW — THIS IS THE CRITICAL FIX
+  baseBytes = widget.selfieBytes!;
+  debugPrint(
+    '[Generation] ✅ Using SELFIE as init image (${baseBytes.length} bytes)',
+  );
+} else if (_originalBaseDollBytes != null &&
+    _originalBaseDollBytes!.isNotEmpty) {
+  // ✅ NORMAL STUDIO FLOW
+  baseBytes = _originalBaseDollBytes!;
+  debugPrint(
+    '[Generation] Using ORIGINAL base doll (${baseBytes.length} bytes)',
+  );
+} else {
+  // ⚠️ FALLBACK — SHOULD RARELY HAPPEN
+  debugPrint(
+    '[Generation] ⚠️ No stored base — loading fresh doll stage',
+  );
+
+  baseBytes = await _loadDollImage(
+    controller.currentDoll!.stagePath,
+    controller.currentDoll!.isStoragePath,
+  ).timeout(const Duration(seconds: 10));
+
+  _originalBaseDollBytes = baseBytes;
+}
 
       // Step 2: Call ModelsLab API (returns IMAGE URL)
-      debugPrint('🌐 [Generation] Calling ModelsLab API...');
-      String imageUrl;
-      try {
-        imageUrl = await ModelsLabService.generateFromImage(
-          initImageBytes: baseBytes,
-          prompt: _buildFinalPrompt(),
-        ).timeout(const Duration(seconds: 60));
-        debugPrint('✅ [Generation] API returned URL: $imageUrl');
-      } catch (e, st) {
-        debugPrint('🛑 [Generation] CRASH: ModelsLab API failed: $e');
-        await RemoteDebugLogger.instance
-            .logError('ModelsLab API failed', e, st)
-            .timeout(const Duration(seconds: 1))
-            .catchError((_) {});
-        rethrow;
-      }
+debugPrint('🎨 [Generation] Calling ModelsLab API...');
+
+String imageUrl;
+
+// ✅ Detect if this generation is coming from QuickMood selfie base
+final bool isSelfieBase =
+    (widget.selfieBytes != null) &&
+    (_originalBaseDollBytes != null) &&
+    identical(_originalBaseDollBytes, widget.selfieBytes);
+
+// ✅ Force transformation ONLY for selfie bases (prevents "same selfie" output)
+final String transformPrefix = isSelfieBase
+    ? 'stylized 3D doll portrait, soft plastic skin, simplified facial geometry, '
+      'studio doll aesthetic, high-quality character render, not photorealistic, '
+    : '';
+
+// ✅ Your existing prompt stays intact — we just prefix when needed
+final String finalPrompt = transformPrefix + _buildFinalPrompt();
+
+try {
+  imageUrl = await ModelsLabService.generateFromImage(
+  initImageBytes: baseBytes,
+  prompt: finalPrompt,
+
+  // 🔥 FORCE IMAGE-TO-IMAGE TRANSFORMATION
+  strength: 0.72,          // <— THIS IS THE KEY
+  guidanceScale: 8.5,      // pushes away from photo realism
+  steps: 30,
+
+  // 🔒 Prevent selfie-style realism
+  negativePrompt:
+      'photorealistic, real human skin, natural pores, '
+      'camera photo, selfie, real person, real face',
+
+).timeout(const Duration(seconds: 60));
+
+  debugPrint('✅ [Generation] API returned URL: $imageUrl');
+} catch (e, st) {
+  debugPrint('❌ [Generation] CRASH: ModelsLab API failed: $e');
+  await RemoteDebugLogger.instance
+      .logError('ModelsLab API failed', e, st)
+      .timeout(const Duration(seconds: 1))
+      .catchError((_) {});
+  rethrow;
+}
 
       // Step 3: Download image bytes from returned URL
       debugPrint('📥 [Generation] Downloading generated image...');
