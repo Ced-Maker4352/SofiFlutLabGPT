@@ -1,12 +1,15 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+
 import 'package:video_player/video_player.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+
 import 'package:sofi_test_connect/services/audio_service.dart';
 
-// 👉 NEW opening target
+// ✅ CORRECT + FINAL import (facade file)
 import 'package:sofi_test_connect/presentation/mood/mood_camera_entry_page.dart';
 
 class SplashPage extends StatefulWidget {
@@ -18,6 +21,7 @@ class SplashPage extends StatefulWidget {
 
 class _SplashPageState extends State<SplashPage> {
   late VideoPlayerController _controller;
+
   bool _isInitialized = false;
   bool _minimumTimeElapsed = false;
   bool _hasNavigated = false;
@@ -35,6 +39,7 @@ class _SplashPageState extends State<SplashPage> {
     await _ensureFirebaseAuth();
     if (!mounted) return;
 
+    // 🔊 Audio handling
     if (kIsWeb) {
       if (!AudioService.instance.isWebAudioUnlocked) {
         setState(() => _needsWebAudioUnlock = true);
@@ -68,10 +73,9 @@ class _SplashPageState extends State<SplashPage> {
 
   void _startMinimumTimer() {
     Timer(const Duration(seconds: 10), () {
-      if (mounted) {
-        setState(() => _minimumTimeElapsed = true);
-        _checkAndNavigate();
-      }
+      if (!mounted) return;
+      setState(() => _minimumTimeElapsed = true);
+      _checkAndNavigate();
     });
   }
 
@@ -87,15 +91,16 @@ class _SplashPageState extends State<SplashPage> {
       _hasController = true;
 
       await _controller.initialize();
-      if (mounted) {
-        setState(() => _isInitialized = true);
-        _controller.setLooping(false);
-        _controller.setVolume(kIsWeb ? 0.0 : 1.0);
-        _controller.play();
-        _controller.addListener(_videoListener);
-      }
+      if (!mounted) return;
+
+      setState(() => _isInitialized = true);
+      _controller
+        ..setLooping(false)
+        ..setVolume(kIsWeb ? 0.0 : 1.0)
+        ..play()
+        ..addListener(_videoListener);
     } catch (e) {
-      debugPrint('Video initialization error: $e');
+      debugPrint('[Splash] Video init failed: $e');
       if (mounted) setState(() => _isInitialized = true);
     }
   }
@@ -123,6 +128,16 @@ class _SplashPageState extends State<SplashPage> {
     }
   }
 
+  Future<void> _handleAudioUnlock() async {
+    if (!kIsWeb || !_needsWebAudioUnlock) return;
+
+    await AudioService.instance.unlockWebAudio();
+    if (!mounted) return;
+
+    setState(() => _needsWebAudioUnlock = false);
+    unawaited(AudioService.instance.playStartup());
+  }
+
   @override
   void dispose() {
     if (_hasController) {
@@ -130,14 +145,6 @@ class _SplashPageState extends State<SplashPage> {
       _controller.dispose();
     }
     super.dispose();
-  }
-
-  Future<void> _handleAudioUnlock() async {
-    if (!kIsWeb || !_needsWebAudioUnlock) return;
-    await AudioService.instance.unlockWebAudio();
-    if (!mounted) return;
-    setState(() => _needsWebAudioUnlock = false);
-    unawaited(AudioService.instance.playStartup());
   }
 
   @override
@@ -168,7 +175,7 @@ class _SplashPageState extends State<SplashPage> {
                         letterSpacing: 1.5,
                         shadows: [
                           Shadow(
-                            offset: const Offset(0, 0),
+                            offset: Offset.zero,
                             blurRadius: 20,
                             color: Colors.purpleAccent,
                           ),
