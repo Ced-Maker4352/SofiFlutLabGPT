@@ -58,15 +58,17 @@ Uint8List _compressFavoriteImageIsolate(Uint8List bytes) {
   final decoded = img.decodeImage(bytes);
   if (decoded == null) return bytes;
 
-  const int maxDim = 900; // sharp but smaller
+  // INCREASED resolution and quality to preserve facial details
+  const int maxDim = 1200; // Higher resolution to preserve face details
   final resized = img.copyResize(
     decoded,
     width: decoded.width >= decoded.height ? maxDim : null,
     height: decoded.height > decoded.width ? maxDim : null,
-    interpolation: img.Interpolation.average,
+    interpolation: img.Interpolation.cubic, // Better quality interpolation for faces
   );
 
-  final jpg = img.encodeJpg(resized, quality: 72);
+  // Higher JPEG quality to preserve facial details and reduce artifacts
+  final jpg = img.encodeJpg(resized, quality: 88);
   return Uint8List.fromList(jpg);
 }
 
@@ -160,24 +162,66 @@ class _PremiumStudioPageState extends State<PremiumStudioPage> {
 
   String _buildIdentityLockPrompt() {
     // Step 1 goal: convert headshot -> full-body identity locked
+    // ENHANCED: Strong face preservation directives to prevent distortion
     return '''
-Create a full-body, head-to-toe image of the same person.
-Preserve identity, facial features, skin tone, and likeness.
-Neutral outfit, fully clothed, shoes visible.
-Do not crop. Do not zoom. Keep full body in frame.
-Simple background.
+Create a full-body, head-to-toe image of the EXACT SAME person from the input photo.
+
+[ABSOLUTE FACE LOCK DIRECTIVE]
+The face from the input image is SACRED and must be preserved with pixel-perfect accuracy.
+- Copy EXACT eye shape, eye color, eye spacing, eye symmetry from input
+- Copy EXACT nose shape, nostril size, nose bridge from input
+- Copy EXACT lip shape, lip fullness, lip color from input
+- Copy EXACT skin tone, skin texture, complexion from input
+- Copy EXACT facial bone structure, jawline, cheekbones from input
+- Do NOT regenerate or modify ANY facial features
+- The face region must be IDENTICAL to the source photograph
+
+[BODY EXTENSION]
+Extend the image to show full body from head to toe.
+Add neutral clothing (simple shirt/top, pants/skirt, shoes).
+Keep the same person's body type and proportions.
+Simple, clean background.
+
+[QUALITY REQUIREMENTS - ABSOLUTE PRIORITY]
+MASTERPIECE, BEST QUALITY, ultra high resolution, 8K quality.
+Photorealistic, professional photography quality, crystal clear.
+Sharp focus, crisp details, perfect clarity, highly detailed.
+Smooth skin texture with natural pores, clean render.
+Professional studio lighting, no noise, no grain, no blur.
+No pixelation, no artifacts, no compression, pristine quality.
+Maintain exact photo-realistic quality matching the input face.
+No distortion, no warping, no degradation.
 ''';
   }
 
   String _buildPrompt(ThemePreset t, ThemeVariant? v) {
     final custom = _promptController.text.trim();
     return '''
+[QUALITY DIRECTIVE - ABSOLUTE PRIORITY]
+MASTERPIECE, BEST QUALITY, ultra high resolution, 8K quality.
+Photorealistic, crystal clear, sharp focus, crisp details, highly detailed.
+Professional photography quality, smooth textures, pristine render.
+No noise, no grain, no blur, no pixelation, no artifacts, no compression.
+
+[FACE PRESERVATION - HIGHEST PRIORITY]
+The face from the identity-locked image MUST be preserved EXACTLY.
+Do NOT regenerate, modify, or distort ANY facial features.
+Copy exact: eye shape, eye color, nose shape, lip shape, skin tone, facial proportions.
+The face region is LOCKED and IMMUTABLE.
+Maintain crystal-clear, high-resolution facial details from source.
+
+[STYLE APPLICATION]
 ${t.basePrompt}
 ${v?.prompt ?? ''}
 ${custom.isNotEmpty ? 'User instruction: $custom' : ''}
+
+[CONSTRAINTS]
+Apply style changes ONLY to clothing, accessories, and background.
 Preserve pose, proportions, full-body framing.
 Ensure character is fully clothed and wearing shoes.
 Do not crop or zoom.
+Face must remain pixel-identical to source with pristine quality.
+If style conflicts with face preservation, ALWAYS preserve the face.
 ''';
   }
 
@@ -357,24 +401,60 @@ Do not crop or zoom.
   // ---------------- STEP 2 ----------------
 
   Future<void> _applySingleStyle() async {
-    if (selectedTheme == null || lockedBodyBytes == null) return;
-
-    if (_isLockedTheme(selectedTheme!)) {
-      _showPremiumDialog();
-      return;
-    }
+    if (applyingStyle) return;
+    if (selectedTheme == null) return;
 
     setState(() => applyingStyle = true);
 
     try {
-      final prompt = _buildPrompt(selectedTheme!, selectedVariant);
+      // ------------------------------------------------------------
+      // 🔒 IDENTITY ANCHOR (CRITICAL FIX)
+      //
+      // This identity source MUST NEVER CHANGE.
+      // It is always derived from:
+      // 1) original user image (preferred)
+      // 2) or first locked identity image
+      //
+      // We NEVER use the current canvas or history image
+      // as the identity input for generation.
+      // ------------------------------------------------------------
 
-      final result = await widget.generationService.generateStyledOnly(
+      // If identity is not locked yet, lock it ONCE
+      if (lockedBodyBytes == null) {
+        if (_userImageBytes != null) {
+          lockedBodyBytes = Uint8List.fromList(_userImageBytes!);
+        } else if (styledBytes != null) {
+          // Fallback: first generated image ONLY (one-time)
+          lockedBodyBytes = Uint8List.fromList(styledBytes!);
+        } else {
+          throw Exception('No identity source available');
+        }
+      }
+
+      // ------------------------------------------------------------
+      // Build prompt (unchanged)
+      // ------------------------------------------------------------
+      final prompt = _buildPrompt(
+        selectedTheme!,
+        selectedVariant,
+      );
+
+      // ------------------------------------------------------------
+      // 🚨 IMPORTANT:
+      // We ALWAYS pass lockedBodyBytes as the identity image.
+      // NEVER pass styledBytes or history images here.
+      // ------------------------------------------------------------
+      final result =
+          await widget.generationService.generateStyledOnly(
         identityLockedImage: lockedBodyBytes!,
         prompt: prompt,
       );
 
-      // history
+      if (!mounted) return;
+
+      // ------------------------------------------------------------
+      // Update canvas & history
+      // ------------------------------------------------------------
       final entry = _GenerationHistoryEntry(
         imageBytes: result,
         themeName: selectedTheme!.label,
@@ -390,22 +470,23 @@ Do not crop or zoom.
       _generationHistory.add(entry);
       _historyIndex = _generationHistory.length - 1;
 
-      if (!mounted) return;
       setState(() {
         styledBytes = result;
         _styledBytesOriginal = result;
-        applyingStyle = false;
         _currentImageSaved = false;
         _cropAspect = null;
         _cropFocus = 0;
       });
     } catch (e) {
-      debugPrint('Style Gen Failed: $e');
+      debugPrint('[Premium Studio] Apply style failed: $e');
       if (!mounted) return;
-      setState(() => applyingStyle = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Failed to apply style.')),
       );
+    } finally {
+      if (mounted) {
+        setState(() => applyingStyle = false);
+      }
     }
   }
 
@@ -811,29 +892,6 @@ Do not crop or zoom.
 
   // ---------------- THEME SHEET ----------------
 
-  void _showPremiumDialog() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: Colors.white,
-        title: const Text('Premium Theme', style: TextStyle(color: Color(0xFF333333))),
-        content: const Text('This style is part of a premium theme pack.', style: TextStyle(color: Color(0xFF333333))),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Not now'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              PaywallSheet.show(context);
-            },
-            child: const Text('Unlock Premium'),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _openThemeSheet(ThemePreset theme) {
     selectedTheme = theme;

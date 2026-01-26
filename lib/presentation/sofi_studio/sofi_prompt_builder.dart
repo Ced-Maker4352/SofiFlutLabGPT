@@ -2,42 +2,78 @@
 
 import 'sofi_studio_models.dart';
 
+/// Look mode for the free front-door.
+/// - human: realistic human result
+/// - pixar: your original Sofi stylized Pixar-like look (NOT plastic toy joints)
+enum LookMode {
+  human,
+  pixar,
+}
+
 /// Responsible for building the final prompt sent to ModelsLab.
+///
+/// IMPORTANT:
+/// This builder is used for the "free" pipeline.
+/// Premium pipelines (cinema/anime/etc) should keep using PremiumStudioController prompts.
 class SofiPromptBuilder {
-  /// Builds a clean, unified prompt using:
-  /// - selected category
-  /// - preset label
-  /// - optional free text
-  /// - global style mode
   static String build({
     required EditCategory category,
     required String styleLabel,
     required String freeText,
-    required StyleMode styleMode,
+    required LookMode lookMode,
   }) {
     final buffer = StringBuffer();
 
-    // 1) Base style
-    if (styleMode == StyleMode.illustration) {
+    // 1) Base style (MODE CONTROLS THIS)
+    if (lookMode == LookMode.human) {
       buffer.write(
-          "3D cartoon Pixar-style doll, soft shading, smooth gradients. ");
+        "Photorealistic human portrait. Natural human anatomy and facial proportions. "
+        "Realistic skin texture, pores, and lighting. No doll, toy, plastic, or cartoon features. ",
+      );
     } else {
-      buffer.write("Semi-realistic photo render of a doll character. ");
+      // This aligns with your original “Pixar-ish” app feel.
+      // Intentionally avoids “plastic toy joints / twistable head”.
+      buffer.write(
+        "High-quality 3D animated Pixar-like character render. Soft shading, smooth gradients, "
+        "cinematic but clean lighting. Maintain a believable human-like face and proportions. ",
+      );
     }
 
-    // 2) Category tag
+    // 2) ENHANCED Identity protection (prevents face drift and distortion)
+    // CRITICAL: Strong face-locking directives to prevent any facial modification
+    buffer.write(
+      "[FACE LOCK - ABSOLUTE PRIORITY] "
+      "The face from the input image is SACRED and IMMUTABLE. "
+      "PRESERVE EXACTLY: eye shape, eye color, eye spacing, eye symmetry, "
+      "nose shape, nose size, nostril width, "
+      "lip shape, lip fullness, lip color, "
+      "skin tone, skin texture, complexion, "
+      "facial bone structure, jawline, cheekbones, forehead. "
+      "Do NOT regenerate, modify, distort, warp, or alter ANY facial features. "
+      "The face region must be PIXEL-IDENTICAL to the source image. "
+      "Apply all changes ONLY to clothing and accessories below the neck. ",
+    );
+
+    // 3) Category tag
     buffer.write("Focus on ${category.promptTag}. ");
 
-    // 3) Preset label
+    // 4) Preset label
     buffer.write("Style: $styleLabel. ");
 
-    // 4) Free text from user
-    if (freeText.trim().isNotEmpty) {
-      buffer.write("Additional details: ${freeText.trim()}. ");
+    // 5) Free text from user
+    final trimmed = freeText.trim();
+    if (trimmed.isNotEmpty) {
+      buffer.write("Additional details: $trimmed. ");
     }
 
-    // 5) Output quality
-    buffer.write("Ultra clean output, full-body view, vibrant lighting.");
+    // 6) Output quality - CRITICAL for crisp, clear images
+    buffer.write(
+      "QUALITY REQUIREMENTS: Ultra high resolution, photorealistic quality, "
+      "masterpiece, best quality, crisp details, sharp focus, perfect clarity, "
+      "clean render, smooth skin texture, professional photography lighting, "
+      "no noise, no grain, no blur, no pixelation, no artifacts. "
+      "8K quality, highly detailed, crystal clear, pristine image quality."
+    );
 
     return buffer.toString();
   }

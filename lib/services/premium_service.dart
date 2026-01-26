@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sofi_test_connect/presentation/mood/mood_mode.dart';
 
 /// Subscription plan types
 enum SubscriptionPlan {
@@ -29,6 +31,7 @@ class PremiumService extends ChangeNotifier {
   static const String _expiryKey = 'premium_expiry';
   static const String _dailyCountKey = 'daily_gen_count';
   static const String _lastResetKey = 'daily_reset_date';
+  static const String _abKey = 'ab_default_mode';
   
   // Pricing (in USD)
   static const double weeklyPrice = 4.99;
@@ -266,8 +269,58 @@ class PremiumService extends ChangeNotifier {
     notifyListeners();
   }
   
+  /// Check if user can use daily preview (1 free premium mode / 24h)
+  bool canUseDailyPreview() {
+    _checkAndResetDailyCount();
+    return _dailyGenerationsUsed == 0;
+  }
+  
+  /// Mark preview as used (locks premium modes for the day)
+  Future<void> markPreviewUsed() async {
+    _dailyGenerationsUsed = 1;
+    await _saveState();
+    notifyListeners();
+  }
+  
+  /// Show paywall sheet (import PaywallSheet at call site)
+  /// Usage: await PremiumService().initialize(); PremiumService().showPaywall(context);
+  void showPaywall(BuildContext context) {
+    // Note: PaywallSheet must be imported where this is called
+    // This is a helper method for convenience
+    throw UnimplementedError('Import PaywallSheet and call PaywallSheet.show(context) directly');
+  }
+  
   /// Debug: Grant premium (for testing)
   Future<void> debugGrantPremium() async {
     await activateSubscription(SubscriptionPlan.monthly);
+  }
+
+  /// A/B Test: Get default mood for user (50/50 split between Human and Doll)
+  /// Assignment is persistent and survives app restarts
+  Future<MoodMode> getDefaultMoodForUser() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString(_abKey);
+
+      if (saved != null) {
+        // Return saved assignment
+        try {
+          return MoodMode.values.byName(saved);
+        } catch (_) {
+          // Invalid saved value, reassign
+        }
+      }
+
+      // Assign new cohort: 50/50 split based on timestamp
+      final assigned = DateTime.now().millisecondsSinceEpoch % 2 == 0
+          ? MoodMode.human
+          : MoodMode.doll;
+
+      await prefs.setString(_abKey, assigned.name);
+      return assigned;
+    } catch (e) {
+      debugPrint('A/B test assignment error: $e');
+      return MoodMode.human; // Fallback
+    }
   }
 }

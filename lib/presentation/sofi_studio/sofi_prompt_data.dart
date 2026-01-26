@@ -196,7 +196,7 @@ class SofiPromptData {
     {
       "label": "Pastel Y2K Set",
       "prompt":
-          "clothing-only edit: pastel Y2K outfit with crop top, pleated skirt, platform sneakers, and small pastel accessories. Do not alter the doll’s face, skin tone, hair, or body.",
+          "[FACE LOCK] clothing-only edit: pastel Y2K outfit with crop top, pleated skirt, platform sneakers, and small pastel accessories. CRITICAL: Preserve face EXACTLY - do not modify eyes, nose, lips, skin tone, or any facial features. Face must be pixel-identical to source.",
       "thumb": "images/full outfit/full_outfit_01.jpg",
     },
     {
@@ -208,7 +208,7 @@ class SofiPromptData {
     {
       "label": "Clean Girl Neutral Set",
       "prompt":
-          "clothing-only edit: soft neutral-toned 'clean girl' look with tank top, lightweight cardigan, high-waisted trousers, and white sneakers. Do not modify facial features or body.",
+          "[FACE LOCK] clothing-only edit: soft neutral-toned 'clean girl' look with tank top, lightweight cardigan, high-waisted trousers, and white sneakers. CRITICAL: Preserve face EXACTLY - do not modify eyes, nose, lips, skin tone, or any facial features.",
       "thumb": "images/full outfit/full_outfit_03.jpg",
     },
     {
@@ -271,74 +271,75 @@ class SofiPromptData {
     {
       "label": "Cozy Winter Fit",
       "prompt":
-          "clothing-only edit: winter coat, knit sweater, warm leggings, and boots. Do not change the doll’s face or body.",
+          "[FACE LOCK] clothing-only edit: winter coat, knit sweater, warm leggings, and boots. CRITICAL: Preserve face EXACTLY - do not modify eyes, nose, lips, skin tone, or any facial features.",
       "thumb": "images/full outfit/full_outfit_13.jpg",
     },
     {
       "label": "Fashion Sweatsuit",
       "prompt":
-          "clothing-only edit: trendy matching sweatsuit with modern sneakers. Leave hair and face untouched.",
+          "[FACE LOCK] clothing-only edit: trendy matching sweatsuit with modern sneakers. CRITICAL: Preserve face EXACTLY - do not modify eyes, nose, lips, skin tone, or any facial features.",
       "thumb": "images/full outfit/full_outfit_14.jpg",
     },
     {
       "label": "Denim Overalls Look",
       "prompt":
-          "clothing-only edit: pastel tee with denim overalls and sneakers. No changes to doll’s face, skin, or hair.",
+          "[FACE LOCK] clothing-only edit: pastel tee with denim overalls and sneakers. CRITICAL: Preserve face EXACTLY - do not modify eyes, nose, lips, skin tone, or any facial features.",
       "thumb": "images/full outfit/full_outfit_15.jpg",
     },
     {
       "label": "Neutral Tones Outfit",
       "prompt":
-          "clothing-only edit: neutral-toned crop top, trousers, and clean sneakers. Do not modify body or facial features.",
+          "[FACE LOCK] clothing-only edit: neutral-toned crop top, trousers, and clean sneakers. CRITICAL: Preserve face EXACTLY - do not modify eyes, nose, lips, skin tone, or any facial features.",
       "thumb": "images/full outfit/full_outfit_16.jpg",
     },
     {
       "label": "Music Studio Outfit",
       "prompt":
-          "clothing-only edit: stylish top, cargo pants, and chunky sneakers with edgy accessories. Keep face and hair unchanged.",
+          "[FACE LOCK] clothing-only edit: stylish top, cargo pants, and chunky sneakers with edgy accessories. CRITICAL: Preserve face EXACTLY - do not modify eyes, nose, lips, skin tone, or any facial features.",
       "thumb": "images/full outfit/full_outfit_17.jpg",
     },
     {
       "label": "Cafe Day Fit",
       "prompt":
-          "clothing-only edit: soft sweater, skirt, and flats perfect for a cafe day. Leave all doll features unchanged.",
+          "[FACE LOCK] clothing-only edit: soft sweater, skirt, and flats perfect for a cafe day. CRITICAL: Preserve face EXACTLY - do not modify eyes, nose, lips, skin tone, or any facial features.",
       "thumb": "images/full outfit/full_outfit_18.jpg",
     },
     {
       "label": "Summer Festival Look",
       "prompt":
-          "clothing-only edit: crop top, high-waisted shorts, and festival boots. Keep face and body identical.",
+          "[FACE LOCK] clothing-only edit: crop top, high-waisted shorts, and festival boots. CRITICAL: Preserve face EXACTLY - do not modify eyes, nose, lips, skin tone, or any facial features.",
       "thumb": "images/full outfit/full_outfit_19.jpg",
     },
     {
       "label": "Sporty Chic",
       "prompt":
-          "clothing-only edit: athletic top, joggers, and clean white sneakers. Do not alter hair, body, or face.",
+          "[FACE LOCK] clothing-only edit: athletic top, joggers, and clean white sneakers. CRITICAL: Preserve face EXACTLY - do not modify eyes, nose, lips, skin tone, or any facial features.",
       "thumb": "images/full outfit/full_outfit_20.jpg",
     },
     {
       "label": "Modern Boho",
       "prompt":
-          "clothing-only edit: boho-style top, layered skirt, and sandals. No changes to skin, face, or hair.",
+          "[FACE LOCK] clothing-only edit: boho-style top, layered skirt, and sandals. CRITICAL: Preserve face EXACTLY - do not modify eyes, nose, lips, skin tone, or any facial features.",
       "thumb": "images/full outfit/full_outfit_21.jpg",
     },
     {
       "label": "Glow-Up Streetwear",
       "prompt":
-          "clothing-only edit: modern streetwear with oversized hoodie, cargo pants, and chunky shoes. Leave doll’s features intact.",
+          "[FACE LOCK] clothing-only edit: modern streetwear with oversized hoodie, cargo pants, and chunky shoes. CRITICAL: Preserve face EXACTLY - do not modify eyes, nose, lips, skin tone, or any facial features.",
       "thumb": "images/full outfit/full_outfit_22.jpg",
     },
     {
       "label": "Soft Girl Aesthetic",
       "prompt":
-          "clothing-only edit: pastel sweater, mini skirt, and cute platform shoes. Face and body remain unchanged.",
+          "[FACE LOCK] clothing-only edit: pastel sweater, mini skirt, and cute platform shoes. CRITICAL: Preserve face EXACTLY - do not modify eyes, nose, lips, skin tone, or any facial features.",
       "thumb": "images/full outfit/full_outfit_23.jpg",
     },
     {
       "label": "Classy Casual",
       "prompt":
-          "clothing-only edit: fitted top, high-waisted trousers, and modern shoes. Do not alter the doll’s appearance.",
+          "[FACE LOCK] clothing-only edit: fitted top, high-waisted trousers, and modern shoes. CRITICAL: Preserve face EXACTLY - do not modify eyes, nose, lips, skin tone, or any facial features.",
       "thumb": "images/full outfit/full_outfit_24.jpg",
     },
+
   ];
 }

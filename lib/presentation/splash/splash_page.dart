@@ -129,6 +129,7 @@ class _SplashPageState extends State<SplashPage> {
       MaterialPageRoute(
         builder: (_) => SofiStudioPage(
           initialMood: result?['mood'] as String?,
+          initialMode: result?['mode'] as String?,
           selfieBytes: result?['selfieBytes'],
           selfiePath: result?['selfiePath'],
         ),

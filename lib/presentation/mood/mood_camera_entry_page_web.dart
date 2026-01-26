@@ -2,19 +2,30 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'mood_mode.dart';
+import '../../widgets/mood_icon_row.dart';
+import '../../services/premium_service.dart';
+
 class MoodCameraEntryPageImpl extends StatefulWidget {
   const MoodCameraEntryPageImpl({super.key});
 
   @override
-  State<MoodCameraEntryPageImpl> createState() => _MoodCameraEntryPageImplState();
+  State<MoodCameraEntryPageImpl> createState() =>
+      _MoodCameraEntryPageImplState();
 }
 
 class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
-  bool _isGenerating = false;
-  String? _selectedMood;
-  Uint8List? _selfieBytes;
+  final ImagePicker _picker = ImagePicker();
 
-  final _picker = ImagePicker();
+  bool _isGenerating = false;
+
+  /// FUNCTIONAL mood (this triggers auto-generation)
+  String? _selectedMood;
+
+  /// VISUAL mode (human / doll / premium)
+  MoodMode _selectedMode = MoodMode.human;
+
+  Uint8List? _selfieBytes;
 
   final List<String> _moods = const [
     'Bold',
@@ -28,33 +39,32 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
   ];
 
   Future<void> _pickSelfie() async {
-    final file = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 92);
+    final file = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 92,
+    );
     if (file == null) return;
+
     final bytes = await file.readAsBytes();
     if (!mounted) return;
+
     setState(() => _selfieBytes = bytes);
   }
 
-  Future<void> _continueAndGenerate() async {
-    if (_isGenerating) return;
-    if (_selectedMood == null) return;
+  Future<void> _continue() async {
+    if (_isGenerating || _selectedMood == null) return;
 
     setState(() => _isGenerating = true);
-    try {
-      // ✅ HOOK POINT:
-      // Navigate/pop with:
-      // - mood
-      // - selfie bytes (optional)
-      await Future.delayed(const Duration(seconds: 1)); // replace with real call
-      if (!mounted) return;
 
-      Navigator.of(context).pop({
-        'mood': _selectedMood,
-        'selfieBytes': _selfieBytes,
-      });
-    } finally {
-      if (mounted) setState(() => _isGenerating = false);
-    }
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    if (!mounted) return;
+
+    Navigator.of(context).pop({
+      'mood': _selectedMood,            // REQUIRED for auto-gen
+      'mode': _selectedMode.id,         // additive
+      'selfieBytes': _selfieBytes,
+    });
   }
 
   @override
@@ -75,23 +85,49 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                 const SizedBox(height: 24),
                 const Text(
                   "How are you feeling today?",
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Colors.white),
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 const Text(
-                  "Pick a mood. Add a selfie if you want — we’ll transform your look.",
+                  "Pick a mood. Add a selfie if you want — we'll transform your look.",
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 15, color: Colors.white70),
                 ),
 
-                const Spacer(),
+                const SizedBox(height: 20),
 
+                /// MODE ICONS (NEW — ADDITIVE)
+                MoodIconRow(
+                  selected: _selectedMode,
+                  onSelect: (mode) async {
+                    final premium = PremiumService();
+                    await premium.initialize();
+
+                    if (mode.isPremium) {
+                      if (!premium.canUseDailyPreview()) {
+                        premium.showPaywall(context);
+                        return;
+                      }
+                    }
+
+                    setState(() => _selectedMode = mode);
+                  },
+                ),
+
+                const SizedBox(height: 24),
+
+                /// MOOD GRID (RESTORED — FUNCTIONAL)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: GridView.builder(
                     shrinkWrap: true,
                     itemCount: _moods.length,
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 4,
                       mainAxisSpacing: 12,
                       crossAxisSpacing: 12,
@@ -100,19 +136,23 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                     itemBuilder: (context, index) {
                       final mood = _moods[index];
                       final isSelected = mood == _selectedMood;
+
                       return GestureDetector(
                         onTap: () => setState(() => _selectedMood = mood),
                         child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
+                          duration: const Duration(milliseconds: 180),
                           decoration: BoxDecoration(
-                            color: isSelected ? Colors.purpleAccent : Colors.white.withOpacity(0.15),
+                            color: isSelected
+                                ? Colors.purpleAccent
+                                : Colors.white.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(24),
                           ),
                           alignment: Alignment.center,
                           child: Text(
                             mood,
                             style: TextStyle(
-                              color: isSelected ? Colors.black : Colors.white,
+                              color:
+                                  isSelected ? Colors.black : Colors.white,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -122,27 +162,26 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                   ),
                 ),
 
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
 
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: SizedBox(
-                          height: 48,
-                          child: OutlinedButton(
-                            onPressed: _pickSelfie,
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              side: BorderSide(color: Colors.white.withOpacity(0.35)),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            ),
-                            child: Text(_selfieBytes == null ? 'Upload Selfie (Optional)' : 'Selfie Selected'),
-                          ),
-                        ),
+                  child: SizedBox(
+                    height: 48,
+                    child: OutlinedButton(
+                      onPressed: _pickSelfie,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: BorderSide(color: Colors.white.withOpacity(0.35)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
                       ),
-                    ],
+                      child: Text(
+                        _selfieBytes == null
+                            ? 'Upload Selfie (Optional)'
+                            : 'Selfie Selected',
+                      ),
+                    ),
                   ),
                 ),
 
@@ -154,15 +193,17 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: (_selectedMood == null || _isGenerating) ? null : _continueAndGenerate,
+                      onPressed: _selectedMood == null ? null : _continue,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: Colors.black,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18)),
                       ),
                       child: const Text(
                         'Transform My Look',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w800),
                       ),
                     ),
                   ),
@@ -185,7 +226,10 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                       SizedBox(height: 14),
                       Text(
                         'Creating your look…',
-                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600),
                       ),
                     ],
                   ),

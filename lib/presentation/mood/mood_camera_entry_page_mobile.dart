@@ -2,6 +2,10 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'mood_mode.dart';
+import '../../widgets/mood_icon_row.dart';
+import '../../services/premium_service.dart';
+
 class MoodCameraEntryPageImpl extends StatefulWidget {
   const MoodCameraEntryPageImpl({super.key});
 
@@ -14,7 +18,13 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
   final ImagePicker _picker = ImagePicker();
 
   bool _isGenerating = false;
+
+  /// FUNCTIONAL mood (this triggers auto-generation)
   String? _selectedMood;
+
+  /// VISUAL mode (human / doll / premium)
+  MoodMode _selectedMode = MoodMode.human;
+
   Uint8List? _selfieBytes;
 
   final List<String> _moods = const [
@@ -46,12 +56,13 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
 
     setState(() => _isGenerating = true);
 
-    await Future.delayed(const Duration(seconds: 1));
+    await Future.delayed(const Duration(milliseconds: 300));
 
     if (!mounted) return;
 
     Navigator.of(context).pop({
-      'mood': _selectedMood,
+      'mood': _selectedMood,            // REQUIRED for auto-gen
+      'mode': _selectedMode.id,         // additive
       'selfieBytes': _selfieBytes,
     });
   }
@@ -72,14 +83,35 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                 color: Colors.white,
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             const Text(
-              "Pick a mood. Add a selfie if you want.",
+              "Pick a mood. Add a selfie if you want — we'll transform your look.",
               style: TextStyle(color: Colors.white70),
             ),
 
-            const Spacer(),
+            const SizedBox(height: 20),
 
+            /// MODE ICONS (NEW — ADDITIVE)
+            MoodIconRow(
+              selected: _selectedMode,
+              onSelect: (mode) async {
+                final premium = PremiumService();
+                await premium.initialize();
+
+                if (mode.isPremium) {
+                  if (!premium.canUseDailyPreview()) {
+                    premium.showPaywall(context);
+                    return;
+                  }
+                }
+
+                setState(() => _selectedMode = mode);
+              },
+            ),
+
+            const SizedBox(height: 24),
+
+            /// MOOD GRID (RESTORED — FUNCTIONAL)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: GridView.builder(
@@ -99,7 +131,7 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                   return GestureDetector(
                     onTap: () => setState(() => _selectedMood = mood),
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
+                      duration: const Duration(milliseconds: 180),
                       decoration: BoxDecoration(
                         color: isSelected
                             ? Colors.purpleAccent
@@ -125,19 +157,13 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
 
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _pickSelfie,
-                      child: Text(
-                        _selfieBytes == null
-                            ? 'Upload Selfie (Optional)'
-                            : 'Selfie Selected',
-                      ),
-                    ),
-                  ),
-                ],
+              child: OutlinedButton(
+                onPressed: _pickSelfie,
+                child: Text(
+                  _selfieBytes == null
+                      ? 'Upload Selfie (Optional)'
+                      : 'Selfie Selected',
+                ),
               ),
             ),
 
@@ -146,7 +172,7 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: ElevatedButton(
-                onPressed: _continue,
+                onPressed: _selectedMood == null ? null : _continue,
                 child: const Text('Transform My Look'),
               ),
             ),

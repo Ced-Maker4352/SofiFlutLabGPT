@@ -1,98 +1,118 @@
-import 'dart:convert';
 import 'dart:typed_data';
-import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:flutter/foundation.dart';
 
 class ModelsLabService {
   ModelsLabService._();
 
-  // Cloud Run backend (DO NOT CHANGE)
-  static const String _backendBaseUrl =
-      'https://us-central1-sofi-saint-app.cloudfunctions.net';
+  /// Firebase Functions instance (CORS-safe for Web)
+  static FirebaseFunctions get _functions =>
+      FirebaseFunctions.instanceFor(region: 'us-central1');
 
-  static Uri _generateUri() =>
-      Uri.parse('$_backendBaseUrl/generateImageFunc');
-
-  /// Default negative prompt to prevent common issues like facial distortion
+  /// Strong default negative prompt (safe for Flux)
   static const String _defaultNegativePrompt =
-      'distorted face, distorted eyes, asymmetrical eyes, cross-eyed, uneven eyes, '
-      'distorted lips, distorted mouth, distorted nose, deformed face, '
-      'blurry face, low quality face, bad anatomy, extra limbs, '
-      'mutated hands, bad hands, bad fingers, fused fingers, '
-      'ugly, deformed, noisy, blurry, low quality, grainy, '
-      'unnatural skin, unnatural creases, wrinkled clothing artifacts';
+      'low quality, worst quality, low resolution, blurry, '
+      'distorted face, warped face, asymmetrical face, '
+      'bad anatomy, deformed features, uncanny valley, '
+      'jpeg artifacts, noisy skin, melted face';
 
-  /// ONE-STEP IMAGE-TO-IMAGE GENERATION (BACKWARD SAFE)
+  /// Generic callable wrapper.
+  /// Returns a String imageUrl on success.
+  static Future<String> _callImageFunction(
+    String functionName,
+    Map<String, dynamic> payload,
+  ) async {
+    // 🚨 STEP 2 — Block empty prompts before Firebase call
+    final prompt = payload['prompt'];
+    if (prompt == null || prompt.toString().trim().isEmpty) {
+      debugPrint('❌ BLOCKED: Empty prompt sent to Firebase');
+      throw Exception('Generation blocked: empty prompt');
+    }
+
+    // 🔒 Force-assign cleaned prompt at last moment
+    payload['prompt'] = prompt.toString().trim();
+
+    // 🔍 STEP 3 — Log the actual payload
+    debugPrint('[GEN PAYLOAD] prompt="${payload['prompt']}"');
+    debugPrint('[GEN PAYLOAD] isHumanMode=${payload['isHumanMode']}');
+    debugPrint('[GEN PAYLOAD] mode=${payload['mode']}');
+
+    final callable = _functions.httpsCallable(
+      functionName,
+      options: HttpsCallableOptions(timeout: const Duration(seconds: 120)),
+    );
+
+    debugPrint('[ModelsLab] Calling $functionName via Firebase Callable');
+    final res = await callable.call(payload);
+    final data = res.data;
+
+    // Accept common shapes:
+    // { imageUrl: "..." } or { url: "..." } or { image_url: "..." } or direct string.
+    if (data is String) return data;
+
+    if (data is Map) {
+      final imageUrl = data['imageUrl'] ?? data['url'] ?? data['image_url'] ?? data['image'];
+      if (imageUrl is String && imageUrl.isNotEmpty) return imageUrl;
+    }
+
+    throw Exception('Unexpected function response from $functionName: $data');
+  }
+
+  /// 🔥 Main pipeline (Pixar/Doll/Anime/etc) — CORS-safe on Web
   static Future<String> generateFromImage({
     required Uint8List initImageBytes,
     required String prompt,
-
-    // OPTIONAL — SAFE EXTENSIONS
-    String? negativePrompt,
+    required bool isHumanMode,
     double? strength,
     double? guidanceScale,
     int? steps,
+    int? width,
+    int? height,
+    String? negativePrompt,
   }) async {
     if (initImageBytes.isEmpty) {
       throw Exception('Init image bytes are empty');
     }
 
-    final String initImageDataUrl =
-        'data:image/png;base64,${base64Encode(initImageBytes)}';
-
-    // Combine custom negative prompt with defaults
-    final effectiveNegativePrompt =
-        negativePrompt != null && negativePrompt.isNotEmpty
-            ? '$negativePrompt, $_defaultNegativePrompt'
-            : _defaultNegativePrompt;
-
-    /// BUILD REQUEST BODY — ONLY ADD SAFE FIELDS
-    final Map<String, dynamic> body = {
+    final payload = <String, dynamic>{
       'prompt': prompt,
-      'negative_prompt': effectiveNegativePrompt,
-      'init_image': initImageDataUrl,
+      'initImageBase64': base64Encode(initImageBytes),
 
-      // REQUIRED BY YOUR BACKEND — DO NOT CHANGE
-      'model_id': 'seededit-i2i',
+      // 🔥 FORCE correct mode handling
+      'isHumanMode': isHumanMode,
+      'mode': isHumanMode ? 'flux_human' : 'standard',
+
+      // Optional tuning — backend can ignore safely
+      if (strength != null) 'strength': strength,
+      if (guidanceScale != null) 'guidanceScale': guidanceScale,
+      if (steps != null) 'steps': steps,
+      if (width != null) 'width': width,
+      if (height != null) 'height': height,
+      if (negativePrompt != null) 'negativePrompt': negativePrompt,
     };
 
-    // OPTIONAL TRANSFORMATION CONTROLS
-    // These are only added if provided.
-    if (strength != null) {
-      body['strength'] = strength;
-    }
+    debugPrint('[ModelsLab] generateFromImage - isHumanMode: $isHumanMode');
+    
+    final functionName =
+        isHumanMode ? 'generateImageFunc' : 'generateImageFunc';
 
-    if (guidanceScale != null) {
-      body['guidance_scale'] = guidanceScale;
-    }
+    debugPrint('[ModelsLab] Calling $functionName via Firebase Callable');
 
-    if (steps != null) {
-      body['steps'] = steps;
-    }
+    return _callImageFunction(functionName, payload);
+  }
 
-    final response = await http.post(
-      _generateUri(),
-      headers: const {
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode(body),
+  /// ✅ Human FLUX pipeline — fixes the analyzer error AND routes via callable
+  static Future<String> generateHumanFlux({
+    required Uint8List initImageBytes,
+    required String prompt,
+  }) async {
+    debugPrint('[ModelsLab] generateHumanFlux invoked');
+
+    return generateFromImage(
+      initImageBytes: initImageBytes,
+      prompt: prompt,
+      isHumanMode: true, // 🔒 FORCE HUMAN
     );
-
-    if (response.statusCode != 200) {
-      throw Exception(
-        'Backend /generate failed (${response.statusCode}): ${response.body}',
-      );
-    }
-
-    final decoded = jsonDecode(response.body);
-    if (decoded is! Map<String, dynamic>) {
-      throw Exception('Invalid backend response: ${response.body}');
-    }
-
-    final imageUrl = decoded['image_url'];
-    if (imageUrl is! String || imageUrl.isEmpty) {
-      throw Exception('Backend missing image_url: ${response.body}');
-    }
-
-    return imageUrl;
   }
 }
