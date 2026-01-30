@@ -41,6 +41,7 @@ class _SofiSettingsSheetState extends State<SofiSettingsSheet> {
   }
   
   Future<void> _togglePerformanceMode(bool value) async {
+    if (!mounted) return;
     setState(() => _performanceMode = value);
     await PerformanceService.instance.setPerformanceMode(value);
   }

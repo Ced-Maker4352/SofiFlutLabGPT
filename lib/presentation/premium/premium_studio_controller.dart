@@ -21,17 +21,17 @@ class PremiumStudioController extends ChangeNotifier {
   Uint8List? get identityLockedImage => _identityLockedImage;
   Uint8List? get finalStyledImage => _finalStyledImage;
 
-  Future<void> runStep1({
-    required Uint8List baseImage,
-    required String identityPrompt,
-  }) async {
+  Future<void> runStep1(
+    Uint8List baseImage,
+    String prompt,
+  ) async {
     _isLoading = true;
     notifyListeners();
 
     try {
       _identityLockedImage = await _service.runStep1IdentityLock(
-        baseImage: baseImage,
-        prompt: identityPrompt,
+        baseImage,
+        prompt,
       );
       _bodyLocked = true;
     } catch (e) {
@@ -42,9 +42,7 @@ class PremiumStudioController extends ChangeNotifier {
     }
   }
 
-  Future<void> runStep2({
-    required String stylePrompt,
-  }) async {
+  Future<void> runStep2(String prompt) async {
     if (_identityLockedImage == null) return;
 
     _isLoading = true;
@@ -52,8 +50,8 @@ class PremiumStudioController extends ChangeNotifier {
 
     try {
       _finalStyledImage = await _service.generateStyledOnly(
-        identityLockedImage: _identityLockedImage!,
-        prompt: stylePrompt,
+        _identityLockedImage!,
+        prompt,
       );
     } catch (e) {
       debugPrint('❌ PremiumStudioController.runStep2 failed: $e');

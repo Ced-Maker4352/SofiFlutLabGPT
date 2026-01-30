@@ -7,6 +7,8 @@ environment:
   sdk: ">=3.5.4 <4.0.0"
 
 dependencies:
+  path_provider: ^2.0.0
+  image_gallery_saver_plus: ^4.0.1
   cached_network_image: ^3.0.0
   flutter_tts: ^4.0.0
   flutter:
@@ -19,7 +21,7 @@ dependencies:
   firebase_storage: ^13.0.4
   flutter_dotenv: ^5.2.1
   google_fonts: ^6.2.1
-  http: ^1.4.0
+  http: ^1.2.2
   image: ^4.5.4
   image_picker: ^1.2.1
   image_picker_web: ^4.0.0
@@ -28,7 +30,7 @@ dependencies:
   audioplayers: ^6.5.1
   just_audio: ^0.10.5
   just_audio_web: ^0.4.16
-  share_plus: ^12.0.1
+  share_plus: ^10.1.4
   shared_preferences: ^2.3.2
   speech_to_text: ^7.3.0
   video_player: ^2.10.1

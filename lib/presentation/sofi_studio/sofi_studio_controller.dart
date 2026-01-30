@@ -1,16 +1,196 @@
 // lib/presentation/sofi_studio/sofi_studio_controller.dart
 
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'sofi_studio_models.dart';
+import '../../services/two_step_generation_service.dart';
+import '../../services/prompt_builder.dart';
+import '../../services/mood_visual_mapper.dart';
+import '../mood/mood_mode.dart';
 
 class SofiStudioController extends ChangeNotifier {
+  // ---------------------------------------------------------------
+  // GENERATION STATE
+  // ---------------------------------------------------------------
+  Uint8List? generatedImageBytes;
+  bool isGenerating = false;
+  String? generationError;
+  bool hasPendingGeneration = false; // 🔑 Re-arm flag for mood selection
+  bool autoGenConsumed = false; // 🔑 Prevents double auto-generation
+  Uint8List? selfieBytes; // 🔑 Stored selfie for mood-triggered generation
+  bool skipWelcomeOverlay = false; // 🔑 Bypass welcome overlay when entering from Mood flow
+
+  // ---------------------------------------------------------------
+  // PROMPT OWNERSHIP (SINGLE SOURCE OF TRUTH)
+  // ---------------------------------------------------------------
+  String _currentPrompt = ''; // 🔑 The active prompt used by Generate button
+  String get currentPrompt => _currentPrompt;
+  String selectedMood = '';
+  MoodMode selectedMode = MoodMode.doll;
+
+  final _twoStep = const TwoStepGenerationService();
+
   VoidCallback? onClearGenerated;
+
+  SofiStudioController() {
+    onClearGenerated = clearGeneratedImage;
+  }
 
   /// Whether the bottom drawer is currently open.
   bool isDrawerOpen = false;
 
   void clearGeneratedOverride() {
     onClearGenerated?.call();
+  }
+
+  // ---------------------------------------------------------------
+  // PROMPT BUILDER (CENTRALIZED)
+  // ---------------------------------------------------------------
+  void rebuildPrompt({
+    required String userPrompt,
+    required String mode,
+    String mood = '',
+    double styleStrength = 7.0,
+  }) {
+    _currentPrompt = buildSofiPrompt(
+      userPrompt: userPrompt,
+      mode: mode,
+      mood: mood,
+      styleStrength: styleStrength,
+    );
+
+    debugPrint('[PROMPT BUILT]\n$_currentPrompt');
+    notifyListeners(); // 🔑 FIX #1: Explicit rebuild notification
+  }
+
+  // ---------------------------------------------------------------
+  // MOOD FLOW ENTRY (SINGLE ENTRY POINT FROM MOOD PAGE)
+  // ---------------------------------------------------------------
+  void enterFromMoodFlow({
+    required Uint8List selfie,
+    required String mood,
+    required MoodMode mode,
+  }) {
+    debugPrint('[Studio] Entering from Mood flow');
+
+    selfieBytes = selfie;
+    selectedMood = mood;
+    selectedMode = mode;
+
+    skipWelcomeOverlay = false; // Welcome overlay should show for Mood flow
+
+    rebuildPrompt(
+      userPrompt: mood,
+      mode: mode.id,
+    );
+
+    hasPendingGeneration = true;
+    autoGenConsumed = false;
+
+    notifyListeners();
+  }
+
+  // ---------------------------------------------------------------
+  // MOOD SELECTION HANDLER (RE-ARM GENERATION)
+  // ---------------------------------------------------------------
+  void onMoodSelectedInStudio(String mood) {
+    selectedMood = mood;
+
+    final visualPrompt = MoodVisualMapper.map(mood);
+
+    rebuildPrompt(
+      userPrompt: visualPrompt,
+      mode: selectedMode.id,
+      mood: mood, // 🔑 Pass mood for style preset mapping
+    );
+
+    hasPendingGeneration = true;
+    notifyListeners();
+
+    // 🔑 STEP 3: Auto-trigger generation on mood change
+    debugPrint('[UI] Triggering generateFromSelfie');
+    if (selfieBytes != null && !isGenerating) {
+      generateFromSelfie(selfieBytes: selfieBytes!);
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // GENERATION ENTRY POINT (PUBLIC API)
+  // ---------------------------------------------------------------
+  Future<void> generateIfReady({
+    required Uint8List selfieBytes,
+  }) async {
+    if (_currentPrompt.isEmpty) {
+      throw Exception('Attempted generation with empty prompt');
+    }
+    await generateFromSelfie(selfieBytes: selfieBytes);
+  }
+
+  // ---------------------------------------------------------------
+  // GENERATION METHOD (KONTEXT PRO - INTERNAL)
+  // ---------------------------------------------------------------
+  Future<void> generateFromSelfie({
+    required Uint8List selfieBytes,
+  }) async {
+    if (isGenerating) return;
+
+    // 🔒 FIX #2: Gate generation behind hasPendingGeneration
+    if (!hasPendingGeneration) {
+      debugPrint('[SofiStudio] Generation blocked: no pending prompt');
+      return;
+    }
+
+    // 🔒 FIX #2: Snapshot prompt to prevent race conditions
+    final promptSnapshot = _currentPrompt;
+    if (promptSnapshot.isEmpty) {
+      throw Exception('Prompt missing at generation time');
+    }
+
+    // ✅ STEP 4 FIX: Add safety delay before generation (CRITICAL FOR WEB)
+    // This allows widget tree to mount and canvas to exist before render
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+
+    isGenerating = true;
+    generationError = null;
+    hasPendingGeneration = false;
+    notifyListeners();
+
+    try {
+      // STEP 1 — identity lock
+      final locked = await _twoStep.runStep1IdentityLock(
+        selfieBytes,
+        promptSnapshot, // 🔑 USE SNAPSHOT
+      );
+
+      // STEP 2 — style application
+      final styled = await _twoStep.generateStyledOnly(
+        locked,
+        promptSnapshot, // 🔑 SAME SNAPSHOT
+      );
+
+      generatedImageBytes = styled;
+      
+      // 🔑 STEP 4: Reset welcome overlay bypass flag after successful generation
+      skipWelcomeOverlay = false;
+    } catch (e) {
+      generationError = e.toString();
+      debugPrint('[SofiStudio] Generation error: $e');
+    } finally {
+      isGenerating = false;
+      debugPrint('[GENERATION] Completed. Image bytes: '
+          '${generatedImageBytes?.length}');
+      notifyListeners();
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // CLEAR GENERATED IMAGE
+  // ---------------------------------------------------------------
+  void clearGeneratedImage() {
+    generatedImageBytes = null;
+    generationError = null;
+    skipWelcomeOverlay = false; // 🔑 Reset flag so welcome overlay can show on next normal entry
+    notifyListeners();
   }
 
   void openDrawer() {

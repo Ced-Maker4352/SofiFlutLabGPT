@@ -1,16 +1,4 @@
-// lib/services/two_step_generation_service.dart
-//
-// Two-step pipeline:
-// Step 1: Identity lock / base generation
-// Step 2: Style-only edit using the locked identity
-//
-// IMPORTANT:
-// - Uses ONE backend function
-// - Uses ONE model (flux_headshot)
-// - No human/doll switching
-// - No strength / isHumanMode params
-// - Style differences handled ONLY via prompt text
-
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
@@ -19,59 +7,70 @@ import 'models_lab_service.dart';
 class TwoStepGenerationService {
   const TwoStepGenerationService();
 
-  /// STEP 1: Identity lock
-  /// Goal: Preserve face + proportions with high fidelity
-  Future<Uint8List> runStep1IdentityLock({
-    required Uint8List baseImage,
-    required String prompt,
+  /// Step 1 — Identity lock
+  ///
+  /// Goal:
+  /// - lock face + proportions
+  /// - minimal style change
+  Future<Uint8List> runStep1IdentityLock(
+    Uint8List baseImage,
+    String prompt, {
     String? negativePrompt,
+    String aspectRatio = '9:16',
   }) async {
-    final finalPrompt = _mergePrompt(prompt, negativePrompt);
+    final initImageBase64 = 'data:image/png;base64,${base64Encode(baseImage)}';
 
-    final imageUrl = await ModelsLabService.generateFromImage(
-      initImageBytes: baseImage,
+    final finalPrompt = _mergePrompt(
+      prompt,
+      // extra lock language helps reduce drift
+      'Preserve the same person identity exactly. Do not change facial structure, age, ethnicity, skin tone, or proportions.',
+      negativePrompt,
+    );
+
+    final imageUrl = await ModelsLabService.generateKontextPro(
       prompt: finalPrompt,
-      isHumanMode: true, // 🔒 Identity lock always uses human mode
-      guidanceScale: 7.5,
-      steps: 50,
-      width: 1024,
-      height: 1536,
       negativePrompt:
-          'low quality, low resolution, pixelated, grainy, blurry, noisy, '
-          'jpeg artifacts, compression artifacts, '
-          'distorted face, warped face, asymmetrical face, '
-          'changed identity, different person, wrong proportions, '
-          'plastic skin, waxy skin, uncanny valley, '
-          'bad anatomy, deformed features, worst quality',
+          'low quality, blurry, pixelated, grainy, noisy, jpeg artifacts, '
+          'changed identity, different person, altered face, warped face, '
+          'bad anatomy, deformed, worst quality',
+      initImageBase64: initImageBase64,
+      aspectRatio: aspectRatio,
+      steps: 28,
+      guidanceScale: 6.5,
     );
 
     return _downloadBytes(imageUrl);
   }
 
-  /// STEP 2: Style application
-  /// Goal: Apply outfit / art style WITHOUT altering identity
-  Future<Uint8List> generateStyledOnly({
-    required Uint8List identityLockedImage,
-    required String prompt,
+  /// Step 2 — Style-only edit (on locked identity)
+  ///
+  /// Goal:
+  /// - apply outfit/style
+  /// - keep identity stable
+  Future<Uint8List> generateStyledOnly(
+    Uint8List identityLockedImage,
+    String prompt, {
     String? negativePrompt,
+    String aspectRatio = '9:16',
   }) async {
-    final finalPrompt = _mergePrompt(prompt, negativePrompt);
+    final initImageBase64 =
+        'data:image/png;base64,${base64Encode(identityLockedImage)}';
 
-    final imageUrl = await ModelsLabService.generateFromImage(
-      initImageBytes: identityLockedImage,
+    final finalPrompt = _mergePrompt(
+      prompt,
+      'Keep the same identity exactly. Only change clothing, styling, and background if requested.',
+      negativePrompt,
+    );
+
+    final imageUrl = await ModelsLabService.generateKontextPro(
       prompt: finalPrompt,
-      isHumanMode: true, // 🔒 Style application preserves human identity
-      guidanceScale: 7.5,
-      steps: 45,
-      width: 1024,
-      height: 1536,
       negativePrompt:
-          'low quality, low resolution, pixelated, grainy, blurry, noisy, '
-          'jpeg artifacts, compression artifacts, '
-          'changed face, different face, altered identity, '
-          'changed eye color, changed nose shape, changed lips, '
-          'plastic face, uncanny valley, '
-          'bad anatomy, deformed features, worst quality',
+          'changed face, different person, altered identity, '
+          'bad anatomy, deformed, worst quality, uncanny valley',
+      initImageBase64: initImageBase64,
+      aspectRatio: aspectRatio,
+      steps: 30,
+      guidanceScale: 7,
     );
 
     return _downloadBytes(imageUrl);
@@ -79,23 +78,20 @@ class TwoStepGenerationService {
 
   // ---- helpers ----
 
-  String _mergePrompt(String prompt, String? negative) {
+  String _mergePrompt(String prompt, String lockLine, String? negative) {
     final p = prompt.trim();
     final n = (negative ?? '').trim();
-    if (n.isEmpty) return p;
-    return '$p\n\nNEGATIVE: $n';
+
+    final base = '$p\n\n$lockLine';
+    if (n.isEmpty) return base;
+    return '$base\n\nNEGATIVE: $n';
   }
 
   Future<Uint8List> _downloadBytes(String url) async {
-    final uri = Uri.parse(url);
-    final resp = await http.get(uri);
-
+    final resp = await http.get(Uri.parse(url));
     if (resp.statusCode < 200 || resp.statusCode >= 300) {
-      throw Exception(
-        'Failed to download generated image ($url): ${resp.statusCode}',
-      );
+      throw Exception('Failed to download generated image ($url): ${resp.statusCode}');
     }
-
     return resp.bodyBytes;
   }
 }

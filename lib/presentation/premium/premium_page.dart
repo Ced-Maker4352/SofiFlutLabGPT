@@ -21,6 +21,7 @@ import 'package:sofi_test_connect/presentation/premium/share_hub_page.dart';
 import 'package:sofi_test_connect/presentation/premium/favorites_hub_page.dart';
 import 'package:sofi_test_connect/presentation/premium/discover_page.dart';
 import 'package:sofi_test_connect/services/storage_service.dart';
+import 'package:sofi_test_connect/services/sofi_export_service.dart';
 import 'package:sofi_test_connect/presentation/premium/paywall_sheet.dart';
 
 class PremiumStudioPage extends StatefulWidget {
@@ -47,6 +48,12 @@ class PremiumStudioPage extends StatefulWidget {
 
   @override
   State<PremiumStudioPage> createState() => _PremiumStudioPageState();
+}
+
+enum ExportPreset {
+  story,      // 9:16
+  post,       // 1:1
+  wallpaper,  // 9:16 (full height)
 }
 
 /// Compress + downscale favorite images so they fit inside web localStorage limits.
@@ -114,6 +121,228 @@ class _PremiumStudioPageState extends State<PremiumStudioPage> {
 
   // ---------------- HELPERS ----------------
   String? _b64(Uint8List? bytes) => bytes == null ? null : base64Encode(bytes);
+
+  double _aspectForPreset(ExportPreset preset) {
+    switch (preset) {
+      case ExportPreset.story:
+        return 9 / 16;
+      case ExportPreset.post:
+        return 1.0;
+      case ExportPreset.wallpaper:
+        return 9 / 16;
+    }
+  }
+
+  String _fileNameForPreset(ExportPreset preset) {
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    switch (preset) {
+      case ExportPreset.story:
+        return 'sofi_story_$ts.png';
+      case ExportPreset.post:
+        return 'sofi_post_$ts.png';
+      case ExportPreset.wallpaper:
+        return 'sofi_wallpaper_$ts.png';
+    }
+  }
+
+  String _hashtagsForPlatform({
+    required ExportPreset preset,
+  }) {
+    switch (preset) {
+      case ExportPreset.story:
+        // TikTok / Reels style: short + trending
+        return '#SofiStudio #AIArt #FYP #Creative';
+
+      case ExportPreset.post:
+        // Instagram feed style: discoverable + clean
+        return '#SofiStudio #AICreative #DigitalArt #ArtOfTheDay';
+
+      case ExportPreset.wallpaper:
+        return '#SofiStudio #Wallpaper';
+
+      default:
+        return '#SofiStudio';
+    }
+  }
+
+  String _captionForPreset(ExportPreset preset) {
+    final hashtags = _hashtagsForPlatform(preset: preset);
+
+    switch (preset) {
+      case ExportPreset.story:
+        return '✨ Made with Sofi Studio\n$hashtags';
+
+      case ExportPreset.post:
+        return 'Created with Sofi Studio ✨\n\n$hashtags';
+
+      case ExportPreset.wallpaper:
+        return 'Wallpaper created with Sofi Studio ✨\n$hashtags';
+
+      default:
+        return 'Made with Sofi Studio\n$hashtags';
+    }
+  }
+
+  Future<void> _exportWithPreset(
+    ExportPreset preset, {
+    bool share = false,
+  }) async {
+    if (styledBytes == null || _styledBytesOriginal == null) return;
+
+    final aspect = _aspectForPreset(preset);
+
+    final cropped = await _cropBytesToAspect(
+      bytes: _styledBytesOriginal!,
+      aspect: aspect,
+      focusY: 0, // center focus by default
+    );
+
+    if (!mounted || cropped == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Export failed')),
+      );
+      return;
+    }
+
+    final fileName = _fileNameForPreset(preset);
+
+    try {
+      if (share) {
+        // Share flow
+        await SofiExportService.shareImage(
+          context: context,
+          imageUrl: await StorageService.instance
+              .uploadTempBytesAndGetUrl(cropped, fileName),
+          shareText: _captionForPreset(preset),
+          fileName: fileName,
+        );
+      } else {
+        // Save to Photos / Download
+        await SofiExportService.saveImage(
+          imageUrl: await StorageService.instance
+              .uploadTempBytesAndGetUrl(cropped, fileName),
+          fileName: fileName,
+        );
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('✓ Exported')),
+      );
+    } catch (e) {
+      debugPrint('Export failed: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Export failed')),
+      );
+    }
+  }
+
+  Future<void> _batchExportStoryAndPost() async {
+    if (styledBytes == null || _styledBytesOriginal == null) return;
+
+    try {
+      // STORY (9:16)
+      final storyBytes = await _cropBytesToAspect(
+        bytes: _styledBytesOriginal!,
+        aspect: 9 / 16,
+        focusY: 0,
+      );
+
+      // POST (1:1)
+      final postBytes = await _cropBytesToAspect(
+        bytes: _styledBytesOriginal!,
+        aspect: 1.0,
+        focusY: 0,
+      );
+
+      if (!mounted || storyBytes == null || postBytes == null) {
+        throw Exception('Batch crop failed');
+      }
+
+      final ts = DateTime.now().millisecondsSinceEpoch;
+
+      // Upload both (reuse your existing storage helper)
+      final storyUrl = await StorageService.instance
+          .uploadTempBytesAndGetUrl(storyBytes, 'sofi_story_$ts.png');
+
+      final postUrl = await StorageService.instance
+          .uploadTempBytesAndGetUrl(postBytes, 'sofi_post_$ts.png');
+
+      // Save both
+      await SofiExportService.saveImage(
+        imageUrl: storyUrl,
+        fileName: 'sofi_story_$ts.png',
+      );
+
+      await SofiExportService.saveImage(
+        imageUrl: postUrl,
+        fileName: 'sofi_post_$ts.png',
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('✓ Story + Post exported')),
+      );
+    } catch (e) {
+      debugPrint('Batch export failed: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Batch export failed')),
+      );
+    }
+  }
+
+  Future<void> _batchShareStoryAndPost() async {
+    if (styledBytes == null || _styledBytesOriginal == null) return;
+
+    try {
+      // STORY (9:16)
+      final storyBytes = await _cropBytesToAspect(
+        bytes: _styledBytesOriginal!,
+        aspect: 9 / 16,
+        focusY: 0,
+      );
+
+      // POST (1:1)
+      final postBytes = await _cropBytesToAspect(
+        bytes: _styledBytesOriginal!,
+        aspect: 1.0,
+        focusY: 0,
+      );
+
+      if (!mounted || storyBytes == null || postBytes == null) {
+        throw Exception('Batch crop failed');
+      }
+
+      final ts = DateTime.now().millisecondsSinceEpoch;
+
+      // Upload temp files (reuse your existing helper)
+      final storyUrl = await StorageService.instance
+          .uploadTempBytesAndGetUrl(storyBytes, 'sofi_story_$ts.png');
+
+      final postUrl = await StorageService.instance
+          .uploadTempBytesAndGetUrl(postBytes, 'sofi_post_$ts.png');
+
+      // Share both (mobile = files, web = links)
+      await SofiExportService.shareImage(
+        context: context,
+        imageUrl: storyUrl,
+        shareText: _captionForPreset(ExportPreset.story),
+        fileName: 'sofi_story_$ts.png',
+      );
+
+      await SofiExportService.shareImage(
+        context: context,
+        imageUrl: postUrl,
+        shareText: _captionForPreset(ExportPreset.post),
+        fileName: 'sofi_post_$ts.png',
+      );
+    } catch (e) {
+      debugPrint('Batch share failed: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Batch share failed')),
+      );
+    }
+  }
 
   bool _isLockedTheme(ThemePreset t) => t.isPremium && !widget.isPremiumUser;
 
@@ -232,8 +461,8 @@ If style conflicts with face preservation, ALWAYS preserve the face.
 
     try {
       final res = await widget.generationService.runStep1IdentityLock(
-        baseImage: _userImageBytes!,
-        prompt: _buildIdentityLockPrompt(),
+        _userImageBytes!,
+        _buildIdentityLockPrompt(),
       );
 
       if (!mounted) return;
@@ -404,6 +633,7 @@ If style conflicts with face preservation, ALWAYS preserve the face.
     if (applyingStyle) return;
     if (selectedTheme == null) return;
 
+    if (!mounted) return;
     setState(() => applyingStyle = true);
 
     try {
@@ -446,8 +676,8 @@ If style conflicts with face preservation, ALWAYS preserve the face.
       // ------------------------------------------------------------
       final result =
           await widget.generationService.generateStyledOnly(
-        identityLockedImage: lockedBodyBytes!,
-        prompt: prompt,
+        lockedBodyBytes!,
+        prompt,
       );
 
       if (!mounted) return;
@@ -470,6 +700,7 @@ If style conflicts with face preservation, ALWAYS preserve the face.
       _generationHistory.add(entry);
       _historyIndex = _generationHistory.length - 1;
 
+      if (!mounted) return;
       setState(() {
         styledBytes = result;
         _styledBytesOriginal = result;
@@ -754,6 +985,7 @@ If style conflicts with face preservation, ALWAYS preserve the face.
   }
 
   void _resetIdentity() {
+    if (!mounted) return;
     setState(() {
       _userImageBytes = null;
       lockedBodyBytes = null;
@@ -1289,6 +1521,53 @@ If style conflicts with face preservation, ALWAYS preserve the face.
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Export Presets',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _exportWithPreset(ExportPreset.story),
+                  child: const Text('Story (9:16)'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _exportWithPreset(ExportPreset.post),
+                  child: const Text('Post (1:1)'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => _exportWithPreset(ExportPreset.wallpaper),
+              child: const Text('Wallpaper'),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _batchExportStoryAndPost,
+              child: const Text('Export Story + Post'),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: _batchShareStoryAndPost,
+              child: const Text('Share Story + Post'),
             ),
           ),
           const SizedBox(height: 12),
@@ -2003,6 +2282,7 @@ class _FirebaseImageState extends State<_FirebaseImage> {
   }
 
   Future<void> _loadImage() async {
+    if (!mounted) return;
     setState(() {
       _loading = true;
       _error = false;

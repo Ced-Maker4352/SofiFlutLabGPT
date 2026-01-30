@@ -73,6 +73,7 @@ class _StageImageState extends State<StageImage> {
   void _hydrate() {
     // Priority: bytes > base64 > url
     if (widget.bytes != null && widget.bytes!.isNotEmpty) {
+      if (!mounted) return;
       setState(() {
         _bytes = widget.bytes;
         _decoding = false;
@@ -84,6 +85,7 @@ class _StageImageState extends State<StageImage> {
     if (widget.base64 != null && widget.base64!.trim().isNotEmpty) {
       final key = widget.base64;
       if (_lastBase64Key == key && _bytes != null) return; // already decoded
+      if (!mounted) return;
       setState(() {
         _decoding = true;
       });
@@ -111,6 +113,7 @@ class _StageImageState extends State<StageImage> {
     }
 
     // No bytes or base64; clear local bytes so url/network path is used.
+    if (!mounted) return;
     setState(() {
       _bytes = null;
       _decoding = false;

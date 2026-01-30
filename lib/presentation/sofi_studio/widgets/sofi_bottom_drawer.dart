@@ -136,6 +136,7 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
       }
     }
 
+    if (!mounted) return;
     setState(() {
       _currentFraction = target;
     });
@@ -182,6 +183,7 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
       PaywallSheet.show(context, message: 'Unlock ${category.prettyName} with Premium!');
       return;
     }
+    if (!mounted) return;
     setState(() => _selectedCategory = category);
   }
   

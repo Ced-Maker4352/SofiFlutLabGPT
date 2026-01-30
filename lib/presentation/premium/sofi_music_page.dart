@@ -118,6 +118,7 @@ class _SofiMusicPageState extends State<SofiMusicPage> with SingleTickerProvider
   Future<void> _playTrack(int index) async {
     if (_loadingTracks[index] == true) return;
 
+    if (!mounted) return;
     setState(() => _loadingTracks[index] = true);
 
     try {
@@ -433,9 +434,15 @@ class _SofiMusicPageState extends State<SofiMusicPage> with SingleTickerProvider
     final progress = _duration.inMilliseconds > 0 ? _position.inMilliseconds / _duration.inMilliseconds : 0.0;
 
     return GestureDetector(
-      onTap: () => setState(() => _showNowPlaying = true),
+      onTap: () {
+        if (!mounted) return;
+        setState(() => _showNowPlaying = true);
+      },
       onVerticalDragEnd: (d) {
-        if (d.primaryVelocity != null && d.primaryVelocity! < -200) setState(() => _showNowPlaying = true);
+        if (d.primaryVelocity != null && d.primaryVelocity! < -200) {
+          if (!mounted) return;
+          setState(() => _showNowPlaying = true);
+        }
       },
       child: Container(
         margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),

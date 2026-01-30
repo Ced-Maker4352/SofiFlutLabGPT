@@ -28,12 +28,14 @@ class _FavoritesHubPageState extends State<FavoritesHubPage> {
       final loaded = await FavoritesManager.load();
       // Sort newest first
       loaded.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      if (!mounted) return;
       setState(() {
         _favorites = loaded;
         _loading = false;
       });
     } catch (e) {
       debugPrint('Failed to load favorites: $e');
+      if (!mounted) return;
       setState(() => _loading = false);
     }
   }
@@ -63,6 +65,7 @@ class _FavoritesHubPageState extends State<FavoritesHubPage> {
     );
 
     if (confirmed == true) {
+      if (!mounted) return;
       setState(() => _favorites.removeAt(index));
       await FavoritesManager.saveAll(_favorites);
       if (mounted) {
@@ -111,6 +114,7 @@ class _FavoritesHubPageState extends State<FavoritesHubPage> {
         if (idx < _favorites.length) _favorites.removeAt(idx);
       }
       await FavoritesManager.saveAll(_favorites);
+      if (!mounted) return;
       setState(() {
         _selectedIndices.clear();
         _selectionMode = false;
@@ -137,6 +141,7 @@ class _FavoritesHubPageState extends State<FavoritesHubPage> {
           favorites: _favorites,
           initialIndex: index,
           onDelete: (idx) async {
+            if (!mounted) return;
             setState(() => _favorites.removeAt(idx));
             await FavoritesManager.saveAll(_favorites);
           },
@@ -179,10 +184,13 @@ class _FavoritesHubPageState extends State<FavoritesHubPage> {
             ),
             IconButton(
               icon: const Icon(Icons.close, color: Colors.white),
-              onPressed: () => setState(() {
-                _selectionMode = false;
-                _selectedIndices.clear();
-              }),
+              onPressed: () {
+                if (!mounted) return;
+                setState(() {
+                  _selectionMode = false;
+                  _selectedIndices.clear();
+                });
+              },
             ),
           ] else if (_favorites.isNotEmpty)
             IconButton(
@@ -194,7 +202,10 @@ class _FavoritesHubPageState extends State<FavoritesHubPage> {
                 ),
                 child: const Icon(Icons.checklist, color: Colors.white, size: 20),
               ),
-              onPressed: () => setState(() => _selectionMode = true),
+              onPressed: () {
+                if (!mounted) return;
+                setState(() => _selectionMode = true);
+              },
             ),
         ],
       ),
@@ -291,6 +302,7 @@ class _FavoritesHubPageState extends State<FavoritesHubPage> {
               if (_selectionMode)
                 TextButton(
                   onPressed: () {
+                    if (!mounted) return;
                     setState(() {
                       if (_selectedIndices.length == _favorites.length) {
                         _selectedIndices.clear();
@@ -325,6 +337,7 @@ class _FavoritesHubPageState extends State<FavoritesHubPage> {
               selectionMode: _selectionMode,
               onTap: () {
                 if (_selectionMode) {
+                  if (!mounted) return;
                   setState(() {
                     if (_selectedIndices.contains(index)) {
                       _selectedIndices.remove(index);
@@ -338,6 +351,7 @@ class _FavoritesHubPageState extends State<FavoritesHubPage> {
               },
               onLongPress: () {
                 if (!_selectionMode) {
+                  if (!mounted) return;
                   setState(() {
                     _selectionMode = true;
                     _selectedIndices.add(index);
@@ -578,7 +592,10 @@ class _FavoritesGalleryViewState extends State<_FavoritesGalleryView> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: GestureDetector(
-        onTap: () => setState(() => _showInfo = !_showInfo),
+        onTap: () {
+          if (!mounted) return;
+          setState(() => _showInfo = !_showInfo);
+        },
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -586,7 +603,10 @@ class _FavoritesGalleryViewState extends State<_FavoritesGalleryView> {
             PageView.builder(
               controller: _pageController,
               itemCount: widget.favorites.length,
-              onPageChanged: (idx) => setState(() => _currentIndex = idx),
+              onPageChanged: (idx) {
+                if (!mounted) return;
+                setState(() => _currentIndex = idx);
+              },
               itemBuilder: (context, index) {
                 return InteractiveViewer(
                   minScale: 1.0,
@@ -673,7 +693,7 @@ class _FavoritesGalleryViewState extends State<_FavoritesGalleryView> {
                             await widget.onDelete(_currentIndex);
                             if (widget.favorites.isEmpty && mounted) {
                               Navigator.pop(context);
-                            } else {
+                            } else if (mounted) {
                               setState(() {
                                 if (_currentIndex >= widget.favorites.length) {
                                   _currentIndex = widget.favorites.length - 1;

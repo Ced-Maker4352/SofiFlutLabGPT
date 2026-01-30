@@ -55,6 +55,7 @@ class _ShareHubPageState extends State<ShareHubPage> with SingleTickerProviderSt
   Future<void> _shareImage() async {
     if (widget.imageBase64 == null) return;
     
+    if (!mounted) return;
     setState(() => _isSharing = true);
     
     try {
@@ -65,12 +66,10 @@ class _ShareHubPageState extends State<ShareHubPage> with SingleTickerProviderSt
         name: 'sofi_creation_${DateTime.now().millisecondsSinceEpoch}.png',
       );
       
-      await SharePlus.instance.share(
-        ShareParams(
-          files: [xFile],
-          text: widget.prompt ?? 'Created with Sofi Studio ✨',
-          subject: 'My Sofi Creation',
-        ),
+      await Share.shareXFiles(
+        [xFile],
+        text: widget.prompt ?? 'Created with Sofi Studio ✨',
+        subject: 'My Sofi Creation',
       );
     } catch (e) {
       debugPrint('Share error: $e');
@@ -297,7 +296,10 @@ class _ShareHubPageState extends State<ShareHubPage> with SingleTickerProviderSt
                 ),
                 Switch.adaptive(
                   value: _showWatermark,
-                  onChanged: (v) => setState(() => _showWatermark = v),
+                  onChanged: (v) {
+                    if (!mounted) return;
+                    setState(() => _showWatermark = v);
+                  },
                   activeColor: const Color(0xFF667eea),
                 ),
               ],
@@ -509,7 +511,10 @@ class _ShareHubPageState extends State<ShareHubPage> with SingleTickerProviderSt
     final isSelected = _selectedFrame == index;
     
     return GestureDetector(
-      onTap: () => setState(() => _selectedFrame = index),
+      onTap: () {
+        if (!mounted) return;
+        setState(() => _selectedFrame = index);
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: 70,

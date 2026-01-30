@@ -27,6 +27,7 @@ class _VoiceCoachSettingsSheetState extends State<VoiceCoachSettingsSheet> {
   }
 
   Future<void> _load() async {
+    if (!mounted) return;
     setState(() => _loading = true);
     try {
       final vc = VoiceCoachService.instance;
@@ -106,6 +107,7 @@ class _VoiceCoachSettingsSheetState extends State<VoiceCoachSettingsSheet> {
                           value: _enabled,
                           activeColor: SofiStudioTheme.purple,
                           onChanged: (v) async {
+                            if (!mounted) return;
                             setState(() => _enabled = v);
                             await VoiceCoachService.instance.setEnabled(v);
                           },
@@ -121,6 +123,7 @@ class _VoiceCoachSettingsSheetState extends State<VoiceCoachSettingsSheet> {
                           value: _sayName,
                           activeColor: SofiStudioTheme.blue,
                           onChanged: (v) async {
+                            if (!mounted) return;
                             setState(() => _sayName = v);
                             await VoiceCoachService.instance.setSayName(v);
                           },

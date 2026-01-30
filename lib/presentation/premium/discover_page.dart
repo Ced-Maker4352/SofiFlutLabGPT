@@ -744,6 +744,7 @@ class _FirebaseThemeImageState extends State<_FirebaseThemeImage> {
   }
 
   Future<void> _loadImage() async {
+    if (!mounted) return;
     setState(() {
       _loading = true;
       _error = false;

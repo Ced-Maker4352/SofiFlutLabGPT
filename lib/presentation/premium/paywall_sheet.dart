@@ -72,6 +72,7 @@ class _PaywallSheetState extends State<PaywallSheet> {
   }
 
   Future<void> _handleSubscribe() async {
+    if (!mounted) return;
     setState(() => _isProcessing = true);
     
     try {
@@ -101,6 +102,7 @@ class _PaywallSheetState extends State<PaywallSheet> {
   }
 
   Future<void> _handleRestore() async {
+    if (!mounted) return;
     setState(() => _isProcessing = true);
     
     try {
@@ -317,7 +319,10 @@ class _PaywallSheetState extends State<PaywallSheet> {
     final isSelected = _selectedPlan == plan.plan;
     
     return GestureDetector(
-      onTap: () => setState(() => _selectedPlan = plan.plan),
+      onTap: () {
+        if (!mounted) return;
+        setState(() => _selectedPlan = plan.plan);
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         margin: const EdgeInsets.only(bottom: 12),

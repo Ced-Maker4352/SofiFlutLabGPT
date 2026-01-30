@@ -14,6 +14,7 @@ import 'package:share_plus/share_plus.dart';
 
 import 'package:sofi_test_connect/services/premium_service.dart';
 import 'package:sofi_test_connect/services/performance_service.dart';
+import 'package:sofi_test_connect/services/sofi_session_memory.dart';
 import 'package:sofi_test_connect/presentation/premium/paywall_sheet.dart';
 import 'package:sofi_test_connect/presentation/premium/premium_page.dart';
 import 'package:sofi_test_connect/presentation/mood/mood_mode.dart';
@@ -29,6 +30,8 @@ import 'package:sofi_test_connect/presentation/sofi_studio/models/favorite_outfi
 import 'package:http/http.dart' as http;
 
 import '../../constants/base_prompts.dart';
+import '../../services/sofi_export_service.dart';
+import '../../services/mood_visual_mapper.dart';
 import 'web_download.dart';
 
 import 'custom_doll_storage.dart';
@@ -63,6 +66,9 @@ class SofiStudioPage extends StatefulWidget {
   final String? initialMode; // 'human' | 'doll' | 'cinematic' | 'fantasy' | 'anime'
   final Uint8List? selfieBytes;
   final String? selfiePath;
+  
+  /// 🔑 NEW: Callback to configure controller after creation (for Mood flow)
+  final void Function(SofiStudioController controller)? onControllerReady;
 
   const SofiStudioPage({
     super.key,
@@ -70,6 +76,7 @@ class SofiStudioPage extends StatefulWidget {
     this.initialMode,
     this.selfieBytes,
     this.selfiePath,
+    this.onControllerReady,
   });
 
   @override
@@ -104,6 +111,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
   bool _listening = false;
 
   Uint8List? generatedImageBytes;
+  String? _latestImageUrl; // Track the URL for share/download
   final List<Uint8List> _history = [];
   final List<Uint8List> _redoStack = [];
   
@@ -112,8 +120,10 @@ class _SofiStudioPageState extends State<SofiStudioPage>
   Uint8List? _originalBaseDollBytes;
 
   // Helper: Did we enter from QuickMood selfie flow?
-  bool get _fromQuickMoodSelfie =>
-      widget.selfieBytes != null && widget.selfieBytes!.isNotEmpty;
+  bool get _fromQuickMoodSelfie {
+    final bytes = controller.selfieBytes ?? widget.selfieBytes;
+    return bytes != null && bytes.isNotEmpty;
+  }
 
   /// Check if we should show the preview watermark
   bool _shouldShowPreviewWatermark() {
@@ -202,7 +212,14 @@ class _SofiStudioPageState extends State<SofiStudioPage>
 
   void _setQuickMood(String moodId) {
     if (_activeMoodId == moodId) return;
+    if (!mounted) return;
+    // 🔒 FIX #4: Block mood changes during generation
+    if (controller.isGenerating) return;
+    
     setState(() => _activeMoodId = moodId);
+
+    // 🔑 RE-ARM GENERATION: Notify controller that mood changed
+    controller.onMoodSelectedInStudio(moodId);
 
     // REMOTE DEBUG LOG: Mood changed (non-blocking)
     unawaited(RemoteDebugLogger.instance.logInteraction('MOOD_CHANGED', {
@@ -238,14 +255,16 @@ class _SofiStudioPageState extends State<SofiStudioPage>
   // First-time canvas hint overlay
   bool _showCanvasHint = false;
 
-  // Initial loading state - true until history is loaded
-  bool _isInitialLoading = true;
-
-  // QUICK-MOOD: ensure auto-generate runs only once per entry
-  bool _didQuickMoodAutoGenerate = false;
+  // Mood flow gate: block auto-generation until user taps Continue Styling
+  bool _awaitingMoodFlowContinue = false;
 
   // Platform hint to tweak shadows/effects for iOS Web (reduce heavy blurs)
   bool get _isIOSWeb => kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
+  // Session-remembered preferences
+  String _selectedMode = 'pixar';
+  double _guidanceScale = 6.8;
+  String _selectedRatio = 'portrait';
 
   final Map<EditCategory, int?> selectedOptions = {
     EditCategory.hair: null,
@@ -262,6 +281,16 @@ class _SofiStudioPageState extends State<SofiStudioPage>
   @override
   void initState() {
     super.initState();
+
+    // 🔑 STEP 6: Call onControllerReady callback immediately after controller creation
+    widget.onControllerReady?.call(controller);
+
+    // If Mood flow injected a selfie + pending generation, require user to press Continue
+    _awaitingMoodFlowContinue =
+        controller.selfieBytes != null && controller.hasPendingGeneration;
+    if (_awaitingMoodFlowContinue) {
+      _showCanvasHint = true; // ensure overlay is visible immediately
+    }
 
     // REMOTE DEBUG LOG: Page entry
     unawaited(RemoteDebugLogger.instance
@@ -321,6 +350,17 @@ class _SofiStudioPageState extends State<SofiStudioPage>
 
     ThemeManager.instance.addListener(_onThemeChanged);
 
+    // STEP 3 — Force-hide Welcome overlay if entering from Mood flow
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (controller.skipWelcomeOverlay && _showCanvasHint) {
+        setState(() {
+          _showCanvasHint = false;
+        });
+        debugPrint('[Studio] Force-dismissed canvas hint (skipWelcomeOverlay)');
+      }
+    });
+
     // Observe app lifecycle to detect backgrounding/crashes
     WidgetsBinding.instance.addObserver(this);
 
@@ -328,6 +368,18 @@ class _SofiStudioPageState extends State<SofiStudioPage>
     _startHeartbeat();
 
     _init();
+
+    // Load session memory (mode, guidance, ratio)
+    SofiSessionMemory.load().then((memory) {
+      if (!mounted) return;
+      setState(() {
+        _selectedMode = memory['mode'];
+        _guidanceScale = memory['guidance'];
+        _selectedRatio = memory['ratio'];
+      });
+    }).catchError((e) {
+      debugPrint('⚠️ [SessionMemory] Failed to load: $e');
+    });
   }
 
   @override
@@ -350,9 +402,17 @@ class _SofiStudioPageState extends State<SofiStudioPage>
         debugPrint('\u26a0\ufe0f [Lifecycle] App pausing while listening!');
         try {
           _speech.stop().catchError((_) {});
-          setState(() => _listening = false);
+          if (mounted) {
+            setState(() => _listening = false);
+          }
         } catch (_) {}
       }
+      
+      // Cancel all timers to prevent crashes when app is backgrounded
+      _heartbeatTimer?.cancel();
+      _premiumReminderTimer?.cancel();
+      _selectionDebounceTimer?.cancel();
+      _cooldownTimer?.cancel();
     }
   }
 
@@ -420,32 +480,74 @@ class _SofiStudioPageState extends State<SofiStudioPage>
   }
 
   Future<void> _init() async {
-    // PRIORITY: Load user's last image FIRST before anything else
-    // This ensures we show the right image immediately without showing default doll first
-  // ================================
-  // QUICK MOOD HANDOFF (ENTRY OVERRIDE)
-  // ================================
-  if (widget.selfieBytes != null) {
-    debugPrint('[QuickMood] 🔥 Entry from Mood flow with selfie');
-    debugPrint('[QuickMood] Mode: ${widget.initialMode ?? "not set"}');
-
-    // Treat selfie as the ORIGINAL base to prevent drift
-    _originalBaseDollBytes = widget.selfieBytes;
-    generatedImageBytes = widget.selfieBytes;
-
-    // Preselect mood (light style layer only)
-    if (widget.initialMood != null) {
-      _activeMoodId = widget.initialMood!;
-      debugPrint('[QuickMood] Mood preselected: ${widget.initialMood}');
+    // Detect direct prop-based Mood flow (fallback path)
+    if (!_awaitingMoodFlowContinue &&
+        widget.selfieBytes != null &&
+        widget.initialMood != null) {
+      _awaitingMoodFlowContinue = true;
+      _showCanvasHint = true;
     }
 
-    // Canvas is ready immediately
-    _isInitialLoading = false;
-  }
+    // PRIORITY: Load user's last image FIRST before anything else
+    // This ensures we show the right image immediately without showing default doll first
+    // ================================
+    // QUICK MOOD HANDOFF (ENTRY OVERRIDE)
+    // ================================
+    final Uint8List? incomingSelfie = controller.selfieBytes ?? widget.selfieBytes;
+    final String? incomingMood = controller.selectedMood.isNotEmpty
+        ? controller.selectedMood
+        : widget.initialMood;
+
+    if (incomingSelfie != null) {
+      debugPrint('[QuickMood] 🔥 Entry from Mood flow with selfie');
+      debugPrint('[QuickMood] Mode: ${widget.initialMode ?? controller.selectedMode.id}');
+
+      // Treat selfie as the ORIGINAL base to prevent drift
+      _originalBaseDollBytes = incomingSelfie;
+      generatedImageBytes = incomingSelfie;
+
+      // Preselect mood (light style layer only)
+      if (incomingMood != null && incomingMood.isNotEmpty) {
+        _activeMoodId = incomingMood;
+        debugPrint('[QuickMood] Mood preselected: $incomingMood');
+      }
+    }
+
+    // 🔑 INITIALIZE CONTROLLER MOOD & MODE (respect injected state from Mood flow)
+    if (widget.initialMode != null) {
+      controller.selectedMode = switch (widget.initialMode) {
+        'human' => MoodMode.human,
+        'cinematic' => MoodMode.cinematic,
+        'fantasy' => MoodMode.fantasy,
+        'artistic' => MoodMode.artistic,
+        'doll' => MoodMode.doll,
+        _ => MoodMode.doll,
+      };
+    }
+
+    // 🔑 Store selfieBytes on controller for mood-triggered generation (but never overwrite injected value)
+    controller.selfieBytes ??= widget.selfieBytes;
+    
+    // Initialize prompt if we have a mood and prompt hasn't been set by callback
+    final initialMood = controller.selectedMood.isNotEmpty
+        ? controller.selectedMood
+        : widget.initialMood;
+    if (initialMood != null && controller.currentPrompt.isEmpty) {
+      controller.selectedMood = initialMood;
+      final visualPrompt = MoodVisualMapper.map(initialMood);
+      controller.rebuildPrompt(
+        userPrompt: visualPrompt,
+        mode: controller.selectedMode.id,
+        mood: initialMood, // 🔑 Pass mood for style preset mapping
+      );
+      controller.hasPendingGeneration = true;
+      debugPrint('[Controller] Initial prompt: ${controller.currentPrompt}');
+    }
 
     await controller.loadDolls();
 
     controller.onClearGenerated = () {
+      if (!mounted) return;
       setState(() {
         generatedImageBytes = null;
         _originalBaseDollBytes = null; // Also clear original base on reset
@@ -474,43 +576,52 @@ class _SofiStudioPageState extends State<SofiStudioPage>
           // NOTE: History images are previous outputs.
           // We never use them as generation base to prevent drift.
         }
-        _isInitialLoading = false; // Canvas is now ready to display
       });
 
-      // 🔥 QUICK-MOOD AUTO-GENERATE (ONCE)
+      // ❌ STEP 1 FIX: DO NOT AUTO-GENERATE ON PAGE ENTER (TEMPORARILY DISABLED)
+      // This stabilizes the render lifecycle and prevents web crashes
+      // 🔥 QUICK-MOOD AUTO-GENERATE (ONCE) - TEMPORARILY COMMENTED OUT
       // If we entered from the Mood page with a selfie + mood,
       // trigger exactly one automatic generation after canvas is ready.
-      if (_fromQuickMoodSelfie &&
-          widget.initialMood != null &&
-          widget.initialMood!.isNotEmpty &&
-          !_didQuickMoodAutoGenerate) {
-        _didQuickMoodAutoGenerate = true;
+      // if (_fromQuickMoodSelfie &&
+      //     widget.initialMood != null &&
+      //     widget.initialMood!.isNotEmpty &&
+      //     widget.initialMode != null &&
+      //     !_didQuickMoodAutoGenerate) {
+      //   _didQuickMoodAutoGenerate = true;
 
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          if (_isGenerating) return;
+      //   // 🔑 FIX: Use controller's centralized prompt system
+      //   final mood = widget.initialMood!;
+      //   final mode = widget.initialMode!;
+      //   final selfieBytes = widget.selfieBytes;
 
-          // 🔒 CRITICAL: Validate state before auto-generate
-          if (generatedImageBytes == null || generatedImageBytes!.isEmpty) {
-            debugPrint('⚠️ [QuickMood] Auto-gen blocked: No selfie image');
-            return;
-          }
+      //   if (selfieBytes != null && selfieBytes.isNotEmpty) {
+      //     // 1️⃣ Set mode FIRST
+      //     controller.selectedMode = MoodMode.values.byName(mode);
 
-          final testPrompt = promptController.text.trim();
-          if (testPrompt.isEmpty) {
-            debugPrint('⚠️ [QuickMood] Auto-gen blocked: Empty prompt');
-            return;
-          }
+      //     // 2️⃣ Rebuild prompt from mood
+      //     controller.onMoodSelectedInStudio(mood);
 
-          debugPrint('[QuickMood] 🚀 Auto-generating from initial mood: ${widget.initialMood}');
+      //     // 3️⃣ Defer generation until next frame (prevents race)
+      //     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      //       if (!mounted) return;
+      //       if (_isGenerating || controller.isGenerating) return;
 
-          // Optional: if your studio uses a mood state variable, set it here.
-          // (Only keep this line if _activeMoodId exists in your file.)
-          _activeMoodId = widget.initialMood!;
+      //       debugPrint('[QuickMood] 🚀 Auto-generating from mood: $mood, mode: $mode');
 
-          _onGeneratePressed();
-        });
-      }
+      //       // Dismiss canvas hint if showing (auto-gen takes priority)
+      //       if (_showCanvasHint) {
+      //         setState(() => _showCanvasHint = false);
+      //       }
+
+      //       await controller.generateIfReady(
+      //         selfieBytes: selfieBytes,
+      //       );
+      //     });
+      //   } else {
+      //     debugPrint('⚠️ [QuickMood] Auto-gen blocked: No selfie bytes');
+      //   }
+      // }
       
       // Preload original base doll ONLY when NOT coming from Quick-Mood selfie
       if (!_fromQuickMoodSelfie && controller.currentDoll != null) {
@@ -529,7 +640,6 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       }
     } catch (e) {
       debugPrint('[SofiStudio] History load error: $e');
-      if (mounted) setState(() => _isInitialLoading = false);
     }
 
     // NOW start deferred/background tasks after canvas is ready
@@ -598,7 +708,14 @@ class _SofiStudioPageState extends State<SofiStudioPage>
   }
 
   Future<void> _checkFirstVisitHint() async {
-    // Always show the hint overlay on every app restart
+    // Skip hint overlay when coming from Mood flow via controller flag
+    // (auto-generation should run uninterrupted)
+    if (controller.skipWelcomeOverlay) {
+      debugPrint('[Studio] Skipping canvas hint (skipWelcomeOverlay = true)');
+      return;
+    }
+    
+    // Show the hint overlay on regular app restart
     if (mounted) {
       setState(() => _showCanvasHint = true);
     }
@@ -606,17 +723,63 @@ class _SofiStudioPageState extends State<SofiStudioPage>
 
   void _dismissCanvasHint() {
     if (!mounted) return;
+    
+    // STEP 4  Clear controller flag when user manually dismisses
+    controller.skipWelcomeOverlay = false;
+
+    // Once overlay is dismissed, allow generation to proceed
+    _awaitingMoodFlowContinue = false;
+    
     setState(() => _showCanvasHint = false);
     // Don't persist - show again on next restart
 
     // On web, dismissing the hint also unlocks audio and speaks intro
     if (kIsWeb && _awaitingFirstSoundUnlock) {
+      if (!mounted) return;
       setState(() => _awaitingFirstSoundUnlock = false);
       AudioService.instance.playClick();
       unawaited(VoiceCoachService.instance.speakWelcomeIntro().catchError((e) {
         debugPrint('[VoiceCoach] speakWelcomeIntro error: $e');
       }));
     }
+  }
+
+  /// Handler for "Continue Styling" button - safely triggers generation after dismiss
+  void _onContinueStylingPressed() {
+    // Prevent focus crashes on Flutter Web
+    FocusScope.of(context).unfocus();
+
+    // Mark flow as acknowledged so auto-trigger stays suppressed
+    controller.autoGenConsumed = true;
+    _awaitingMoodFlowContinue = false;
+
+    // Dismiss overlay (not a modal, so no Navigator.pop)
+    _dismissCanvasHint();
+
+    // IMPORTANT: defer generation until after dismiss completes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _triggerGenerate(); // safe, deferred trigger
+    });
+  }
+
+  /// Safely triggers generation if conditions are met
+  void _triggerGenerate() {
+    if (controller.isGenerating) {
+      debugPrint('[UI] _triggerGenerate: Generation already in progress, skipping');
+      return;
+    }
+    if (controller.selfieBytes == null) {
+      debugPrint('[UI] _triggerGenerate: No selfie bytes, cannot generate');
+      return;
+    }
+    if (!controller.hasPendingGeneration) {
+      debugPrint('[UI] _triggerGenerate: No pending generation flagged');
+      return;
+    }
+    
+    debugPrint('[UI] _triggerGenerate: Starting generation');
+    controller.generateFromSelfie(selfieBytes: controller.selfieBytes!);
   }
 
   Future<void> _setCanvasAndAutosave(Uint8List bytes,
@@ -634,6 +797,8 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       }
       // Reset favorite state when image changes
       _isFavorited = false;
+      // Clear the latest URL when manually updating canvas
+      _latestImageUrl = null;
     });
   }
 
@@ -983,31 +1148,31 @@ class _SofiStudioPageState extends State<SofiStudioPage>
   Future<void> _onGeneratePressed() async {
     debugPrint('\u25b6\ufe0f [Generation] Button pressed');
 
-    if (_isGenerating || controller.currentDoll == null) {
+    // 🔒 FIX #4: Block double-generation at controller level
+    if (_isGenerating || controller.isGenerating || controller.currentDoll == null) {
       debugPrint(
-          '\u26a0\ufe0f [Generation] Blocked: isGenerating=$_isGenerating, currentDoll=${controller.currentDoll}');
+          '\u26a0\ufe0f [Generation] Blocked: isGenerating=$_isGenerating, controller.isGenerating=${controller.isGenerating}, currentDoll=${controller.currentDoll}');
       return;
     }
 
-    // If we've already detected an out-of-credits state, nudge to paywall instead.
-    if (_outOfCredits) {
-    // 🔒 CRITICAL: Validate prompt and selfie before proceeding
-    final promptText = promptController.text.trim();
-    if (promptText.isEmpty) {
-      debugPrint('⚠️ [Generation] Blocked: Empty prompt');
-      _showSnack('Please add a prompt to generate');
-      return;
-    }
-
-    // For Quick-Mood selfie flow, ensure selfie exists
+    // 🔒 CRITICAL: Validate selfie before proceeding (for Quick-Mood flow)
     if (_fromQuickMoodSelfie && (generatedImageBytes == null || generatedImageBytes!.isEmpty)) {
       debugPrint('⚠️ [Generation] Blocked: No selfie image in Quick-Mood flow');
       _showSnack('Please upload a selfie first');
       return;
     }
 
-    // If we've already detected an out-of-credits state, nudge to paywall instead.
+    // NOTE: Empty prompt is OK for Quick-Mood flow (mode/mood provide base prompt)
+    // Only block if we're NOT in Quick-Mood flow AND prompt is empty
+    final promptText = promptController.text.trim();
+    if (!_fromQuickMoodSelfie && promptText.isEmpty) {
+      debugPrint('⚠️ [Generation] Blocked: Empty prompt (non Quick-Mood flow)');
+      _showSnack('Please add a prompt to generate');
+      return;
+    }
 
+    // If we've already detected an out-of-credits state, nudge to paywall instead.
+    if (_outOfCredits) {
       debugPrint('⛔ [Generation] Blocked: out of credits');
       if (!mounted) return;
       final didSubscribe = await PaywallSheet.show(
@@ -1016,6 +1181,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
             "You're out of generation credits. Start your trial or add credits to continue.",
       );
       if (didSubscribe == true) {
+        if (!mounted) return;
         setState(() => _outOfCredits = false);
         _showSnack('Thanks! Try again.');
       } else {
@@ -1071,6 +1237,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
     // Platform-specific memory guard before heavy work
     _prepareForGenerationMemory();
 
+    if (!mounted) return;
     setState(() => _isGenerating = true);
 
     try {
@@ -1123,8 +1290,8 @@ final String transformPrefix = isSelfieBase
       'studio doll aesthetic, high-quality character render, not photorealistic, '
     : '';
 
-// ✅ Your existing prompt stays intact — we just prefix when needed
-final String finalPrompt = transformPrefix + _buildFinalPrompt();
+// ✅ USE CONTROLLER'S STORED PROMPT (DO NOT REBUILD)
+final String finalPrompt = transformPrefix + controller.currentPrompt;
 
 // ================================
 // FACE LOCK — FULL OUTFIT ONLY
@@ -1175,7 +1342,6 @@ try {
   // For clothing-only edits: can use slightly higher strength
   // ================================
   
-  final bool isFullOutfitGeneration = selectedOptions[EditCategory.fullOutfit] != null;
   final bool isSelfieSource = widget.selfieBytes != null && widget.selfieBytes!.isNotEmpty;
   
   // Higher guidance = sharper, more defined features (better quality)
@@ -1187,19 +1353,18 @@ try {
   // ================================
   debugPrint('[GEN] Using unified ModelsLab pipeline');
 
-  imageUrl = await ModelsLabService.generateFromImage(
-    initImageBytes: initImageBytes,
+  // Convert initImageBytes to base64
+  final String initImageBase64 = 'data:image/png;base64,${base64Encode(initImageBytes)}';
+
+  // Determine mode from initialMode (not initialMood!)
+  final bool isHuman = widget.initialMode == 'human';
+  final String modeLabel = isHuman ? 'human' : 'doll';
+  debugPrint('[GEN] Mode: $modeLabel (initialMode=${widget.initialMode})');
+
+  debugPrint('[UI] Triggering generateFromSelfie');  // ← VERIFY CALLABLE REACHED
+  
+  imageUrl = await ModelsLabService.generateKontextPro(
     prompt: enforcedPrompt,
-    isHumanMode: _fromQuickMoodSelfie, // 🔒 FORCE human mode when from selfie
-
-    // Quality-first defaults
-    guidanceScale: facePreservingGuidance,
-    steps: 50,
-
-    // High-quality portrait output
-    width: 1024,
-    height: 1536,
-
     negativePrompt:
         'low quality, worst quality, low resolution, low-res, pixelated, grainy, noisy, '
         'blurry, soft focus, jpeg artifacts, compression artifacts, muddy, '
@@ -1209,8 +1374,12 @@ try {
         'pixelated face, blurry face, low quality face, jpeg artifacts on face, '
         'changed facial features, altered identity, wrong proportions, '
         'camera photo, selfie, real person photograph',
-  ).timeout(const Duration(seconds: 60));
-
+    initImageBase64: initImageBase64,
+  ).timeout(const Duration(seconds: 120));
+  // Save URL for share/download functionality
+  if (mounted) {
+    setState(() => _latestImageUrl = imageUrl);
+  }
   debugPrint('✅ [Generation] API returned URL: $imageUrl');
 } catch (e, st) {
   debugPrint('❌ [Generation] CRASH: ModelsLab API failed: $e');
@@ -1268,6 +1437,17 @@ try {
             .timeout(const Duration(seconds: 1));
       } catch (e) {
         debugPrint('\u26a0\ufe0f [RemoteLog] Failed to log success: $e');
+      }
+
+      // Save session memory
+      try {
+        await SofiSessionMemory.save(
+          mode: _selectedMode,
+          guidance: _guidanceScale,
+          ratio: _selectedRatio,
+        );
+      } catch (e) {
+        debugPrint('⚠️ [SessionMemory] Failed to save: $e');
       }
 
       // SFX: success
@@ -1381,13 +1561,15 @@ try {
 
   // Adapter to match SofiBottomDrawer(onGenerate: _onGenerate)
   void _onGenerate() {
-    _onGeneratePressed();
+    // TEMP: disable non-button generation path to stabilize flow
+    debugPrint('[UI] Drawer generate ignored (manual generate button only)');
   }
 
   /// Start a cooldown period after generation to prevent rapid-fire requests.
   /// This helps iPhone Safari stay stable by allowing memory to settle.
   void _startGenerationCooldown() {
     _cooldownTimer?.cancel();
+    if (!mounted) return;
     setState(() => _isOnCooldown = true);
 
     _cooldownTimer = Timer(_cooldownDuration, () {
@@ -1668,6 +1850,7 @@ try {
             _setCanvasAndAutosave(bytes, pushToStacks: false),
         onDelete: (bytes) async {
           await CustomDollStorage.deleteFromHistory(bytes);
+          if (!mounted) return;
           setState(() {
             _history.remove(bytes);
             if (generatedImageBytes == bytes) {
@@ -1695,12 +1878,10 @@ try {
       if (bytes != null) {
         // Use share_plus shareXFiles - shows native share sheet on mobile and web (if supported)
         try {
-          final result = await SharePlus.instance.share(
-            ShareParams(
-              files: [XFile.fromData(bytes, name: name, mimeType: 'image/png')],
-              text: 'Made with Sofi Saint',
-              subject: 'Sofi Saint Creation',
-            ),
+          final result = await Share.shareXFiles(
+            [XFile.fromData(bytes, name: name, mimeType: 'image/png')],
+            text: 'Made with Sofi Saint',
+            subject: 'Sofi Saint Creation',
           );
           debugPrint('✅ Share result: ${result.status}');
           // Check if sharing actually worked
@@ -1718,11 +1899,9 @@ try {
           debugPrint('❌ shareXFiles failed: $e');
           // Try text-only share as fallback
           try {
-            await SharePlus.instance.share(
-              ShareParams(
-                text: 'Check out my creation made with Sofi Saint!',
-                subject: 'Sofi Saint Creation',
-              ),
+            await Share.share(
+              'Check out my creation made with Sofi Saint!',
+              subject: 'Sofi Saint Creation',
             );
             return;
           } catch (e2) {
@@ -1736,11 +1915,9 @@ try {
         }
       } else {
         // No image yet: share text only
-        await SharePlus.instance.share(
-          ShareParams(
-            text: 'Check out Sofi Saint - AI Fashion Studio!',
-            subject: 'Sofi Saint',
-          ),
+        await Share.share(
+          'Check out Sofi Saint - AI Fashion Studio!',
+          subject: 'Sofi Saint',
         );
       }
     } catch (e) {
@@ -1944,6 +2121,7 @@ try {
 
       // If we got a prompt back, store it as the active base style
       if (returnedPrompt != null && returnedPrompt.isNotEmpty) {
+        if (!mounted) return;
         setState(() => _activeBaseStylePrompt = returnedPrompt);
         debugPrint('Activated premium style prompt override');
       }
@@ -2045,6 +2223,7 @@ try {
           return;
         }
 
+        if (!mounted) return;
         setState(() => _listening = true);
         debugPrint('\ud83c\udfa4 [Speech] Starting to listen...');
 
@@ -2139,8 +2318,74 @@ try {
     }
   }
 
+  Future<void> _shareImage() async {
+    if (_latestImageUrl == null && generatedImageBytes == null) {
+      _showSnack('No image to share');
+      return;
+    }
+
+    try {
+      await AudioService.instance.playClick();
+      
+      // If we have a URL, use it for sharing; otherwise we'll need to generate one
+      if (_latestImageUrl != null) {
+        await SofiExportService.shareImage(
+          context: context,
+          imageUrl: _latestImageUrl!,
+          shareText: 'Made with Sofi Studio',
+          fileName: 'sofi_studio_${DateTime.now().millisecondsSinceEpoch}.png',
+        );
+        _showSnack('Opening share sheet...');
+      } else {
+        _showSnack('Image URL not available');
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to share: $e');
+      _showSnack('Failed to share. Please try again.');
+    }
+  }
+
+  Future<void> _downloadImage() async {
+    if (_latestImageUrl == null && generatedImageBytes == null) {
+      _showSnack('No image to download');
+      return;
+    }
+
+    try {
+      await AudioService.instance.playClick();
+      
+      await SofiExportService.saveImage(
+        imageUrl: _latestImageUrl ?? '',
+        fileName: 'sofi_studio_${DateTime.now().millisecondsSinceEpoch}.png',
+      );
+      _showSnack(kIsWeb ? 'Image downloaded!' : 'Saved to Photos ✓');
+    } catch (e) {
+      debugPrint('❌ Failed to download: $e');
+      _showSnack('Failed to save. Please try again.');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // STEP 3 — AUTO-TRIGGER AFTER FIRST FRAME (RACE CONDITION FIX)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_awaitingMoodFlowContinue) return; // Wait for Continue Styling tap
+      if (_showCanvasHint) return; // Do not auto-generate while overlay is visible
+
+      if (controller.hasPendingGeneration &&
+          controller.selfieBytes != null &&
+          !controller.isGenerating &&
+          !controller.autoGenConsumed) {
+        debugPrint('[Studio] 🚀 Auto-triggering generation');
+
+        controller.autoGenConsumed = true;
+
+        controller.generateFromSelfie(
+          selfieBytes: controller.selfieBytes!,
+        );
+      }
+    });
+
     final current = controller.currentDoll;
     final theme = ThemeManager.instance.current;
     // Updated background color to blend with stage
@@ -2162,7 +2407,7 @@ try {
                   Column(
                     children: [
                       SafeArea(bottom: false, child: _header()),
-                      Expanded(child: _stage(current)),
+                      Expanded(child: buildStage(controller)),
                     ],
                   ),
 
@@ -2181,7 +2426,7 @@ try {
                   ),
 
                   // Floating Share button on the left, intentionally hidden while generating
-                  if (!_isGenerating)
+                  if (!controller.isGenerating)
                     Positioned(
                       left: 16,
                       bottom: 130,
@@ -2342,7 +2587,8 @@ try {
                   // First-time canvas hint overlay
                   if (_showCanvasHint &&
                       !_isGenerating &&
-                      !controller.isDrawerOpen)
+                      !controller.isDrawerOpen &&
+                      !controller.skipWelcomeOverlay)
                     _buildCanvasHintOverlay(),
 
                   // Premium reminder popup (every 2 generations)
@@ -2448,7 +2694,7 @@ try {
               color: isDark
                   ? Colors.black.withValues(alpha: 0.45)
                   : theme.headerColor.withValues(alpha: 0.78),
-              borderRadius: _radius20,
+              borderRadius: _radius20, // ✅ CONST
               border: Border.all(
                 color: isDark ? Colors.white24 : Colors.black12,
               ),
@@ -2629,6 +2875,26 @@ try {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Share button (only show if image is generated)
+                if (_latestImageUrl != null) ...[
+                  _headerBtn(
+                    Icons.share,
+                    'Share',
+                    _shareImage,
+                    color: theme.headerTextColor,
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                // Download button (only show if image is generated)
+                if (_latestImageUrl != null) ...[
+                  _headerBtn(
+                    Icons.download,
+                    'Download',
+                    _downloadImage,
+                    color: theme.headerTextColor,
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 _headerBtn(
                   _isFavorited ? Icons.favorite : Icons.favorite_border,
                   'Save',
@@ -2674,50 +2940,30 @@ try {
     );
   }
 
-  Widget _stage(SofiDoll? current) {
-    // Increase edge bleed slightly to be safe
-    const double edgeBleed = 1.05;
-    final theme = ThemeManager.instance.current;
+  // ---------------------------------------------------------------------------
+  // STEP 3 — HARD LOCK STAGE RENDERING (WEB-SAFE)
+  // ---------------------------------------------------------------------------
+  Widget buildStage(SofiStudioController controller) {
+    // STEP 3 — FIX CANVAS IMAGE SOURCE
+    // Show selfie immediately, then replace with generated image
+    final selfie = controller.generatedImageBytes ?? controller.selfieBytes;
 
-    // While initial loading, show an instant “studio-ready” placeholder
-    // (canvas visible immediately, mood already active).
-    if (_isInitialLoading) {
-      return _buildStartupStagePlaceholder();
+    if (controller.isGenerating) {
+      return const Center(child: CircularProgressIndicator());
     }
 
-    final Widget image = generatedImageBytes != null
-        ? Image.memory(
-            generatedImageBytes!,
-            fit: BoxFit.contain,
-            filterQuality: FilterQuality.high,
-          )
-        : (current != null
-            ? (current.isStoragePath
-                ? _FirebaseStageImage(path: current.stagePath)
-                : Image.asset(
-                    current.stagePath,
-                    fit: BoxFit.contain,
-                    filterQuality: FilterQuality.high,
-                  ))
-            : const SizedBox.shrink());
+    if (selfie == null) {
+      return const SizedBox();
+    }
 
-    return Container(
-      color: theme.backgroundColor, // Blends with header/footer
-      child: SizedBox.expand(
-        child: Padding(
-          // PADDING FIX: Removed bottom padding to let image fill header to footer as requested.
-          padding: EdgeInsets.zero,
-          child: ClipRect(
-            child: Transform.scale(
-              scale: edgeBleed,
-              alignment: Alignment.center,
-              child: image,
-            ),
-          ),
-        ),
-      ),
+    return Image.memory(
+      selfie,
+      fit: BoxFit.cover,
+      gaplessPlayback: true,
     );
   }
+
+  // NOTE: Stage rendering now lives in buildStage(controller) (see above).
 
   Widget _buildPromptPreview() {
     final theme = ThemeManager.instance.current;
@@ -2733,7 +2979,7 @@ try {
           color: isDark
               ? Colors.black.withValues(alpha: 0.75)
               : Colors.white.withValues(alpha: 0.9),
-          borderRadius: _radius16,
+          borderRadius: _radius16, // ✅ CONST
           border: Border.all(
             color: isDark ? Colors.white24 : Colors.black12,
           ),
@@ -2771,6 +3017,7 @@ try {
             GestureDetector(
               onTap: () {
                 promptController.clear();
+                if (!mounted) return;
                 setState(() {});
               },
               child: Padding(
@@ -2800,7 +3047,7 @@ try {
         child: Container(
           height: 64,
           decoration: BoxDecoration(
-            borderRadius: _radius100,
+            borderRadius: _radius100, // ✅ CONST
             boxShadow: isIOSWeb
                 ? null
                 : const [
@@ -2812,7 +3059,7 @@ try {
                   ],
           ),
           child: ClipRRect(
-            borderRadius: _radius100,
+            borderRadius: _radius100, // ✅ CONST
             child: BackdropFilter(
               filter: ui.ImageFilter.blur(
                   sigmaX: isIOSWeb ? 5 : 10, sigmaY: isIOSWeb ? 5 : 10),
@@ -2848,13 +3095,16 @@ try {
                           hintStyle: GoogleFonts.poppins(
                             color: isDark ? Colors.white38 : Colors.black38,
                           ),
-                          border: InputBorder.none,
+                          border: InputBorder.none, // ✅ No dynamic decoration
                           contentPadding:
                               const EdgeInsets.symmetric(horizontal: 8),
                           isDense: true,
                         ),
                         textInputAction: TextInputAction.go,
-                        onSubmitted: (_) => _onGeneratePressed(),
+                        // TEMP: disable auto-generate to stabilize flow
+                        onSubmitted: (_) {
+                          debugPrint('[UI] Prompt submitted (manual generate only)');
+                        },
                       ),
                     ),
 
@@ -2924,15 +3174,17 @@ try {
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          onTap: (_isGenerating || promptController.text.trim().isEmpty)
+                          // STEP 2 — FORCE SINGLE, MANUAL GENERATE BUTTON
+                          // Only place in the UI that triggers generation.
+                          onTap: controller.isGenerating
                               ? null
                               : () async {
+                                  debugPrint('[UI] Manual generate pressed');
                                   HapticFeedback.mediumImpact();
+
                                   if (_outOfCredits) {
-                                    // Open paywall directly when credits are exhausted
                                     if (!context.mounted) return;
-                                    final didSubscribe =
-                                        await PaywallSheet.show(
+                                    final didSubscribe = await PaywallSheet.show(
                                       context,
                                       message:
                                           "You're out of generation credits. Start your trial or add credits to continue.",
@@ -2943,14 +3195,24 @@ try {
                                     }
                                     return;
                                   }
-                                  _onGeneratePressed();
+
+                                  final selfieBytes =
+                                      _originalBaseDollBytes ?? widget.selfieBytes;
+                                  if (selfieBytes == null) {
+                                    debugPrint('[UI] Manual generate blocked: no selfieBytes');
+                                    return;
+                                  }
+
+                                  await controller.generateFromSelfie(
+                                    selfieBytes: selfieBytes,
+                                  );
                                 },
-                          borderRadius: _radius24,
+                          borderRadius: _radius24, // ✅ CONST
                           splashColor: Colors.white.withValues(alpha: 0.2),
                           highlightColor: Colors.white.withValues(alpha: 0.1),
                           child: Builder(
                             builder: (context) {
-                              final isDisabled = _isGenerating || promptController.text.trim().isEmpty;
+                              final isDisabled = controller.isGenerating;
                               return AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             padding: EdgeInsets.symmetric(
@@ -2963,7 +3225,7 @@ try {
                                   : SofiStudioTheme.brandGradient,
                               color:
                                   isDisabled ? Colors.grey.shade400 : null,
-                              borderRadius: _radius24,
+                              borderRadius: _radius24, // ✅ CONST
                               boxShadow: _isIOSWeb
                                   ? null
                                   : [
@@ -3042,14 +3304,14 @@ try {
   }) {
     final bool isIOSWeb = kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
     return ClipRRect(
-      borderRadius: _radius24,
+      borderRadius: _radius24, // ✅ CONST
       child: BackdropFilter(
         filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
           decoration: BoxDecoration(
             color: Colors.black.withValues(alpha: 0.10),
-            borderRadius: _radius24,
+            borderRadius: _radius24, // ✅ CONST
             border: isIOSWeb
                 ? null
                 : Border.all(
@@ -3146,6 +3408,25 @@ try {
                       controller.openDrawer();
                     },
                   ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _onContinueStylingPressed,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6C4DFF),
+                      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    child: const Text(
+                      'Continue Styling',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 32),
                   Text(
                     'Tap anywhere to dismiss',
@@ -3189,6 +3470,7 @@ try {
   }
 
   void _showPremiumReminderPopup() {
+    if (!mounted) return;
     _premiumReminderTimer?.cancel();
     setState(() => _showPremiumReminder = true);
 
@@ -3201,6 +3483,7 @@ try {
   }
 
   void _dismissPremiumReminder() {
+    if (!mounted) return;
     _premiumReminderTimer?.cancel();
     setState(() => _showPremiumReminder = false);
   }
@@ -3478,7 +3761,7 @@ class _FrostyCircleButton extends StatelessWidget {
             height: 44,
             decoration: BoxDecoration(
               color: Colors.black.withValues(alpha: 0.10),
-              borderRadius: _SofiStudioPageState._radius24,
+              borderRadius: _SofiStudioPageState._radius24, // ✅ CONST
               border: (kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
                   ? null
                   : Border.all(
@@ -3528,6 +3811,7 @@ class _FirebaseStageImageState extends State<_FirebaseStageImage> {
   }
 
   Future<void> _loadImage() async {
+    if (!mounted) return;
     setState(() => _loading = true);
     try {
       final url = await StorageService.instance.getDownloadUrl(widget.path);
@@ -3578,7 +3862,7 @@ class _HintButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.95),
-          borderRadius: _SofiStudioPageState._radius16,
+          borderRadius: _SofiStudioPageState._radius16, // ✅ CONST
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.15),
@@ -3592,8 +3876,8 @@ class _HintButton extends StatelessWidget {
             Container(
               width: 40,
               height: 40,
-              decoration: BoxDecoration(
-                color: SofiStudioTheme.purple.withValues(alpha: 0.1),
+              decoration: const BoxDecoration(
+                color: Color(0x1A9B59B6), // ✅ CONST (10% opacity of purple)
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: SofiStudioTheme.purple, size: 20),
@@ -3673,7 +3957,7 @@ class _PremiumEntryButtonState extends State<_PremiumEntryButton>
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              borderRadius: _SofiStudioPageState._radius12,
+              borderRadius: _SofiStudioPageState._radius12, // ✅ CONST
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -3688,9 +3972,9 @@ class _PremiumEntryButtonState extends State<_PremiumEntryButton>
                   (_controller.value + 0.3).clamp(0.0, 1.0),
                 ],
               ),
-              boxShadow: [
+              boxShadow: const [
                 BoxShadow(
-                  color: const Color(0xFF9B59B6).withValues(alpha: 0.4),
+                  color: Color(0x669B59B6), // ✅ CONST (40% opacity)
                   blurRadius: 8,
                   spreadRadius: 1,
                 ),
@@ -3701,7 +3985,7 @@ class _PremiumEntryButtonState extends State<_PremiumEntryButton>
               children: [
                 // Shimmer overlay
                 ClipRRect(
-                  borderRadius: _SofiStudioPageState._radius12,
+                  borderRadius: _SofiStudioPageState._radius12, // ✅ CONST
                   child: Transform.translate(
                     offset: Offset(40 * (_controller.value - 0.5), 0),
                     child: Container(

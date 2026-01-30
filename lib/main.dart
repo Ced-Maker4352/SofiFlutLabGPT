@@ -4,8 +4,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-
 import 'firebase_options.dart';
 import 'package:sofi_test_connect/presentation/splash/splash_page.dart';
 import 'package:sofi_test_connect/services/performance_service.dart';
@@ -40,26 +38,6 @@ Future<void> main() async {
       systemNavigationBarColor: Colors.black,
       systemNavigationBarIconBrightness: Brightness.light,
     ));
-  }
-
-  // Load environment variables
-  //
-  // IMPORTANT (DreamFlow/Web):
-  // Flutter web serves assets under /assets/ automatically.
-  // If you pass "assets/.env", the browser often fetches "assets/assets/.env".
-  // Since web is already using an inline ModelsLab key, treat .env as truly optional
-  // and avoid noisy stack traces on web.
-  try {
-    if (kIsWeb) {
-      await dotenv.load(fileName: '.env'); // ✅ web-safe (optional)
-      debugPrint('[dotenv] Loaded .env (web)');
-    } else {
-      await dotenv.load(fileName: 'assets/.env'); // ✅ mobile/desktop
-      debugPrint('[dotenv] Loaded assets/.env');
-    }
-  } catch (e) {
-    // Do not crash the app if .env is missing; continue with defaults.
-    debugPrint('[dotenv] Skipping .env load (optional). Error: $e');
   }
 
   // Firebase init

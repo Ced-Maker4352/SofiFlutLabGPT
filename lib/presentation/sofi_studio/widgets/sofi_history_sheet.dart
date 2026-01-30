@@ -32,6 +32,7 @@ bool _selectionMode = false;
 final Set<Uint8List> _selectedItems = {};
 
 void _toggleSelection(Uint8List bytes) {
+if (!mounted) return;
 setState(() {
 if (_selectedItems.contains(bytes)) {
 _selectedItems.remove(bytes);
@@ -47,6 +48,7 @@ void _deleteSelected() {
 for (final bytes in _selectedItems) {
 widget.onDelete(bytes);
 }
+if (!mounted) return;
 setState(() {
 _selectedItems.clear();
 _selectionMode = false;
@@ -91,6 +93,7 @@ children: [
 if (_selectionMode)
 IconButton(
 onPressed: () {
+if (!mounted) return;
 setState(() {
 _selectionMode = false;
 _selectedItems.clear();
@@ -121,6 +124,7 @@ icon: const Icon(Icons.delete_outline, color: Colors.red),
 else
 IconButton(
 onPressed: () {
+if (!mounted) return;
 setState(() {
 _selectionMode = true;
 });

@@ -16,6 +16,11 @@ class StorageService {
     return uploadBytes(bytes, path: path, contentType: 'image/png');
   }
 
+  Future<String> uploadTempBytesAndGetUrl(Uint8List bytes, String fileName) async {
+    final path = 'temp/$fileName';
+    return uploadBytes(bytes, path: path, contentType: 'image/png');
+  }
+
   // ============================================================
   // CORE UPLOAD
   // ============================================================

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -11,6 +12,7 @@ import 'package:sofi_test_connect/services/audio_service.dart';
 
 // Mood entry
 import 'package:sofi_test_connect/presentation/mood/mood_camera_entry_page.dart';
+import 'package:sofi_test_connect/presentation/mood/mood_mode.dart';
 
 // 🚀 FINAL DESTINATION
 import 'package:sofi_test_connect/presentation/sofi_studio/sofi_studio_page.dart';
@@ -124,15 +126,36 @@ class _SplashPageState extends State<SplashPage> {
 
     if (!mounted) return;
 
-    // 2️⃣ OPEN SOFI STUDIO (REPLACE)
+    // 2️⃣ OPEN SOFI STUDIO (USING onControllerReady CALLBACK)
+    final selfieBytes = result?['selfieBytes'] as Uint8List?;
+    final selectedMood = result?['mood'] as String?;
+    final selectedMode = result?['mode'] as String?;
+
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (_) => SofiStudioPage(
-          initialMood: result?['mood'] as String?,
-          initialMode: result?['mode'] as String?,
-          selfieBytes: result?['selfieBytes'],
-          selfiePath: result?['selfiePath'],
-        ),
+        builder: (context) {
+          return SofiStudioPage(
+            onControllerReady: (controller) {
+              if (selfieBytes != null && selectedMood != null && selectedMode != null) {
+                // Parse mode string to MoodMode enum
+                final mode = switch (selectedMode) {
+                  'human' => MoodMode.human,
+                  'cinematic' => MoodMode.cinematic,
+                  'fantasy' => MoodMode.fantasy,
+                  'artistic' => MoodMode.artistic,
+                  'doll' => MoodMode.doll,
+                  _ => MoodMode.doll,
+                };
+                
+                controller.enterFromMoodFlow(
+                  selfie: selfieBytes,
+                  mood: selectedMood,
+                  mode: mode,
+                );
+              }
+            },
+          );
+        },
       ),
     );
   }
