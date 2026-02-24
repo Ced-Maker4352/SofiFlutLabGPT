@@ -2967,12 +2967,13 @@ class _SofiStudioPageState extends State<SofiStudioPage>
   // ---------------------------------------------------------------------------
   Widget buildStage(SofiStudioController controller) {
     // STEP 3 — FIX CANVAS IMAGE SOURCE
-    // Show selfie immediately, then replace with generated image
+    // Show generated image from local state first, then fallback to controller
     final selfie = generatedImageBytes ??
         controller.generatedImageBytes ??
+        _originalBaseDollBytes ??
         controller.selfieBytes;
 
-    if (controller.isGenerating) {
+    if (controller.isGenerating || _isGenerating) {
       return const Center(child: CircularProgressIndicator());
     }
 

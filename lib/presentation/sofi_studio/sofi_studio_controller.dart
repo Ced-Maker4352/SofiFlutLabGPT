@@ -18,7 +18,8 @@ class SofiStudioController extends ChangeNotifier {
   bool hasPendingGeneration = false; // 🔑 Re-arm flag for mood selection
   bool autoGenConsumed = false; // 🔑 Prevents double auto-generation
   Uint8List? selfieBytes; // 🔑 Stored selfie for mood-triggered generation
-  bool skipWelcomeOverlay = false; // 🔑 Bypass welcome overlay when entering from Mood flow
+  bool skipWelcomeOverlay =
+      false; // 🔑 Bypass welcome overlay when entering from Mood flow
 
   // ---------------------------------------------------------------
   // PROMPT OWNERSHIP (SINGLE SOURCE OF TRUTH)
@@ -72,22 +73,26 @@ class SofiStudioController extends ChangeNotifier {
     required MoodMode mode,
   }) {
     debugPrint('[Studio] Entering from Mood flow');
+    debugPrint('[Studio] Mode: ${mode.id}, Mood: $mood');
 
     selfieBytes = selfie;
     selectedMood = mood;
     selectedMode = mode;
 
-    skipWelcomeOverlay = false; // Welcome overlay should show for Mood flow
+    // 🔑 FIX: Skip welcome overlay and auto-generate
+    skipWelcomeOverlay = true;
 
     rebuildPrompt(
       userPrompt: mood,
       mode: mode.id,
+      mood: mood, // 🔑 FIX: Pass mood for style flavor
     );
 
     hasPendingGeneration = true;
     autoGenConsumed = false;
 
-    notifyListeners();
+    debugPrint('[Studio] Prompt built, ready for auto-generation');
+    if (hasListeners) notifyListeners();
   }
 
   // ---------------------------------------------------------------
@@ -169,7 +174,7 @@ class SofiStudioController extends ChangeNotifier {
       );
 
       generatedImageBytes = styled;
-      
+
       // 🔑 STEP 4: Reset welcome overlay bypass flag after successful generation
       skipWelcomeOverlay = false;
     } catch (e) {
@@ -189,7 +194,8 @@ class SofiStudioController extends ChangeNotifier {
   void clearGeneratedImage() {
     generatedImageBytes = null;
     generationError = null;
-    skipWelcomeOverlay = false; // 🔑 Reset flag so welcome overlay can show on next normal entry
+    skipWelcomeOverlay =
+        false; // 🔑 Reset flag so welcome overlay can show on next normal entry
     notifyListeners();
   }
 
@@ -251,7 +257,8 @@ class SofiStudioController extends ChangeNotifier {
       premiumDolls.add(
         SofiDoll(
           id: "${100 + i}",
-          thumbPath: "images/dolls/special/thumbs/special_${num}_base_thumb.png",
+          thumbPath:
+              "images/dolls/special/thumbs/special_${num}_base_thumb.png",
           stagePath: "images/dolls/special/stage/special_${num}_base_stage.png",
           isPremium: true,
           isStoragePath: true, // Load from Firebase Storage
@@ -268,7 +275,8 @@ class SofiStudioController extends ChangeNotifier {
       currentDoll = allDolls.first;
     }
 
-    debugPrint("[SofiStudio] Loaded ${allDolls.length} dolls from Firebase Storage.");
+    debugPrint(
+        "[SofiStudio] Loaded ${allDolls.length} dolls from Firebase Storage.");
   }
 
   /// ---------------------------------------------------------------

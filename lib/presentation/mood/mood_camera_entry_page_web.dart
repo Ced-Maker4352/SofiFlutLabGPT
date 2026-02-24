@@ -264,9 +264,12 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                     if (mode.isPremium && !premium.isPremium) {
                       final isSubscribed = await PaywallSheet.show(context);
                       if (isSubscribed != true) {
-                        return;
+                        return; // User cancelled or failed to subscribe
                       }
+                      // If they subscribed, refresh premium state
+                      await premium.initialize();
                     }
+
                     if (!mounted) return;
                     setState(() => _selectedMode = mode);
                   },
