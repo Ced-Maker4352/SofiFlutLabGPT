@@ -262,9 +262,9 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                     final premium = PremiumService();
                     await premium.initialize();
 
-                    if (mode.isPremium) {
-                      if (!premium.canUseDailyPreview()) {
-                        PaywallSheet.show(context);
+                    if (mode.isPremium && !premium.isPremium) {
+                      final isSubscribed = await PaywallSheet.show(context);
+                      if (isSubscribed != true) {
                         return;
                       }
                     }

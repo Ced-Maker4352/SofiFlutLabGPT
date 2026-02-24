@@ -46,7 +46,6 @@ import 'widgets/voice_coach_settings_sheet.dart';
 import 'widgets/sofi_settings_sheet.dart';
 import 'dart:typed_data';
 
-
 class _QuickMood {
   final String id;
   final String label;
@@ -63,10 +62,11 @@ class _QuickMood {
 class SofiStudioPage extends StatefulWidget {
   /// 🔑 Passed from MoodCameraEntryPage via Splash
   final String? initialMood;
-  final String? initialMode; // 'human' | 'doll' | 'cinematic' | 'fantasy' | 'anime'
+  final String?
+      initialMode; // 'human' | 'doll' | 'cinematic' | 'fantasy' | 'anime'
   final Uint8List? selfieBytes;
   final String? selfiePath;
-  
+
   /// 🔑 NEW: Callback to configure controller after creation (for Mood flow)
   final void Function(SofiStudioController controller)? onControllerReady;
 
@@ -114,7 +114,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
   String? _latestImageUrl; // Track the URL for share/download
   final List<Uint8List> _history = [];
   final List<Uint8List> _redoStack = [];
-  
+
   // CRITICAL: Store the ORIGINAL base doll image to prevent generation drift.
   // This ensures we always generate from a clean source, not from previous outputs.
   Uint8List? _originalBaseDollBytes;
@@ -129,7 +129,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
   bool _shouldShowPreviewWatermark() {
     // Only show watermark for free users in Quick-Mood flow with premium modes
     if (widget.initialMood == null || widget.initialMood!.isEmpty) return false;
-    
+
     try {
       final mode = MoodMode.values.byName(widget.initialMood!);
       final premium = PremiumService();
@@ -215,7 +215,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
     if (!mounted) return;
     // 🔒 FIX #4: Block mood changes during generation
     if (controller.isGenerating) return;
-    
+
     setState(() => _activeMoodId = moodId);
 
     // 🔑 RE-ARM GENERATION: Notify controller that mood changed
@@ -232,7 +232,6 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       unawaited(AudioService.instance.playClick());
     } catch (_) {}
   }
-
 
   // Debounce timer for category selections (prevents crash from rapid taps)
   Timer? _selectionDebounceTimer;
@@ -407,7 +406,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
           }
         } catch (_) {}
       }
-      
+
       // Cancel all timers to prevent crashes when app is backgrounded
       _heartbeatTimer?.cancel();
       _premiumReminderTimer?.cancel();
@@ -493,14 +492,16 @@ class _SofiStudioPageState extends State<SofiStudioPage>
     // ================================
     // QUICK MOOD HANDOFF (ENTRY OVERRIDE)
     // ================================
-    final Uint8List? incomingSelfie = controller.selfieBytes ?? widget.selfieBytes;
+    final Uint8List? incomingSelfie =
+        controller.selfieBytes ?? widget.selfieBytes;
     final String? incomingMood = controller.selectedMood.isNotEmpty
         ? controller.selectedMood
         : widget.initialMood;
 
     if (incomingSelfie != null) {
       debugPrint('[QuickMood] 🔥 Entry from Mood flow with selfie');
-      debugPrint('[QuickMood] Mode: ${widget.initialMode ?? controller.selectedMode.id}');
+      debugPrint(
+          '[QuickMood] Mode: ${widget.initialMode ?? controller.selectedMode.id}');
 
       // Treat selfie as the ORIGINAL base to prevent drift
       _originalBaseDollBytes = incomingSelfie;
@@ -527,7 +528,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
 
     // 🔑 Store selfieBytes on controller for mood-triggered generation (but never overwrite injected value)
     controller.selfieBytes ??= widget.selfieBytes;
-    
+
     // Initialize prompt if we have a mood and prompt hasn't been set by callback
     final initialMood = controller.selectedMood.isNotEmpty
         ? controller.selectedMood
@@ -622,7 +623,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       //     debugPrint('⚠️ [QuickMood] Auto-gen blocked: No selfie bytes');
       //   }
       // }
-      
+
       // Preload original base doll ONLY when NOT coming from Quick-Mood selfie
       if (!_fromQuickMoodSelfie && controller.currentDoll != null) {
         try {
@@ -632,7 +633,8 @@ class _SofiStudioPageState extends State<SofiStudioPage>
           ).timeout(const Duration(seconds: 10));
           if (mounted) {
             _originalBaseDollBytes = baseDollBytes;
-            debugPrint('[SofiStudio] ✅ Preloaded original base doll for drift prevention');
+            debugPrint(
+                '[SofiStudio] ✅ Preloaded original base doll for drift prevention');
           }
         } catch (e) {
           debugPrint('[SofiStudio] ⚠️ Could not preload base doll: $e');
@@ -714,7 +716,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       debugPrint('[Studio] Skipping canvas hint (skipWelcomeOverlay = true)');
       return;
     }
-    
+
     // Show the hint overlay on regular app restart
     if (mounted) {
       setState(() => _showCanvasHint = true);
@@ -723,13 +725,13 @@ class _SofiStudioPageState extends State<SofiStudioPage>
 
   void _dismissCanvasHint() {
     if (!mounted) return;
-    
+
     // STEP 4  Clear controller flag when user manually dismisses
     controller.skipWelcomeOverlay = false;
 
     // Once overlay is dismissed, allow generation to proceed
     _awaitingMoodFlowContinue = false;
-    
+
     setState(() => _showCanvasHint = false);
     // Don't persist - show again on next restart
 
@@ -766,7 +768,8 @@ class _SofiStudioPageState extends State<SofiStudioPage>
   /// Safely triggers generation if conditions are met
   void _triggerGenerate() {
     if (controller.isGenerating) {
-      debugPrint('[UI] _triggerGenerate: Generation already in progress, skipping');
+      debugPrint(
+          '[UI] _triggerGenerate: Generation already in progress, skipping');
       return;
     }
     if (controller.selfieBytes == null) {
@@ -777,7 +780,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       debugPrint('[UI] _triggerGenerate: No pending generation flagged');
       return;
     }
-    
+
     debugPrint('[UI] _triggerGenerate: Starting generation');
     controller.generateFromSelfie(selfieBytes: controller.selfieBytes!);
   }
@@ -853,7 +856,8 @@ class _SofiStudioPageState extends State<SofiStudioPage>
           _isFavorited = false;
         });
         debugPrint('[SofiStudio] Canvas state updated with new doll image');
-        debugPrint('[SofiStudio] ✅ Original base doll stored (${stageBytes.length} bytes) - will use for all generations');
+        debugPrint(
+            '[SofiStudio] ✅ Original base doll stored (${stageBytes.length} bytes) - will use for all generations');
       }
 
       // Save to storage in background
@@ -1091,7 +1095,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
   String _buildFinalPrompt() {
     // MODE-BASED BASE PROMPT (from Mood page selection)
     String base;
-    
+
     // Check if we have a premium style transferred from Premium page
     if (_activeBaseStylePrompt != null) {
       base = _activeBaseStylePrompt!;
@@ -1106,7 +1110,8 @@ class _SofiStudioPageState extends State<SofiStudioPage>
         'doll' => dollBasePrompt,
         _ => dollBasePrompt, // safe default
       };
-      debugPrint('[Prompt] Using mode-based base: ${widget.initialMode ?? "default (doll)"}');
+      debugPrint(
+          '[Prompt] Using mode-based base: ${widget.initialMode ?? "default (doll)"}');
     }
 
     final buffer = StringBuffer(base);
@@ -1115,21 +1120,26 @@ class _SofiStudioPageState extends State<SofiStudioPage>
     if (!base.endsWith(' ')) buffer.write(' ');
 
     // CRITICAL: Enhanced face-locking instructions to prevent facial distortion
-    buffer.write('FACE LOCK DIRECTIVE: The face from the input image is SACRED and must be preserved with pixel-perfect accuracy. ');
-    buffer.write('Do NOT regenerate, modify, distort, or alter ANY facial features including: eyes, eyebrows, nose, lips, mouth, chin, jawline, cheekbones, forehead, ears. ');
-    buffer.write('Maintain exact eye shape, eye color, eye spacing, eye symmetry. ');
+    buffer.write(
+        'FACE LOCK DIRECTIVE: The face from the input image is SACRED and must be preserved with pixel-perfect accuracy. ');
+    buffer.write(
+        'Do NOT regenerate, modify, distort, or alter ANY facial features including: eyes, eyebrows, nose, lips, mouth, chin, jawline, cheekbones, forehead, ears. ');
+    buffer.write(
+        'Maintain exact eye shape, eye color, eye spacing, eye symmetry. ');
     buffer.write('Maintain exact nose shape, nostril size, nose bridge. ');
     buffer.write('Maintain exact lip shape, lip fullness, mouth width. ');
     buffer.write('Maintain exact skin tone, skin texture, complexion. ');
-    buffer.write('The face region (from hairline to chin, ear to ear) must remain UNCHANGED. ');
-    buffer.write('Only modify clothing, accessories, and areas below the neck. ');
+    buffer.write(
+        'The face region (from hairline to chin, ear to ear) must remain UNCHANGED. ');
+    buffer
+        .write('Only modify clothing, accessories, and areas below the neck. ');
     buffer.write('Keep hairstyle, hair color, and hair texture identical. ');
 
     // MOOD LAYER (from Quick Mood or manual selection)
     if (_activeMood.id != 'neutral') {
       buffer.write('Mood style: ${_activeMood.promptFragment}. ');
     }
-    
+
     // Use the text box as the source of truth for all edits.
     // This supports "Stacking" (multiple items) and manual edits.
     final manual = promptController.text.trim();
@@ -1140,7 +1150,8 @@ class _SofiStudioPageState extends State<SofiStudioPage>
     buffer.write('High quality. Professional lighting.');
 
     final result = buffer.toString();
-    debugPrint('[Prompt] Final: ${result.substring(0, result.length > 150 ? 150 : result.length)}...');
+    debugPrint(
+        '[Prompt] Final: ${result.substring(0, result.length > 150 ? 150 : result.length)}...');
 
     return result;
   }
@@ -1149,14 +1160,17 @@ class _SofiStudioPageState extends State<SofiStudioPage>
     debugPrint('\u25b6\ufe0f [Generation] Button pressed');
 
     // 🔒 FIX #4: Block double-generation at controller level
-    if (_isGenerating || controller.isGenerating || controller.currentDoll == null) {
+    if (_isGenerating ||
+        controller.isGenerating ||
+        controller.currentDoll == null) {
       debugPrint(
           '\u26a0\ufe0f [Generation] Blocked: isGenerating=$_isGenerating, controller.isGenerating=${controller.isGenerating}, currentDoll=${controller.currentDoll}');
       return;
     }
 
     // 🔒 CRITICAL: Validate selfie before proceeding (for Quick-Mood flow)
-    if (_fromQuickMoodSelfie && (generatedImageBytes == null || generatedImageBytes!.isEmpty)) {
+    if (_fromQuickMoodSelfie &&
+        (generatedImageBytes == null || generatedImageBytes!.isEmpty)) {
       debugPrint('⚠️ [Generation] Blocked: No selfie image in Quick-Mood flow');
       _showSnack('Please upload a selfie first');
       return;
@@ -1248,147 +1262,149 @@ class _SofiStudioPageState extends State<SofiStudioPage>
 // 🔒 RULE: ALL generations MUST anchor to the ORIGINAL identity image
 // NEVER generate from last output — this prevents facial drift.
 
-Uint8List baseBytes;
+      Uint8List baseBytes;
 
 // 1️⃣ If we entered from Quick-Mood with a selfie, that selfie is the identity anchor
-if (widget.selfieBytes != null && widget.selfieBytes!.isNotEmpty) {
-  if (_originalBaseDollBytes == null) {
-    _originalBaseDollBytes = widget.selfieBytes!;
-    debugPrint('[Identity] Locked to Quick-Mood selfie');
-  }
-}
+      if (widget.selfieBytes != null && widget.selfieBytes!.isNotEmpty) {
+        if (_originalBaseDollBytes == null) {
+          _originalBaseDollBytes = widget.selfieBytes!;
+          debugPrint('[Identity] Locked to Quick-Mood selfie');
+        }
+      }
 
 // 2️⃣ If we have an identity anchor, ALWAYS use it
-if (_originalBaseDollBytes != null &&
-    _originalBaseDollBytes!.isNotEmpty) {
-  baseBytes = _originalBaseDollBytes!;
-  debugPrint('[Identity] Using locked base identity');
-} else {
-  // 3️⃣ Fallback (should only happen once per session)
-  baseBytes = await _loadDollImage(
-    controller.currentDoll!.stagePath,
-    controller.currentDoll!.isStoragePath,
-  );
-  _originalBaseDollBytes = baseBytes;
-  debugPrint('[Identity] Locked to base doll stage');
-}
+      if (_originalBaseDollBytes != null &&
+          _originalBaseDollBytes!.isNotEmpty) {
+        baseBytes = _originalBaseDollBytes!;
+        debugPrint('[Identity] Using locked base identity');
+      } else {
+        // 3️⃣ Fallback (should only happen once per session)
+        baseBytes = await _loadDollImage(
+          controller.currentDoll!.stagePath,
+          controller.currentDoll!.isStoragePath,
+        );
+        _originalBaseDollBytes = baseBytes;
+        debugPrint('[Identity] Locked to base doll stage');
+      }
 
       // Step 2: Call ModelsLab API (returns IMAGE URL)
-debugPrint('🎨 [Generation] Calling ModelsLab API...');
+      debugPrint('🎨 [Generation] Calling ModelsLab API...');
 
-String imageUrl;
+      String imageUrl;
 
 // ✅ Detect if this generation is coming from QuickMood selfie base
-final bool isSelfieBase =
-    (widget.selfieBytes != null) &&
-    (_originalBaseDollBytes != null) &&
-    identical(_originalBaseDollBytes, widget.selfieBytes);
+      final bool isSelfieBase = (widget.selfieBytes != null) &&
+          (_originalBaseDollBytes != null) &&
+          identical(_originalBaseDollBytes, widget.selfieBytes);
 
 // ✅ Force transformation ONLY for selfie bases (prevents "same selfie" output)
-final String transformPrefix = isSelfieBase
-    ? 'stylized 3D doll portrait, soft plastic skin, simplified facial geometry, '
-      'studio doll aesthetic, high-quality character render, not photorealistic, '
-    : '';
+      final String transformPrefix = isSelfieBase
+          ? 'stylized 3D doll portrait, soft plastic skin, simplified facial geometry, '
+              'studio doll aesthetic, high-quality character render, not photorealistic, '
+          : '';
 
 // ✅ USE CONTROLLER'S STORED PROMPT (DO NOT REBUILD)
-final String finalPrompt = transformPrefix + controller.currentPrompt;
+      final String finalPrompt = transformPrefix + controller.currentPrompt;
 
 // ================================
 // FACE LOCK — FULL OUTFIT ONLY
 // ================================
 
-String enforcedPrompt = finalPrompt;
+      String enforcedPrompt = finalPrompt;
 
-if (selectedOptions[EditCategory.fullOutfit] != null) {
-  enforcedPrompt +=
-      " [ABSOLUTE FACE LOCK - FULL OUTFIT MODE] "
-      "CRITICAL OVERRIDE: The face region is IMMUTABLE and LOCKED. "
-      "Copy the face pixels EXACTLY from the input image without ANY modification. "
-      "Do NOT regenerate eyes - use original eye shape, color, spacing, symmetry. "
-      "Do NOT regenerate nose - use original nose shape, size, nostril width. "
-      "Do NOT regenerate lips - use original lip shape, fullness, color. "
-      "Do NOT regenerate skin - use original skin tone, texture, complexion. "
-      "Do NOT change facial proportions, bone structure, or expressions. "
-      "Do NOT change age, ethnicity, or identity characteristics. "
-      "The face must be PIXEL-IDENTICAL to the source image. "
-      "Apply ALL style changes ONLY to clothing, shoes, and accessories. "
-      "Body pose may change but head/face orientation should stay similar. "
-      "If there is ANY conflict between style and face preservation, ALWAYS preserve the face. ";
-}
+      if (selectedOptions[EditCategory.fullOutfit] != null) {
+        enforcedPrompt += " [ABSOLUTE FACE LOCK - FULL OUTFIT MODE] "
+            "CRITICAL OVERRIDE: The face region is IMMUTABLE and LOCKED. "
+            "Copy the face pixels EXACTLY from the input image without ANY modification. "
+            "Do NOT regenerate eyes - use original eye shape, color, spacing, symmetry. "
+            "Do NOT regenerate nose - use original nose shape, size, nostril width. "
+            "Do NOT regenerate lips - use original lip shape, fullness, color. "
+            "Do NOT regenerate skin - use original skin tone, texture, complexion. "
+            "Do NOT change facial proportions, bone structure, or expressions. "
+            "Do NOT change age, ethnicity, or identity characteristics. "
+            "The face must be PIXEL-IDENTICAL to the source image. "
+            "Apply ALL style changes ONLY to clothing, shoes, and accessories. "
+            "Body pose may change but head/face orientation should stay similar. "
+            "If there is ANY conflict between style and face preservation, ALWAYS preserve the face. ";
+      }
 
 // ================================
 // FULL OUTFIT IDENTITY ENFORCEMENT
 // ================================
 
-Uint8List initImageBytes;
+      Uint8List initImageBytes;
 
 // 🔒 FULL OUTFITS MUST ALWAYS USE ORIGINAL IDENTITY
 // Check if we're generating a full outfit (selectedOptions contains fullOutfit)
-if (selectedOptions[EditCategory.fullOutfit] != null) {
-  initImageBytes = _originalBaseDollBytes!;
-  debugPrint('[Outfit] Using original identity anchor');
-} else {
-  initImageBytes = baseBytes;
-}
+      if (selectedOptions[EditCategory.fullOutfit] != null) {
+        initImageBytes = _originalBaseDollBytes!;
+        debugPrint('[Outfit] Using original identity anchor');
+      } else {
+        initImageBytes = baseBytes;
+      }
 
-try {
-  // ================================
-  // FACE PRESERVATION PARAMETERS
-  // ================================
-  // Lower strength = more preservation of original features (especially face)
-  // Higher strength = more transformation (can distort faces)
-  // 
-  // For full body from selfie: use LOWER strength to preserve facial identity
-  // For clothing-only edits: can use slightly higher strength
-  // ================================
-  
-  final bool isSelfieSource = widget.selfieBytes != null && widget.selfieBytes!.isNotEmpty;
-  
-  // Higher guidance = sharper, more defined features (better quality)
-  final double facePreservingGuidance = isSelfieSource ? 7.5 : 7.5;
-  
-  // ================================
-  // UNIFIED GENERATION PIPELINE
-  // Style differences are handled ONLY by prompt text
-  // ================================
-  debugPrint('[GEN] Using unified ModelsLab pipeline');
+      try {
+        // ================================
+        // FACE PRESERVATION PARAMETERS
+        // ================================
+        // Lower strength = more preservation of original features (especially face)
+        // Higher strength = more transformation (can distort faces)
+        //
+        // For full body from selfie: use LOWER strength to preserve facial identity
+        // For clothing-only edits: can use slightly higher strength
+        // ================================
 
-  // Convert initImageBytes to base64
-  final String initImageBase64 = 'data:image/png;base64,${base64Encode(initImageBytes)}';
+        final bool isSelfieSource =
+            widget.selfieBytes != null && widget.selfieBytes!.isNotEmpty;
 
-  // Determine mode from initialMode (not initialMood!)
-  final bool isHuman = widget.initialMode == 'human';
-  final String modeLabel = isHuman ? 'human' : 'doll';
-  debugPrint('[GEN] Mode: $modeLabel (initialMode=${widget.initialMode})');
+        // Higher guidance = sharper, more defined features (better quality)
+        final double facePreservingGuidance = isSelfieSource ? 7.5 : 7.5;
 
-  debugPrint('[UI] Triggering generateFromSelfie');  // ← VERIFY CALLABLE REACHED
-  
-  imageUrl = await ModelsLabService.generateKontextPro(
-    prompt: enforcedPrompt,
-    negativePrompt:
-        'low quality, worst quality, low resolution, low-res, pixelated, grainy, noisy, '
-        'blurry, soft focus, jpeg artifacts, compression artifacts, muddy, '
-        'distorted face, warped face, asymmetrical face, wrong face, '
-        'distorted eyes, asymmetrical eyes, crossed eyes, misaligned eyes, '
-        'distorted nose, distorted lips, distorted mouth, '
-        'pixelated face, blurry face, low quality face, jpeg artifacts on face, '
-        'changed facial features, altered identity, wrong proportions, '
-        'camera photo, selfie, real person photograph',
-    initImageBase64: initImageBase64,
-  ).timeout(const Duration(seconds: 120));
-  // Save URL for share/download functionality
-  if (mounted) {
-    setState(() => _latestImageUrl = imageUrl);
-  }
-  debugPrint('✅ [Generation] API returned URL: $imageUrl');
-} catch (e, st) {
-  debugPrint('❌ [Generation] CRASH: ModelsLab API failed: $e');
-  await RemoteDebugLogger.instance
-      .logError('ModelsLab API failed', e, st)
-      .timeout(const Duration(seconds: 1))
-      .catchError((_) {});
-  rethrow;
-}
+        // ================================
+        // UNIFIED GENERATION PIPELINE
+        // Style differences are handled ONLY by prompt text
+        // ================================
+        debugPrint('[GEN] Using unified ModelsLab pipeline');
+
+        // Convert initImageBytes to base64
+        final String initImageBase64 =
+            'data:image/png;base64,${base64Encode(initImageBytes)}';
+
+        // Determine mode from initialMode (not initialMood!)
+        final bool isHuman = widget.initialMode == 'human';
+        final String modeLabel = isHuman ? 'human' : 'doll';
+        debugPrint(
+            '[GEN] Mode: $modeLabel (initialMode=${widget.initialMode})');
+
+        debugPrint(
+            '[UI] Triggering generateFromSelfie'); // ← VERIFY CALLABLE REACHED
+
+        imageUrl = await ModelsLabService.generateKontextPro(
+          prompt: enforcedPrompt,
+          negativePrompt:
+              'low quality, worst quality, low resolution, low-res, pixelated, grainy, noisy, '
+              'blurry, soft focus, jpeg artifacts, compression artifacts, muddy, '
+              'distorted face, warped face, asymmetrical face, wrong face, '
+              'distorted eyes, asymmetrical eyes, crossed eyes, misaligned eyes, '
+              'distorted nose, distorted lips, distorted mouth, '
+              'pixelated face, blurry face, low quality face, jpeg artifacts on face, '
+              'changed facial features, altered identity, wrong proportions, '
+              'camera photo, selfie, real person photograph',
+          initImageBase64: initImageBase64,
+        ).timeout(const Duration(seconds: 120));
+        // Save URL for share/download functionality
+        if (mounted) {
+          setState(() => _latestImageUrl = imageUrl);
+        }
+        debugPrint('✅ [Generation] API returned URL: $imageUrl');
+      } catch (e, st) {
+        debugPrint('❌ [Generation] CRASH: ModelsLab API failed: $e');
+        await RemoteDebugLogger.instance
+            .logError('ModelsLab API failed', e, st)
+            .timeout(const Duration(seconds: 1))
+            .catchError((_) {});
+        rethrow;
+      }
 
       // Step 3: Download image bytes from returned URL
       debugPrint('📥 [Generation] Downloading generated image...');
@@ -1561,8 +1577,9 @@ try {
 
   // Adapter to match SofiBottomDrawer(onGenerate: _onGenerate)
   void _onGenerate() {
-    // TEMP: disable non-button generation path to stabilize flow
-    debugPrint('[UI] Drawer generate ignored (manual generate button only)');
+    if (!_isGenerating) {
+      _onGeneratePressed();
+    }
   }
 
   /// Start a cooldown period after generation to prevent rapid-fire requests.
@@ -1627,8 +1644,10 @@ try {
       // Only crop truly black borders, never anything that could be facial shadows
       final trimmed = await _autoCropDarkBorders(
         bytes,
-        darknessThreshold: 15, // VERY LOW - only pure black pixels (protects facial shadows)
-        maxBorderFractionPerSide: 0.10, // MAX 10% per side - protects face from being cropped
+        darknessThreshold:
+            15, // VERY LOW - only pure black pixels (protects facial shadows)
+        maxBorderFractionPerSide:
+            0.10, // MAX 10% per side - protects face from being cropped
       ).timeout(const Duration(seconds: 15));
 
       debugPrint(
@@ -1789,14 +1808,16 @@ try {
       // This prevents unnecessary re-encoding for minimal crops
       final double cropPercentage = 1.0 - ((newW * newH) / (w * h));
       if (cropPercentage < 0.05) {
-        debugPrint('\ud83d\udd0d [Crop] Minimal crop detected (${(cropPercentage * 100).toStringAsFixed(1)}%), keeping original to preserve quality');
+        debugPrint(
+            '\ud83d\udd0d [Crop] Minimal crop detected (${(cropPercentage * 100).toStringAsFixed(1)}%), keeping original to preserve quality');
         return input;
       }
 
       // If nothing cropped, return original
       if (newW == w && newH == h) return input;
 
-      debugPrint('\ud83d\udd0d [Crop] Cropping from ${w}x$h to ${newW}x$newH (${(cropPercentage * 100).toStringAsFixed(1)}% reduction)');
+      debugPrint(
+          '\ud83d\udd0d [Crop] Cropping from ${w}x$h to ${newW}x$newH (${(cropPercentage * 100).toStringAsFixed(1)}% reduction)');
 
       final ui.PictureRecorder recorder = ui.PictureRecorder();
       final ui.Canvas canvas = ui.Canvas(recorder);
@@ -1804,12 +1825,12 @@ try {
           left.toDouble(), top.toDouble(), newW.toDouble(), newH.toDouble());
       final ui.Rect dst =
           ui.Rect.fromLTWH(0, 0, newW.toDouble(), newH.toDouble());
-      
+
       // QUALITY FIX: Use high-quality filtering to preserve details
       final ui.Paint paint = ui.Paint()
         ..filterQuality = FilterQuality.high
         ..isAntiAlias = true;
-      
+
       canvas.drawImageRect(image, src, dst, paint);
       final ui.Picture picture = recorder.endRecording();
       final ui.Image cropped = await picture.toImage(newW, newH);
@@ -2326,7 +2347,7 @@ try {
 
     try {
       await AudioService.instance.playClick();
-      
+
       // If we have a URL, use it for sharing; otherwise we'll need to generate one
       if (_latestImageUrl != null) {
         await SofiExportService.shareImage(
@@ -2353,7 +2374,7 @@ try {
 
     try {
       await AudioService.instance.playClick();
-      
+
       await SofiExportService.saveImage(
         imageUrl: _latestImageUrl ?? '',
         fileName: 'sofi_studio_${DateTime.now().millisecondsSinceEpoch}.png',
@@ -2370,7 +2391,8 @@ try {
     // STEP 3 — AUTO-TRIGGER AFTER FIRST FRAME (RACE CONDITION FIX)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_awaitingMoodFlowContinue) return; // Wait for Continue Styling tap
-      if (_showCanvasHint) return; // Do not auto-generate while overlay is visible
+      if (_showCanvasHint)
+        return; // Do not auto-generate while overlay is visible
 
       if (controller.hasPendingGeneration &&
           controller.selfieBytes != null &&
@@ -2477,7 +2499,8 @@ try {
                       child: Opacity(
                         opacity: 0.35,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: Colors.black.withValues(alpha: 0.5),
                             borderRadius: BorderRadius.circular(20),
@@ -2604,7 +2627,6 @@ try {
       ),
     );
   }
-
 
   Widget _buildStartupStagePlaceholder() {
     final theme = ThemeManager.instance.current;
@@ -2735,7 +2757,8 @@ try {
                           decoration: BoxDecoration(
                             borderRadius: _radius16,
                             color: active
-                                ? theme.accentColor.withValues(alpha: isDark ? 0.28 : 0.18)
+                                ? theme.accentColor
+                                    .withValues(alpha: isDark ? 0.28 : 0.18)
                                 : (isDark
                                     ? Colors.white.withValues(alpha: 0.06)
                                     : Colors.white.withValues(alpha: 0.60)),
@@ -2753,7 +2776,9 @@ try {
                                 size: 14,
                                 color: active
                                     ? theme.accentColor
-                                    : (isDark ? Colors.white54 : Colors.black45),
+                                    : (isDark
+                                        ? Colors.white54
+                                        : Colors.black45),
                               ),
                               const SizedBox(width: 6),
                               Text(
@@ -2762,9 +2787,7 @@ try {
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                   color: active
-                                      ? (isDark
-                                          ? Colors.white
-                                          : Colors.black87)
+                                      ? (isDark ? Colors.white : Colors.black87)
                                       : (isDark
                                           ? Colors.white70
                                           : Colors.black54),
@@ -2784,7 +2807,6 @@ try {
       ),
     );
   }
-
 
   Widget _header() {
     final theme = ThemeManager.instance.current;
@@ -3103,7 +3125,8 @@ try {
                         textInputAction: TextInputAction.go,
                         // TEMP: disable auto-generate to stabilize flow
                         onSubmitted: (_) {
-                          debugPrint('[UI] Prompt submitted (manual generate only)');
+                          debugPrint(
+                              '[UI] Prompt submitted (manual generate only)');
                         },
                       ),
                     ),
@@ -3184,7 +3207,8 @@ try {
 
                                   if (_outOfCredits) {
                                     if (!context.mounted) return;
-                                    final didSubscribe = await PaywallSheet.show(
+                                    final didSubscribe =
+                                        await PaywallSheet.show(
                                       context,
                                       message:
                                           "You're out of generation credits. Start your trial or add credits to continue.",
@@ -3196,10 +3220,11 @@ try {
                                     return;
                                   }
 
-                                  final selfieBytes =
-                                      _originalBaseDollBytes ?? widget.selfieBytes;
+                                  final selfieBytes = _originalBaseDollBytes ??
+                                      widget.selfieBytes;
                                   if (selfieBytes == null) {
-                                    debugPrint('[UI] Manual generate blocked: no selfieBytes');
+                                    debugPrint(
+                                        '[UI] Manual generate blocked: no selfieBytes');
                                     return;
                                   }
 
@@ -3214,69 +3239,70 @@ try {
                             builder: (context) {
                               final isDisabled = controller.isGenerating;
                               return AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            padding: EdgeInsets.symmetric(
-                              horizontal: _isGenerating ? 20 : 16,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              gradient: isDisabled
-                                  ? null
-                                  : SofiStudioTheme.brandGradient,
-                              color:
-                                  isDisabled ? Colors.grey.shade400 : null,
-                              borderRadius: _radius24, // ✅ CONST
-                              boxShadow: _isIOSWeb
-                                  ? null
-                                  : [
-                                      BoxShadow(
-                                        color: (isDisabled
-                                                ? Colors.grey
-                                                : SofiStudioTheme.purple)
-                                            .withValues(alpha: 0.35),
-                                        blurRadius: 12,
-                                        offset: const Offset(0, 3),
+                                duration: const Duration(milliseconds: 200),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: _isGenerating ? 20 : 16,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  gradient: isDisabled
+                                      ? null
+                                      : SofiStudioTheme.brandGradient,
+                                  color:
+                                      isDisabled ? Colors.grey.shade400 : null,
+                                  borderRadius: _radius24, // ✅ CONST
+                                  boxShadow: _isIOSWeb
+                                      ? null
+                                      : [
+                                          BoxShadow(
+                                            color: (isDisabled
+                                                    ? Colors.grey
+                                                    : SofiStudioTheme.purple)
+                                                .withValues(alpha: 0.35),
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 3),
+                                          )
+                                        ],
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (_isGenerating)
+                                      const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white),
                                       )
-                                    ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (_isGenerating)
-                                  const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2, color: Colors.white),
-                                  )
-                                else if (_outOfCredits) ...[
-                                  const Icon(Icons.lock,
-                                      size: 16, color: Colors.white),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Get Credits',
-                                    style: GoogleFonts.poppins(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ] else ...[
-                                  const Icon(Icons.auto_awesome,
-                                      size: 16, color: Colors.white),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Generate',
-                                    style: GoogleFonts.poppins(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ]
-                              ],
-                            ),
-                          );
+                                    else if (_outOfCredits) ...[
+                                      const Icon(Icons.lock,
+                                          size: 16, color: Colors.white),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Get Credits',
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ] else ...[
+                                      const Icon(Icons.auto_awesome,
+                                          size: 16, color: Colors.white),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Generate',
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ]
+                                  ],
+                                ),
+                              );
                             },
                           ),
                         ),
@@ -3413,7 +3439,8 @@ try {
                     onPressed: _onContinueStylingPressed,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF6C4DFF),
-                      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 28, vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
