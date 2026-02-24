@@ -23,7 +23,10 @@ class ModelsLabService {
   }) async {
     debugPrint('[ModelsLab] Calling generateImageFunc (CLEAN)...');
 
-    final callable = _functions.httpsCallable('generateImageFunc');
+    final callable = _functions.httpsCallable(
+      'generateImageFunc',
+      options: HttpsCallableOptions(timeout: const Duration(minutes: 5)),
+    );
 
     final result = await callable.call({
       'prompt': prompt,

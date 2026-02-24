@@ -1391,7 +1391,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
               'changed facial features, altered identity, wrong proportions, '
               'camera photo, selfie, real person photograph',
           initImageBase64: initImageBase64,
-        ).timeout(const Duration(seconds: 120));
+        ).timeout(const Duration(minutes: 5));
         // Save URL for share/download functionality
         if (mounted) {
           setState(() => _latestImageUrl = imageUrl);
