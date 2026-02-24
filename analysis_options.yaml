@@ -1,5 +1,7 @@
 # analysis_options.yaml
-# Minimal, compatible config for FlutLab / DreamFlow
+# Strict, performance-focused config for SofiFlutLabGPT
+
+include: package:flutter_lints/flutter.yaml
 
 analyzer:
   exclude:
@@ -8,7 +10,41 @@ analyzer:
     # Otherwise YAML treats them as an alias (and you'll see: "Undefined alias").
     - "**/*.g.dart"
     - "**/*.freezed.dart"
+  errors:
+    # Treat these as errors to prevent regressions
+    unused_import: warning
+    unused_local_variable: warning
+    dead_code: warning
 
 linter:
   rules:
-    avoid_print: false
+    # --- Performance ---
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    prefer_const_literals_to_create_immutables: true
+    avoid_unnecessary_containers: true
+    sized_box_for_whitespace: true
+
+    # --- Correctness ---
+    cancel_subscriptions: true
+    close_sinks: true
+    use_key_in_widget_constructors: true
+    no_duplicate_case_values: true
+    avoid_print: false          # Keep: project uses debugPrint heavily
+
+    # --- Readability ---
+    prefer_single_quotes: true
+    prefer_is_empty: true
+    prefer_is_not_empty: true
+    annotate_overrides: true
+    prefer_final_locals: true
+    unnecessary_this: true
+    unnecessary_new: true
+    unnecessary_const: true
+    curly_braces_in_flow_control_structures: true
+
+    # --- Safety ---
+    avoid_dynamic_calls: false  # Keep false: Firebase/JSON returns dynamic
+    always_declare_return_types: true
+    type_annotate_public_apis: true
+    unawaited_futures: false    # Keep false: project intentionally uses unawaited()
