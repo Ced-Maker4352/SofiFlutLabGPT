@@ -8,6 +8,7 @@ import '../../services/premium_service.dart';
 import '../../theme.dart';
 import '../sofi_studio/sofi_studio_theme.dart';
 import '../../services/theme_manager.dart';
+import '../../presentation/premium/paywall_sheet.dart';
 
 class MoodCameraEntryPageImpl extends StatefulWidget {
   const MoodCameraEntryPageImpl({super.key});
@@ -65,8 +66,8 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
     if (!mounted) return;
 
     Navigator.of(context).pop({
-      'mood': _selectedMood,            // REQUIRED for auto-gen
-      'mode': _selectedMode.id,         // additive
+      'mood': _selectedMood, // REQUIRED for auto-gen
+      'mode': _selectedMode.id, // additive
       'selfieBytes': _selfieBytes,
     });
   }
@@ -119,7 +120,9 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                                 color: theme.accentColor.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Icon(Icons.image, color: theme.headerTextColor.withValues(alpha: 0.5)),
+                              child: Icon(Icons.image,
+                                  color: theme.headerTextColor
+                                      .withValues(alpha: 0.5)),
                             );
                           },
                         ),
@@ -132,7 +135,10 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                           children: [
                             ShaderMask(
                               shaderCallback: (bounds) => LinearGradient(
-                                colors: [SofiStudioTheme.purple, SofiStudioTheme.blue],
+                                colors: [
+                                  SofiStudioTheme.purple,
+                                  SofiStudioTheme.blue
+                                ],
                               ).createShader(bounds),
                               child: const Text(
                                 "How are you feeling today?",
@@ -148,7 +154,8 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                               "Pick a mood. Add a selfie if you want — we'll transform your look.",
                               style: TextStyle(
                                 fontSize: 12,
-                                color: theme.headerTextColor.withValues(alpha: 0.7),
+                                color: theme.headerTextColor
+                                    .withValues(alpha: 0.7),
                               ),
                             ),
                           ],
@@ -202,9 +209,11 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                                     height: 180,
                                     decoration: BoxDecoration(
                                       border: Border.all(
-                                        color: SofiStudioTheme.purple.withValues(alpha: 0.5),
+                                        color: SofiStudioTheme.purple
+                                            .withValues(alpha: 0.5),
                                         width: 2,
-                                        strokeAlign: BorderSide.strokeAlignCenter,
+                                        strokeAlign:
+                                            BorderSide.strokeAlignCenter,
                                       ),
                                       borderRadius: BorderRadius.circular(70),
                                     ),
@@ -212,7 +221,8 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                                       child: Icon(
                                         Icons.person_outline,
                                         size: 80,
-                                        color: SofiStudioTheme.purple.withValues(alpha: 0.4),
+                                        color: SofiStudioTheme.purple
+                                            .withValues(alpha: 0.4),
                                       ),
                                     ),
                                   ),
@@ -220,7 +230,8 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                                   Text(
                                     'Tap to add your selfie',
                                     style: TextStyle(
-                                      color: DarkModeColors.darkOnBackground.withValues(alpha: 0.7),
+                                      color: DarkModeColors.darkOnBackground
+                                          .withValues(alpha: 0.7),
                                       fontSize: 16,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -229,7 +240,8 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                                   Text(
                                     'Position your face in the frame',
                                     style: TextStyle(
-                                      color: DarkModeColors.darkOnBackground.withValues(alpha: 0.5),
+                                      color: DarkModeColors.darkOnBackground
+                                          .withValues(alpha: 0.5),
                                       fontSize: 13,
                                     ),
                                   ),
@@ -252,7 +264,7 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
 
                     if (mode.isPremium) {
                       if (!premium.canUseDailyPreview()) {
-                        premium.showPaywall(context);
+                        PaywallSheet.show(context);
                         return;
                       }
                     }
@@ -290,13 +302,17 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 180),
                           decoration: BoxDecoration(
-                            gradient: isSelected ? SofiStudioTheme.brandGradient : null,
-                            color: isSelected ? null : DarkModeColors.darkSurface,
+                            gradient: isSelected
+                                ? SofiStudioTheme.brandGradient
+                                : null,
+                            color:
+                                isSelected ? null : DarkModeColors.darkSurface,
                             borderRadius: BorderRadius.circular(20),
                             border: isSelected
                                 ? null
                                 : Border.all(
-                                    color: SofiStudioTheme.purple.withValues(alpha: 0.3),
+                                    color: SofiStudioTheme.purple
+                                        .withValues(alpha: 0.3),
                                     width: 1,
                                   ),
                           ),
@@ -304,7 +320,9 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                           child: Text(
                             mood,
                             style: TextStyle(
-                              color: isSelected ? Colors.white : DarkModeColors.darkOnBackground,
+                              color: isSelected
+                                  ? Colors.white
+                                  : DarkModeColors.darkOnBackground,
                               fontWeight: FontWeight.w700,
                               fontSize: 13,
                             ),
@@ -326,19 +344,23 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                     child: OutlinedButton.icon(
                       onPressed: _pickSelfie,
                       icon: Icon(
-                        _selfieBytes == null ? Icons.add_a_photo_outlined : Icons.check_circle,
+                        _selfieBytes == null
+                            ? Icons.add_a_photo_outlined
+                            : Icons.check_circle,
                         size: 18,
                       ),
                       label: Text(
-                        _selfieBytes == null ? 'Upload Selfie' : 'Selfie Added ✓',
+                        _selfieBytes == null
+                            ? 'Upload Selfie'
+                            : 'Selfie Added ✓',
                       ),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: _selfieBytes == null 
-                            ? theme.headerTextColor 
+                        foregroundColor: _selfieBytes == null
+                            ? theme.headerTextColor
                             : BrandColors.neonCyan,
                         side: BorderSide(
-                          color: _selfieBytes == null 
-                              ? SofiStudioTheme.purple.withValues(alpha: 0.4) 
+                          color: _selfieBytes == null
+                              ? SofiStudioTheme.purple.withValues(alpha: 0.4)
                               : BrandColors.neonCyan.withValues(alpha: 0.6),
                         ),
                         shape: RoundedRectangleBorder(
@@ -359,8 +381,8 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                     height: 52,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        gradient: _selectedMood != null 
-                            ? SofiStudioTheme.brandGradient 
+                        gradient: _selectedMood != null
+                            ? SofiStudioTheme.brandGradient
                             : LinearGradient(
                                 colors: [
                                   SofiStudioTheme.purple.withValues(alpha: 0.3),
@@ -371,7 +393,8 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                         boxShadow: _selectedMood != null
                             ? [
                                 BoxShadow(
-                                  color: SofiStudioTheme.purple.withValues(alpha: 0.4),
+                                  color: SofiStudioTheme.purple
+                                      .withValues(alpha: 0.4),
                                   blurRadius: 12,
                                   offset: const Offset(0, 4),
                                 ),
@@ -385,14 +408,16 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                           foregroundColor: Colors.white,
                           shadowColor: Colors.transparent,
                           disabledBackgroundColor: Colors.transparent,
-                          disabledForegroundColor: Colors.white.withValues(alpha: 0.5),
+                          disabledForegroundColor:
+                              Colors.white.withValues(alpha: 0.5),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
                         child: const Text(
                           'Transform My Look',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w800),
                         ),
                       ),
                     ),
@@ -413,7 +438,8 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const CircularProgressIndicator(color: SofiStudioTheme.purple),
+                      const CircularProgressIndicator(
+                          color: SofiStudioTheme.purple),
                       const SizedBox(height: 14),
                       Text(
                         'Creating your look…',
