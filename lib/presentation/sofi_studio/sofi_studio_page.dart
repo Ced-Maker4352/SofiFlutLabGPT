@@ -2968,7 +2968,9 @@ class _SofiStudioPageState extends State<SofiStudioPage>
   Widget buildStage(SofiStudioController controller) {
     // STEP 3 — FIX CANVAS IMAGE SOURCE
     // Show selfie immediately, then replace with generated image
-    final selfie = controller.generatedImageBytes ?? controller.selfieBytes;
+    final selfie = generatedImageBytes ??
+        controller.generatedImageBytes ??
+        controller.selfieBytes;
 
     if (controller.isGenerating) {
       return const Center(child: CircularProgressIndicator());
@@ -3228,9 +3230,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                                     return;
                                   }
 
-                                  await controller.generateFromSelfie(
-                                    selfieBytes: selfieBytes,
-                                  );
+                                  await _onGeneratePressed();
                                 },
                           borderRadius: _radius24, // ✅ CONST
                           splashColor: Colors.white.withValues(alpha: 0.2),
