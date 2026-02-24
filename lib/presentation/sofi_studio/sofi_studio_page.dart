@@ -1169,8 +1169,9 @@ class _SofiStudioPageState extends State<SofiStudioPage>
     }
 
     // 🔒 CRITICAL: Validate selfie before proceeding (for Quick-Mood flow)
+    final effectiveSelfie = controller.selfieBytes ?? widget.selfieBytes;
     if (_fromQuickMoodSelfie &&
-        (generatedImageBytes == null || generatedImageBytes!.isEmpty)) {
+        (effectiveSelfie == null || effectiveSelfie.isEmpty)) {
       debugPrint('⚠️ [Generation] Blocked: No selfie image in Quick-Mood flow');
       _showSnack('Please upload a selfie first');
       return;
@@ -1265,9 +1266,10 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       Uint8List baseBytes;
 
 // 1️⃣ If we entered from Quick-Mood with a selfie, that selfie is the identity anchor
-      if (widget.selfieBytes != null && widget.selfieBytes!.isNotEmpty) {
+      final effectiveBase = controller.selfieBytes ?? widget.selfieBytes;
+      if (effectiveBase != null && effectiveBase.isNotEmpty) {
         if (_originalBaseDollBytes == null) {
-          _originalBaseDollBytes = widget.selfieBytes!;
+          _originalBaseDollBytes = effectiveBase;
           debugPrint('[Identity] Locked to Quick-Mood selfie');
         }
       }
@@ -1293,9 +1295,9 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       String imageUrl;
 
 // ✅ Detect if this generation is coming from QuickMood selfie base
-      final bool isSelfieBase = (widget.selfieBytes != null) &&
+      final bool isSelfieBase = (effectiveBase != null) &&
           (_originalBaseDollBytes != null) &&
-          identical(_originalBaseDollBytes, widget.selfieBytes);
+          identical(_originalBaseDollBytes, effectiveBase);
 
 // ✅ Force transformation ONLY for selfie bases (prevents "same selfie" output)
       final String transformPrefix = isSelfieBase
@@ -2390,6 +2392,17 @@ class _SofiStudioPageState extends State<SofiStudioPage>
   Widget build(BuildContext context) {
     // STEP 3 — AUTO-TRIGGER AFTER FIRST FRAME (RACE CONDITION FIX)
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      // Force-hide welcome overlay if entering from mood flow
+      if (controller.skipWelcomeOverlay && _showCanvasHint) {
+        setState(() {
+          _showCanvasHint = false;
+          _awaitingMoodFlowContinue = false;
+        });
+        debugPrint('[Studio] Force-dismissed canvas hint (skipWelcomeOverlay)');
+      }
+
       if (_awaitingMoodFlowContinue) return; // Wait for Continue Styling tap
       if (_showCanvasHint)
         return; // Do not auto-generate while overlay is visible
