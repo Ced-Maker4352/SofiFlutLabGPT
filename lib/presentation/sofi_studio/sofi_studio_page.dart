@@ -2426,7 +2426,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
 
   @override
   Widget build(BuildContext context) {
-    // STEP 3 — AUTO-TRIGGER AFTER FIRST FRAME (RACE CONDITION FIX)
+    // STEP 3 — OVERLAY DISMISS (auto-gen is handled in _init())
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
@@ -2437,62 +2437,6 @@ class _SofiStudioPageState extends State<SofiStudioPage>
           _awaitingMoodFlowContinue = false;
         });
         debugPrint('[Studio] Force-dismissed canvas hint (skipWelcomeOverlay)');
-
-        // 🔑 FIX: Schedule auto-gen for NEXT frame after setState rebuild
-        // Diagnostic: Log ALL conditions unconditionally
-        debugPrint('[AutoGen-Schedule] Conditions:'
-            ' hasPending=${controller.hasPendingGeneration}'
-            ' selfie=${controller.selfieBytes != null}'
-            ' selfieLen=${controller.selfieBytes?.length ?? 0}'
-            ' autoConsumed=${controller.autoGenConsumed}'
-            ' isGen=$_isGenerating'
-            ' ctrlGen=${controller.isGenerating}');
-
-        if (controller.hasPendingGeneration &&
-            controller.selfieBytes != null &&
-            !controller.autoGenConsumed &&
-            !_isGenerating) {
-          debugPrint('[Studio] 🚀 Scheduling auto-gen after overlay dismiss');
-          // Use Future.delayed to allow the rebuild to complete first
-          Future.delayed(const Duration(milliseconds: 100), () {
-            if (!mounted) return;
-            if (controller.autoGenConsumed || _isGenerating) return;
-            debugPrint(
-                '[Studio] 🚀 Auto-triggering generation via page pipeline');
-            controller.autoGenConsumed = true;
-            _onGeneratePressed();
-          });
-        } else {
-          debugPrint(
-              '[AutoGen-Schedule] ❌ Condition NOT met, auto-gen skipped');
-        }
-        return; // Let the rebuild happen first
-      }
-
-      if (_awaitingMoodFlowContinue) return; // Wait for Continue Styling tap
-      if (_showCanvasHint)
-        return; // Do not auto-generate while overlay is visible
-
-      // Diagnostic logging for auto-gen conditions
-      if (controller.hasPendingGeneration && !controller.autoGenConsumed) {
-        debugPrint('[AutoGen] Checking conditions:'
-            ' pendingGen=${controller.hasPendingGeneration}'
-            ' selfie=${controller.selfieBytes != null}'
-            ' ctrlGen=${controller.isGenerating}'
-            ' consumed=${controller.autoGenConsumed}'
-            ' pageGen=$_isGenerating');
-      }
-
-      if (controller.hasPendingGeneration &&
-          controller.selfieBytes != null &&
-          !controller.isGenerating &&
-          !controller.autoGenConsumed &&
-          !_isGenerating) {
-        debugPrint('[Studio] 🚀 Auto-triggering generation via page pipeline');
-
-        controller.autoGenConsumed = true;
-
-        _onGeneratePressed();
       }
     });
 
