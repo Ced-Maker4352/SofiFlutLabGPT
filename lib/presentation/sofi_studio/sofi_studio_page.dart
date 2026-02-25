@@ -659,7 +659,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       debugPrint(
           '[Studio] AUTO-GEN state: hasPending=${controller.hasPendingGeneration}'
           ' selfieLen=${controller.selfieBytes!.length}'
-          ' currentDoll=${controller.currentDoll?.name ?? "null"}');
+          ' currentDoll=${controller.currentDoll != null ? "loaded" : "null"}');
 
       // Dismiss canvas hint if still showing
       if (_showCanvasHint || _awaitingMoodFlowContinue) {
