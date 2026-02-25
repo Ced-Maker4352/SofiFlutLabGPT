@@ -52,13 +52,6 @@ exports.generateImageFunc = onCall({
   const safeWidth = Math.min(width, 1024);
   const safeHeight = Math.min(height, 1024);
 
-  // Determine the best model for the mode
-  // Using pixar-3d-v1-0 for doll-like styling with likeness
-  let targetModel = "flux-kontext-pro";
-  if (prompt.toLowerCase().includes("pixar") || prompt.toLowerCase().includes("doll")) {
-    targetModel = "pixar-3d-v1-0";
-  }
-
   // ---- STEP 0: Upload init_image to Firebase Storage to get a public URL ----
   let initImageUrl = null;
   let tempFilePath = null;
@@ -95,7 +88,7 @@ exports.generateImageFunc = onCall({
   // ---- STEP 1: Submit generation job ----
   const submitBody = {
     key: apiKey,
-    model_id: targetModel, // 🔑 Dynamic model selection
+    model_id: "flux-kontext-pro",
     prompt,
     negative_prompt,
     width: safeWidth,
@@ -109,7 +102,7 @@ exports.generateImageFunc = onCall({
     submitBody.init_image = initImageUrl;
     // 🔑 Use provided strength or default to 0.45
     submitBody.strength = strength !== undefined ? strength : 0.45;
-    console.log(`Using init_image with strength=${submitBody.strength} model=${targetModel}`);
+    console.log(`Using init_image with strength=${submitBody.strength} model=${submitBody.model_id}`);
   }
 
   // Use img2img endpoint when we have an init_image, text2img otherwise

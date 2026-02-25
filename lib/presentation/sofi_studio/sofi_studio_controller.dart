@@ -122,22 +122,22 @@ class SofiStudioController extends ChangeNotifier {
   // ---------------------------------------------------------------
   // GENERATION ENTRY POINT (PUBLIC API)
   // ---------------------------------------------------------------
-  Future<void> generateIfReady({
+  Future<Uint8List> generateIfReady({
     required Uint8List selfieBytes,
   }) async {
     if (_currentPrompt.isEmpty) {
       throw Exception('Attempted generation with empty prompt');
     }
-    await generateFromSelfie(selfieBytes: selfieBytes);
+    return await generateFromSelfie(selfieBytes: selfieBytes);
   }
 
   // ---------------------------------------------------------------
   // GENERATION METHOD (KONTEXT PRO - INTERNAL)
   // ---------------------------------------------------------------
-  Future<void> generateFromSelfie({
+  Future<Uint8List> generateFromSelfie({
     required Uint8List selfieBytes,
   }) async {
-    if (isGenerating) return;
+    if (isGenerating) throw Exception('Already generating in progress');
 
     // Snapshot current state
     final userPromptSnapshot =
@@ -179,9 +179,11 @@ class SofiStudioController extends ChangeNotifier {
 
       generatedImageBytes = styled;
       skipWelcomeOverlay = false;
+      return styled;
     } catch (e) {
       generationError = e.toString();
       debugPrint('[SofiStudio] Generation error: $e');
+      rethrow;
     } finally {
       isGenerating = false;
       debugPrint('[GENERATION] Completed. Image bytes: '

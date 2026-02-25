@@ -1378,82 +1378,26 @@ class _SofiStudioPageState extends State<SofiStudioPage>
         initImageBytes = baseBytes;
       }
 
-      try {
-        // ================================
-        // FACE PRESERVATION PARAMETERS
-        // ================================
-        // Lower strength = more preservation of original features (especially face)
-        // Higher strength = more transformation (can distort faces)
-        //
-        // For full body from selfie: use LOWER strength to preserve facial identity
-        // For clothing-only edits: can use slightly higher strength
-        // ================================
+      // ================================
+      // DELEGATE TO TWO-STEP GENERATION CONTROLLER
+      // ================================
+      debugPrint('[GEN] Delegating to Two-Step Pipeline');
 
-        // ================================
-        // UNIFIED GENERATION PIPELINE
-        // Style differences are handled ONLY by prompt text
-        // ================================
-        debugPrint('[GEN] Using unified ModelsLab pipeline');
+      // We must pass the intended final prompt to the controller so it can use it for Step 2.
+      controller.rebuildPrompt(
+        userPrompt: finalPrompt,
+        mode: controller.selectedMode.id,
+        mood: _activeMood.id,
+      );
 
-        // Convert initImageBytes to base64
-        final String initImageBase64 =
-            'data:image/png;base64,${base64Encode(initImageBytes)}';
-
-        // Determine mode from controller (synced from Mood flow or user selection)
-        final String modeId = controller.selectedMode.id;
-        final bool isHuman = modeId == 'human';
-        final String modeLabel = isHuman ? 'human' : modeId;
-        debugPrint(
-            '[GEN] Mode: $modeLabel (controller.selectedMode=${controller.selectedMode.id})');
-
-        debugPrint(
-            '[UI] Triggering generateFromSelfie'); // ← VERIFY CALLABLE REACHED
-
-        imageUrl = await ModelsLabService.generateKontextPro(
-          prompt: enforcedPrompt,
-          negativePrompt:
-              'low quality, worst quality, low resolution, low-res, pixelated, grainy, noisy, '
-              'blurry, soft focus, jpeg artifacts, compression artifacts, muddy, '
-              'distorted face, warped face, asymmetrical face, wrong face, '
-              'distorted eyes, asymmetrical eyes, crossed eyes, misaligned eyes, '
-              'distorted nose, distorted lips, distorted mouth, '
-              'pixelated face, blurry face, low quality face, jpeg artifacts on face, '
-              'changed facial features, altered identity, wrong proportions, '
-              'camera photo, selfie, real person photograph',
-          initImageBase64: initImageBase64,
-        ).timeout(const Duration(minutes: 5));
-        // Save URL for share/download functionality
-        if (mounted) {
-          setState(() => _latestImageUrl = imageUrl);
-        }
-        debugPrint('✅ [Generation] API returned URL: $imageUrl');
-      } catch (e, st) {
-        debugPrint('❌ [Generation] CRASH: ModelsLab API failed: $e');
-        await RemoteDebugLogger.instance
-            .logError('ModelsLab API failed', e, st)
-            .timeout(const Duration(seconds: 1))
-            .catchError((_) {});
-        rethrow;
-      }
-
-      // Step 3: Download image bytes from returned URL
-      debugPrint('📥 [Generation] Downloading generated image...');
       Uint8List result;
       try {
-        final response = await http
-            .get(Uri.parse(imageUrl))
-            .timeout(const Duration(seconds: 30));
-
-        if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
-          throw Exception('Image download failed (${response.statusCode})');
-        }
-
-        result = response.bodyBytes;
-        debugPrint('✅ [Generation] Image downloaded (${result.length} bytes)');
+        result =
+            await controller.generateFromSelfie(selfieBytes: initImageBytes);
       } catch (e, st) {
-        debugPrint('🛑 [Generation] CRASH: Failed to download image: $e');
+        debugPrint('❌ [Generation] CRASH: Two-Step Pipeline failed: $e');
         await RemoteDebugLogger.instance
-            .logError('Image download failed', e, st)
+            .logError('Two-Step Pipeline failed', e, st)
             .timeout(const Duration(seconds: 1))
             .catchError((_) {});
         rethrow;
