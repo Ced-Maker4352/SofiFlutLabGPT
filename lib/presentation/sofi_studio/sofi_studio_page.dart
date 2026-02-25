@@ -647,6 +647,38 @@ class _SofiStudioPageState extends State<SofiStudioPage>
     // NOW start deferred/background tasks after canvas is ready
     await _checkFirstVisitHint();
 
+    // 🔑 AUTO-GEN TRIGGER: Fire auto-generation AFTER all setup is complete
+    // This is the most reliable location — dolls loaded, selfie set, hint dismissed
+    if (controller.hasPendingGeneration &&
+        controller.selfieBytes != null &&
+        !controller.autoGenConsumed &&
+        !_isGenerating &&
+        !controller.isGenerating) {
+      debugPrint(
+          '[Studio] 🚀 AUTO-GEN: Triggering from _init() — all setup complete');
+      debugPrint(
+          '[Studio] AUTO-GEN state: hasPending=${controller.hasPendingGeneration}'
+          ' selfieLen=${controller.selfieBytes!.length}'
+          ' currentDoll=${controller.currentDoll?.name ?? "null"}');
+
+      // Dismiss canvas hint if still showing
+      if (_showCanvasHint || _awaitingMoodFlowContinue) {
+        setState(() {
+          _showCanvasHint = false;
+          _awaitingMoodFlowContinue = false;
+        });
+      }
+
+      controller.autoGenConsumed = true;
+      // Small delay to ensure the UI is fully rendered
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (!mounted) return;
+        if (_isGenerating) return;
+        debugPrint('[Studio] 🚀 AUTO-GEN: Firing _onGeneratePressed()');
+        _onGeneratePressed();
+      });
+    }
+
     // Initialize voice coach (non-blocking, delayed)
     Future<void>.delayed(const Duration(milliseconds: 800)).then((_) {
       if (!mounted) return;
@@ -2407,7 +2439,15 @@ class _SofiStudioPageState extends State<SofiStudioPage>
         debugPrint('[Studio] Force-dismissed canvas hint (skipWelcomeOverlay)');
 
         // 🔑 FIX: Schedule auto-gen for NEXT frame after setState rebuild
-        // The setState triggers a rebuild, but we need to auto-gen AFTER the new frame
+        // Diagnostic: Log ALL conditions unconditionally
+        debugPrint('[AutoGen-Schedule] Conditions:'
+            ' hasPending=${controller.hasPendingGeneration}'
+            ' selfie=${controller.selfieBytes != null}'
+            ' selfieLen=${controller.selfieBytes?.length ?? 0}'
+            ' autoConsumed=${controller.autoGenConsumed}'
+            ' isGen=$_isGenerating'
+            ' ctrlGen=${controller.isGenerating}');
+
         if (controller.hasPendingGeneration &&
             controller.selfieBytes != null &&
             !controller.autoGenConsumed &&
@@ -2422,6 +2462,9 @@ class _SofiStudioPageState extends State<SofiStudioPage>
             controller.autoGenConsumed = true;
             _onGeneratePressed();
           });
+        } else {
+          debugPrint(
+              '[AutoGen-Schedule] ❌ Condition NOT met, auto-gen skipped');
         }
         return; // Let the rebuild happen first
       }

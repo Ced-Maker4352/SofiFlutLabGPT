@@ -99,9 +99,20 @@ exports.generateImageFunc = onCall({
 
   if (initImageUrl) {
     submitBody.init_image = initImageUrl;
+    // 🔑 CRITICAL: strength controls how much of the original image to preserve
+    // Lower = more like original (identity preserved), Higher = more creative
+    // 0.55-0.70 is the sweet spot for identity lock with style transfer
+    submitBody.strength = 0.65;
+    console.log("Using init_image with strength=0.65 for identity lock");
   }
 
-  const submitResponse = await fetch(`${MODELSLAB_BASE}/text-to-image`, {
+  // Use img2img endpoint when we have an init_image, text2img otherwise
+  const endpoint = initImageUrl
+    ? `${MODELSLAB_BASE}/img2img`
+    : `${MODELSLAB_BASE}/text-to-image`;
+  console.log(`Using endpoint: ${endpoint}`);
+
+  const submitResponse = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(submitBody),
