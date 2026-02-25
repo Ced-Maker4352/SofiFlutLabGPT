@@ -1101,7 +1101,9 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       base = _activeBaseStylePrompt!;
     } else {
       // Use mode-specific base prompt from centralised constants
-      base = switch (widget.initialMode) {
+      // 🔑 FIX: Use controller.selectedMode (synced from Mood flow) instead of widget.initialMode
+      final modeId = controller.selectedMode.id;
+      base = switch (modeId) {
         'human' => humanBasePrompt,
         'cinematic' => cinematicBasePrompt,
         'fantasy' => fantasyBasePrompt,
@@ -1110,8 +1112,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
         'doll' => dollBasePrompt,
         _ => dollBasePrompt, // safe default
       };
-      debugPrint(
-          '[Prompt] Using mode-based base: ${widget.initialMode ?? "default (doll)"}');
+      debugPrint('[Prompt] Using mode-based base: $modeId');
     }
 
     final buffer = StringBuffer(base);
@@ -1356,8 +1357,10 @@ class _SofiStudioPageState extends State<SofiStudioPage>
         // For clothing-only edits: can use slightly higher strength
         // ================================
 
-        final bool isSelfieSource =
-            widget.selfieBytes != null && widget.selfieBytes!.isNotEmpty;
+        final effectiveSelfieForCheck =
+            controller.selfieBytes ?? widget.selfieBytes;
+        final bool isSelfieSource = effectiveSelfieForCheck != null &&
+            effectiveSelfieForCheck.isNotEmpty;
 
         // Higher guidance = sharper, more defined features (better quality)
         final double facePreservingGuidance = isSelfieSource ? 7.5 : 7.5;
@@ -1372,11 +1375,12 @@ class _SofiStudioPageState extends State<SofiStudioPage>
         final String initImageBase64 =
             'data:image/png;base64,${base64Encode(initImageBytes)}';
 
-        // Determine mode from initialMode (not initialMood!)
-        final bool isHuman = widget.initialMode == 'human';
-        final String modeLabel = isHuman ? 'human' : 'doll';
+        // Determine mode from controller (synced from Mood flow or user selection)
+        final String modeId = controller.selectedMode.id;
+        final bool isHuman = modeId == 'human';
+        final String modeLabel = isHuman ? 'human' : modeId;
         debugPrint(
-            '[GEN] Mode: $modeLabel (initialMode=${widget.initialMode})');
+            '[GEN] Mode: $modeLabel (controller.selectedMode=${controller.selectedMode.id})');
 
         debugPrint(
             '[UI] Triggering generateFromSelfie'); // ← VERIFY CALLABLE REACHED
@@ -2410,14 +2414,16 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       if (controller.hasPendingGeneration &&
           controller.selfieBytes != null &&
           !controller.isGenerating &&
-          !controller.autoGenConsumed) {
-        debugPrint('[Studio] 🚀 Auto-triggering generation');
+          !controller.autoGenConsumed &&
+          !_isGenerating) {
+        debugPrint('[Studio] 🚀 Auto-triggering generation via page pipeline');
 
         controller.autoGenConsumed = true;
 
-        controller.generateFromSelfie(
-          selfieBytes: controller.selfieBytes!,
-        );
+        // 🔑 CRITICAL FIX: Use the PAGE's _onGeneratePressed() instead of
+        // controller.generateFromSelfie(). The page's method handles UI updates,
+        // history, audio, and the full generation pipeline.
+        _onGeneratePressed();
       }
     });
 
