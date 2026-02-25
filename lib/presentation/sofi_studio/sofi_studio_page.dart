@@ -2405,11 +2405,40 @@ class _SofiStudioPageState extends State<SofiStudioPage>
           _awaitingMoodFlowContinue = false;
         });
         debugPrint('[Studio] Force-dismissed canvas hint (skipWelcomeOverlay)');
+
+        // 🔑 FIX: Schedule auto-gen for NEXT frame after setState rebuild
+        // The setState triggers a rebuild, but we need to auto-gen AFTER the new frame
+        if (controller.hasPendingGeneration &&
+            controller.selfieBytes != null &&
+            !controller.autoGenConsumed &&
+            !_isGenerating) {
+          debugPrint('[Studio] 🚀 Scheduling auto-gen after overlay dismiss');
+          // Use Future.delayed to allow the rebuild to complete first
+          Future.delayed(const Duration(milliseconds: 100), () {
+            if (!mounted) return;
+            if (controller.autoGenConsumed || _isGenerating) return;
+            debugPrint(
+                '[Studio] 🚀 Auto-triggering generation via page pipeline');
+            controller.autoGenConsumed = true;
+            _onGeneratePressed();
+          });
+        }
+        return; // Let the rebuild happen first
       }
 
       if (_awaitingMoodFlowContinue) return; // Wait for Continue Styling tap
       if (_showCanvasHint)
         return; // Do not auto-generate while overlay is visible
+
+      // Diagnostic logging for auto-gen conditions
+      if (controller.hasPendingGeneration && !controller.autoGenConsumed) {
+        debugPrint('[AutoGen] Checking conditions:'
+            ' pendingGen=${controller.hasPendingGeneration}'
+            ' selfie=${controller.selfieBytes != null}'
+            ' ctrlGen=${controller.isGenerating}'
+            ' consumed=${controller.autoGenConsumed}'
+            ' pageGen=$_isGenerating');
+      }
 
       if (controller.hasPendingGeneration &&
           controller.selfieBytes != null &&
@@ -2420,9 +2449,6 @@ class _SofiStudioPageState extends State<SofiStudioPage>
 
         controller.autoGenConsumed = true;
 
-        // 🔑 CRITICAL FIX: Use the PAGE's _onGeneratePressed() instead of
-        // controller.generateFromSelfie(). The page's method handles UI updates,
-        // history, audio, and the full generation pipeline.
         _onGeneratePressed();
       }
     });
