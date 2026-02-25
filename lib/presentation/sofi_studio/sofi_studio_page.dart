@@ -18,7 +18,7 @@ import 'package:sofi_test_connect/services/sofi_session_memory.dart';
 import 'package:sofi_test_connect/presentation/premium/paywall_sheet.dart';
 import 'package:sofi_test_connect/presentation/premium/premium_page.dart';
 import 'package:sofi_test_connect/presentation/mood/mood_mode.dart';
-import 'package:sofi_test_connect/services/models_lab_service.dart';
+
 import 'package:sofi_test_connect/services/two_step_generation_service.dart';
 import 'package:sofi_test_connect/services/audio_service.dart';
 import 'package:sofi_test_connect/services/storage_service.dart';
@@ -881,8 +881,14 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       if (mounted) {
         setState(() {
           generatedImageBytes = stageBytes;
-          // CRITICAL: Store this as the original base to prevent generation drift
-          _originalBaseDollBytes = stageBytes;
+          // 🔒 Only store as base doll if there's NO active selfie session.
+          // If a selfie is loaded, the selfie stays as the identity anchor.
+          final hasSelfie = (controller.selfieBytes != null &&
+                  controller.selfieBytes!.isNotEmpty) ||
+              (widget.selfieBytes != null && widget.selfieBytes!.isNotEmpty);
+          if (!hasSelfie) {
+            _originalBaseDollBytes = stageBytes;
+          }
           _history.add(stageBytes);
           _redoStack.clear();
           _isFavorited = false;
@@ -1290,105 +1296,36 @@ class _SofiStudioPageState extends State<SofiStudioPage>
 
     try {
       // ================================
-// STEP 1: SELECT INIT IMAGE SOURCE (IDENTITY LOCK)
-// ================================
+      // STEP 1: GET THE SELFIE (IDENTITY SOURCE)
+      // ================================
+      // The selfie is the ONLY identity source. It comes from the
+      // controller (set during enterFromMoodFlow) or the widget prop.
+      final Uint8List? selfie = controller.selfieBytes ?? widget.selfieBytes;
 
-// 🔒 RULE: ALL generations MUST anchor to the ORIGINAL identity image
-// NEVER generate from last output — this prevents facial drift.
-
-      Uint8List baseBytes;
-
-// 1️⃣ If we entered from Quick-Mood with a selfie, that selfie is the identity anchor
-      final effectiveBase = controller.selfieBytes ?? widget.selfieBytes;
-      if (effectiveBase != null && effectiveBase.isNotEmpty) {
-        if (_originalBaseDollBytes == null) {
-          _originalBaseDollBytes = effectiveBase;
-          debugPrint('[Identity] Locked to Quick-Mood selfie');
-        }
-      }
-
-// 2️⃣ If we have an identity anchor, ALWAYS use it
-      if (_originalBaseDollBytes != null &&
-          _originalBaseDollBytes!.isNotEmpty) {
-        baseBytes = _originalBaseDollBytes!;
-        debugPrint('[Identity] Using locked base identity');
+      Uint8List initImageBytes;
+      if (selfie != null && selfie.isNotEmpty) {
+        initImageBytes = selfie;
+        debugPrint(
+            '[Identity] ✅ Using SELFIE as identity anchor (${selfie.length} bytes)');
       } else {
-        // 3️⃣ Fallback (should only happen once per session)
-        baseBytes = await _loadDollImage(
+        // No selfie — fall back to base doll image
+        initImageBytes = await _loadDollImage(
           controller.currentDoll!.stagePath,
           controller.currentDoll!.isStoragePath,
         );
-        _originalBaseDollBytes = baseBytes;
-        debugPrint('[Identity] Locked to base doll stage');
-      }
-
-      // Step 2: Call ModelsLab API (returns IMAGE URL)
-      debugPrint('🎨 [Generation] Calling ModelsLab API...');
-
-      String imageUrl;
-
-// ✅ Detect if this generation is coming from QuickMood selfie base
-      final bool isSelfieBase = (effectiveBase != null) &&
-          (_originalBaseDollBytes != null) &&
-          identical(_originalBaseDollBytes, effectiveBase);
-
-// ✅ Force transformation ONLY for selfie bases (prevents "same selfie" output)
-      final String transformPrefix = isSelfieBase
-          ? 'stylized 3D doll portrait, soft plastic skin, simplified facial geometry, '
-              'studio doll aesthetic, high-quality character render, not photorealistic, '
-          : '';
-
-// ✅ USE CONTROLLER'S STORED PROMPT (DO NOT REBUILD)
-      final String finalPrompt = transformPrefix + controller.currentPrompt;
-
-// ================================
-// FACE LOCK — FULL OUTFIT ONLY
-// ================================
-
-      String enforcedPrompt = finalPrompt;
-
-      if (selectedOptions[EditCategory.fullOutfit] != null) {
-        enforcedPrompt += " [ABSOLUTE FACE LOCK - FULL OUTFIT MODE] "
-            "CRITICAL OVERRIDE: The face region is IMMUTABLE and LOCKED. "
-            "Copy the face pixels EXACTLY from the input image without ANY modification. "
-            "Do NOT regenerate eyes - use original eye shape, color, spacing, symmetry. "
-            "Do NOT regenerate nose - use original nose shape, size, nostril width. "
-            "Do NOT regenerate lips - use original lip shape, fullness, color. "
-            "Do NOT regenerate skin - use original skin tone, texture, complexion. "
-            "Do NOT change facial proportions, bone structure, or expressions. "
-            "Do NOT change age, ethnicity, or identity characteristics. "
-            "The face must be PIXEL-IDENTICAL to the source image. "
-            "Apply ALL style changes ONLY to clothing, shoes, and accessories. "
-            "Body pose may change but head/face orientation should stay similar. "
-            "If there is ANY conflict between style and face preservation, ALWAYS preserve the face. ";
-      }
-
-// ================================
-// FULL OUTFIT IDENTITY ENFORCEMENT
-// ================================
-
-      Uint8List initImageBytes;
-
-// 🔒 FULL OUTFITS MUST ALWAYS USE ORIGINAL IDENTITY
-// Check if we're generating a full outfit (selectedOptions contains fullOutfit)
-      if (selectedOptions[EditCategory.fullOutfit] != null) {
-        initImageBytes = _originalBaseDollBytes!;
-        debugPrint('[Outfit] Using original identity anchor');
-      } else {
-        initImageBytes = baseBytes;
+        debugPrint('[Identity] No selfie, using base doll');
       }
 
       // ================================
-      // DELEGATE TO TWO-STEP GENERATION CONTROLLER
+      // STEP 2: DELEGATE TO TWO-STEP CONTROLLER
       // ================================
+      // The controller already holds the correct prompt (built during
+      // enterFromMoodFlow or onMoodSelectedInStudio).
+      // DO NOT rebuild or wrap the prompt here — that causes nesting.
       debugPrint('[GEN] Delegating to Two-Step Pipeline');
-
-      // We must pass the intended final prompt to the controller so it can use it for Step 2.
-      controller.rebuildPrompt(
-        userPrompt: finalPrompt,
-        mode: controller.selectedMode.id,
-        mood: _activeMood.id,
-      );
+      debugPrint(
+          '[GEN] Controller prompt length: ${controller.currentPrompt.length}');
+      debugPrint('[GEN] Init image bytes: ${initImageBytes.length}');
 
       Uint8List result;
       try {
