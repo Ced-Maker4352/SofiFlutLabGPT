@@ -41,6 +41,20 @@ int optimizedSteps({
   }
 }
 
+String buildIdentityOnlyPrompt({
+  required String userPrompt,
+}) {
+  return '''
+[SOFI_PROMPT_VERSION: identity_v1]
+CRITICAL: IDENTITY LOCK ENABLED.
+You MUST preserve the subject's facial identity EXACTLY from the reference photo.
+Maintain: face shape, eye spacing, nose structure, skin tone, and ethnicity.
+Do not stylize the face. Do not simplified facial geometry.
+
+Context: $userPrompt
+''';
+}
+
 String buildSofiPromptV1({
   required String userPrompt,
   required String mode,
@@ -48,84 +62,59 @@ String buildSofiPromptV1({
   double styleStrength = 7.0,
 }) {
   const baseIdentityLock = '''
-You are generating a character image using a reference photo.
+CRITICAL: PRESERVE IDENTITY.
+Strictly preserve the subject's facial identity: face shape, eye shape, nose structure, mouth shape, skin tone, and ethnicity.
+Do not simplified facial geometry. Keep original likeness intact.
 
-Strictly preserve the subject's facial identity, including:
-- face shape
-- eye shape and spacing
-- nose structure
-- mouth shape
-- hairline and hair texture
-- skin tone
-- age and ethnicity
-
-Do not change the person's identity.
-Do not stylize the face in a way that alters likeness.
-
-Generate a full-body character with natural human anatomy.
-Show the entire body head to toe, uncropped.
-Maintain correct limb proportions and posture.
-Lighting should be clean, cinematic, and realistic.
+Generate a full-body character with natural human anatomy, uncropped, head to toe.
+Lighting should be clean and cinematic.
 ''';
 
   // Determine style preset from mood (or fallback to pixar)
-  final stylePreset = mood.isNotEmpty
-      ? MoodStylePresetMapper.map(mood)
-      : MoodStylePreset.pixar;
+  final stylePreset =
+      mood.isNotEmpty ? MoodStylePresetMapper.map(mood) : MoodStylePreset.pixar;
 
   final styleBuffer = StringBuffer();
   switch (stylePreset) {
     case MoodStylePreset.pixar:
       styleBuffer.writeln('''
-Style the character as a Pixar-style 3D animated character.
-Soft rounded features.
-Expressive eyes.
-High-quality animation render.
+Style: Pixar-style 3D animated character.
+Soft rounded features, expressive eyes, high-quality animation render.
 ''');
       break;
 
     case MoodStylePreset.cinematic:
       styleBuffer.writeln('''
-Style the character as a cinematic realistic character.
-Film lighting.
-High contrast shadows.
-Detailed textures.
-Professional photography look.
+Style: Cinematic realistic character.
+Film lighting, high contrast, detailed textures.
 ''');
       break;
 
     case MoodStylePreset.fashion:
       styleBuffer.writeln('''
-Style the character as a high-fashion editorial model.
-Runway-ready outfit.
-Clean studio lighting.
-Magazine-quality photography.
+Style: High-fashion editorial model.
+Runway outfit, clean studio lighting, magazine quality.
 ''');
       break;
 
     case MoodStylePreset.softIllustration:
       styleBuffer.writeln('''
-Style the character as a soft illustrated figure.
-Pastel tones.
-Gentle lighting.
-Dreamlike atmosphere.
+Style: Soft illustrated figure.
+Pastel tones, gentle lighting, dreamlike atmosphere.
 ''');
       break;
   }
 
   final styleBlock = styleBuffer.toString();
-
   final intensityBlock = styleIntensityModifier(styleStrength);
 
   return '''
 [SOFI_PROMPT_VERSION: v1]
-
 $baseIdentityLock
 $styleBlock
 $intensityBlock
 
-User request:
-$userPrompt
+User request: $userPrompt
 ''';
 }
 
@@ -135,7 +124,12 @@ String buildSofiPrompt({
   String mood = '',
   double styleStrength = 7.0,
   String version = SOFI_PROMPT_VERSION,
+  bool identityOnly = false,
 }) {
+  if (identityOnly) {
+    return buildIdentityOnlyPrompt(userPrompt: userPrompt);
+  }
+
   switch (version) {
     case 'v1':
     default:

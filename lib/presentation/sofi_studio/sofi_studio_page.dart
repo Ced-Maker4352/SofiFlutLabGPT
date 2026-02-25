@@ -1389,14 +1389,6 @@ class _SofiStudioPageState extends State<SofiStudioPage>
         // For clothing-only edits: can use slightly higher strength
         // ================================
 
-        final effectiveSelfieForCheck =
-            controller.selfieBytes ?? widget.selfieBytes;
-        final bool isSelfieSource = effectiveSelfieForCheck != null &&
-            effectiveSelfieForCheck.isNotEmpty;
-
-        // Higher guidance = sharper, more defined features (better quality)
-        final double facePreservingGuidance = isSelfieSource ? 7.5 : 7.5;
-
         // ================================
         // UNIFIED GENERATION PIPELINE
         // Style differences are handled ONLY by prompt text
@@ -2440,7 +2432,6 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       }
     });
 
-    final current = controller.currentDoll;
     final theme = ThemeManager.instance.current;
     // Updated background color to blend with stage
     return Scaffold(
@@ -2653,74 +2644,6 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                     _buildPremiumReminderOverlay(),
                 ],
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStartupStagePlaceholder() {
-    final theme = ThemeManager.instance.current;
-    final bool isDark = theme.type == AppThemeType.black;
-
-    // A lightweight “canvas is alive” stage with the active mood,
-    // designed to avoid blocking first render (no images, no network).
-    return Container(
-      color: theme.backgroundColor,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: isDark
-                      ? [
-                          Colors.black.withValues(alpha: 0.90),
-                          Colors.black.withValues(alpha: 0.75),
-                          theme.accentColor.withValues(alpha: 0.15),
-                        ]
-                      : [
-                          theme.headerColor.withValues(alpha: 0.95),
-                          theme.backgroundColor.withValues(alpha: 0.95),
-                          theme.accentColor.withValues(alpha: 0.10),
-                        ],
-                ),
-              ),
-            ),
-          ),
-          Align(
-            alignment: Alignment.center,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  _activeMood.icon,
-                  size: 40,
-                  color: isDark ? Colors.white70 : Colors.black54,
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  _activeMood.label,
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: isDark ? Colors.white70 : Colors.black54,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Ready to generate',
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: isDark ? Colors.white38 : Colors.black38,
-                  ),
-                ),
-              ],
             ),
           ),
         ],

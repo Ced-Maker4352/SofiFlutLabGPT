@@ -35,8 +35,9 @@ class TwoStepGenerationService {
           'bad anatomy, deformed, worst quality',
       initImageBase64: initImageBase64,
       aspectRatio: aspectRatio,
-      steps: 28,
-      guidanceScale: 6.5,
+      steps: 24, // identity lock converges fast
+      guidanceScale: 8.5, // 🔑 HIGH GUIDANCE for sharper identity
+      strength: 0.35, // 🔑 LOW STRENGTH: preserve face exactly
     );
 
     return _downloadBytes(imageUrl);
@@ -64,13 +65,13 @@ class TwoStepGenerationService {
 
     final imageUrl = await ModelsLabService.generateKontextPro(
       prompt: finalPrompt,
-      negativePrompt:
-          'changed face, different person, altered identity, '
+      negativePrompt: 'changed face, different person, altered identity, '
           'bad anatomy, deformed, worst quality, uncanny valley',
       initImageBase64: initImageBase64,
       aspectRatio: aspectRatio,
-      steps: 30,
-      guidanceScale: 7,
+      steps: 28,
+      guidanceScale: 7.5,
+      strength: 0.65, // 🔑 MODERATE STRENGTH: apply style while keeping base
     );
 
     return _downloadBytes(imageUrl);
@@ -90,7 +91,8 @@ class TwoStepGenerationService {
   Future<Uint8List> _downloadBytes(String url) async {
     final resp = await http.get(Uri.parse(url));
     if (resp.statusCode < 200 || resp.statusCode >= 300) {
-      throw Exception('Failed to download generated image ($url): ${resp.statusCode}');
+      throw Exception(
+          'Failed to download generated image ($url): ${resp.statusCode}');
     }
     return resp.bodyBytes;
   }

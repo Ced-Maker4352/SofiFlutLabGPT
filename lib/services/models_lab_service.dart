@@ -19,6 +19,7 @@ class ModelsLabService {
     String aspectRatio = '9:16',
     int steps = 28,
     double guidanceScale = 7,
+    double? strength, // 🔑 NEW: Controls img2img strength (0.0 - 1.0)
     int? seed,
   }) async {
     debugPrint('[ModelsLab] Calling generateImageFunc (CLEAN)...');
@@ -35,6 +36,7 @@ class ModelsLabService {
       'aspect_ratio': aspectRatio,
       'steps': steps,
       'guidance_scale': guidanceScale,
+      if (strength != null) 'strength': strength,
       if (seed != null) 'seed': seed,
     });
 

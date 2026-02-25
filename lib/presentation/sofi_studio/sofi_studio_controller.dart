@@ -139,20 +139,24 @@ class SofiStudioController extends ChangeNotifier {
   }) async {
     if (isGenerating) return;
 
-    // 🔒 FIX #2: Gate generation behind hasPendingGeneration
-    if (!hasPendingGeneration) {
-      debugPrint('[SofiStudio] Generation blocked: no pending prompt');
-      return;
-    }
+    // Snapshot current state
+    final userPromptSnapshot =
+        selectedMood.isNotEmpty ? selectedMood : _currentPrompt;
+    final modeSnapshot = selectedMode.id;
 
-    // 🔒 FIX #2: Snapshot prompt to prevent race conditions
-    final promptSnapshot = _currentPrompt;
-    if (promptSnapshot.isEmpty) {
+    // 🔒 Build focused prompts
+    final identityPrompt = buildSofiPrompt(
+      userPrompt: userPromptSnapshot,
+      mode: modeSnapshot,
+      identityOnly: true,
+    );
+
+    final fullPrompt = _currentPrompt;
+
+    if (fullPrompt.isEmpty) {
       throw Exception('Prompt missing at generation time');
     }
 
-    // ✅ STEP 4 FIX: Add safety delay before generation (CRITICAL FOR WEB)
-    // This allows widget tree to mount and canvas to exist before render
     await Future<void>.delayed(const Duration(milliseconds: 300));
 
     isGenerating = true;
@@ -161,21 +165,19 @@ class SofiStudioController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // STEP 1 — identity lock
+      // STEP 1 — identity lock (uses CLEAN identity-only prompt)
       final locked = await _twoStep.runStep1IdentityLock(
         selfieBytes,
-        promptSnapshot, // 🔑 USE SNAPSHOT
+        identityPrompt,
       );
 
-      // STEP 2 — style application
+      // STEP 2 — style application (uses FULL stylized prompt)
       final styled = await _twoStep.generateStyledOnly(
         locked,
-        promptSnapshot, // 🔑 SAME SNAPSHOT
+        fullPrompt,
       );
 
       generatedImageBytes = styled;
-
-      // 🔑 STEP 4: Reset welcome overlay bypass flag after successful generation
       skipWelcomeOverlay = false;
     } catch (e) {
       generationError = e.toString();
