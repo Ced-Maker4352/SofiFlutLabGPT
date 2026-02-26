@@ -1,8 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
-import 'dart:ui' as ui;
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -12,6 +9,7 @@ import 'package:image/image.dart' as img;
 import 'package:sofi_test_connect/data/theme_presets_data.dart';
 import 'package:sofi_test_connect/models/theme_presets.dart';
 import 'package:sofi_test_connect/services/two_step_generation_service.dart';
+import 'package:sofi_test_connect/services/prompt_builder.dart';
 import 'package:sofi_test_connect/presentation/shared/stage_image.dart';
 import 'package:sofi_test_connect/presentation/sofi_studio/widgets/generation_loader.dart';
 import 'package:sofi_test_connect/presentation/sofi_studio/favorites_manager.dart';
