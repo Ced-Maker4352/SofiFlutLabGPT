@@ -4,8 +4,8 @@ publish_to: "none"
 version: 1.0.0+1
 
 environment:
-  sdk: ">=3.5.4 <4.0.0"
-
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: 3.22.0 # Updated to a stable 3.x version as 3.32.0 is not yet released, matching FlutLab's likely intended range.
 dependencies:
   path_provider: ^2.0.0
   image_gallery_saver_plus: ^4.0.1
