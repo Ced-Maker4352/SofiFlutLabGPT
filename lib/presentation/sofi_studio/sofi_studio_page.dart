@@ -1131,15 +1131,11 @@ class _SofiStudioPageState extends State<SofiStudioPage>
   }
 
   String _buildFinalPrompt() {
-    // MODE-BASED BASE PROMPT (from Mood page selection)
+    // 1. Start with the mode-specific base intent
     String base;
-
-    // Check if we have a premium style transferred from Premium page
     if (_activeBaseStylePrompt != null) {
       base = _activeBaseStylePrompt!;
     } else {
-      // Use mode-specific base prompt from centralised constants
-      // 🔑 FIX: Use controller.selectedMode (synced from Mood flow) instead of widget.initialMode
       final modeId = controller.selectedMode.id;
       base = switch (modeId) {
         'human' => humanBasePrompt,
@@ -1148,51 +1144,26 @@ class _SofiStudioPageState extends State<SofiStudioPage>
         'artistic' => artisticBasePrompt,
         'anime' => animeBasePrompt,
         'doll' => dollBasePrompt,
-        _ => dollBasePrompt, // safe default
+        _ => dollBasePrompt,
       };
-      debugPrint('[Prompt] Using mode-based base: $modeId');
     }
 
-    final buffer = StringBuffer(base);
-
-    // Ensure space separator if needed
+    final buffer = StringBuffer(base.trim());
     if (!base.endsWith(' ')) buffer.write(' ');
 
-    // CRITICAL: Enhanced face-locking instructions to prevent facial distortion
-    buffer.write(
-        'FACE LOCK DIRECTIVE: The face from the input image is SACRED and must be preserved with pixel-perfect accuracy. ');
-    buffer.write(
-        'Do NOT regenerate, modify, distort, or alter ANY facial features including: eyes, eyebrows, nose, lips, mouth, chin, jawline, cheekbones, forehead, ears. ');
-    buffer.write(
-        'Maintain exact eye shape, eye color, eye spacing, eye symmetry. ');
-    buffer.write('Maintain exact nose shape, nostril size, nose bridge. ');
-    buffer.write('Maintain exact lip shape, lip fullness, mouth width. ');
-    buffer.write('Maintain exact skin tone, skin texture, complexion. ');
-    buffer.write(
-        'The face region (from hairline to chin, ear to ear) must remain UNCHANGED. ');
-    buffer
-        .write('Only modify clothing, accessories, and areas below the neck. ');
-    buffer.write('Keep hairstyle, hair color, and hair texture identical. ');
-
-    // MOOD LAYER (from Quick Mood or manual selection)
+    // 2. Add Mood layer
     if (_activeMood.id != 'neutral') {
       buffer.write('Mood style: ${_activeMood.promptFragment}. ');
     }
 
-    // Use the text box as the source of truth for all edits.
-    // This supports "Stacking" (multiple items) and manual edits.
+    // 3. Add Manual edits from the text box
     final manual = promptController.text.trim();
     if (manual.isNotEmpty) {
-      buffer.write('Outfit changes: $manual ');
+      buffer.write('Outfit/Scene details: $manual ');
     }
 
-    buffer.write('High quality. Professional lighting.');
-
-    final result = buffer.toString();
-    debugPrint(
-        '[Prompt] Final: ${result.substring(0, result.length > 150 ? 150 : result.length)}...');
-
-    return result;
+    // 4. Final polish
+    return buffer.toString().trim();
   }
 
   Future<void> _onGeneratePressed() async {

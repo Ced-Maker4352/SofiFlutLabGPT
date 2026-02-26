@@ -24,8 +24,16 @@ class SofiStudioController extends ChangeNotifier {
   // ---------------------------------------------------------------
   // PROMPT OWNERSHIP (SINGLE SOURCE OF TRUTH)
   // ---------------------------------------------------------------
-  String _currentPrompt = ''; // 🔑 The active prompt used by Generate button
+  // ---------------------------------------------------------------
+  // PROMPT OWNERSHIP (SINGLE SOURCE OF TRUTH)
+  // ---------------------------------------------------------------
+  String _currentPrompt = ''; // 🔑 The active templated prompt
   String get currentPrompt => _currentPrompt;
+
+  String _rawUserIntention =
+      ''; // 🔑 The clean user-facing intent (no system tags)
+  String get rawUserIntention => _rawUserIntention;
+
   String selectedMood = '';
   MoodMode selectedMode = MoodMode.doll;
 
@@ -53,6 +61,8 @@ class SofiStudioController extends ChangeNotifier {
     String mood = '',
     double styleStrength = 7.0,
   }) {
+    _rawUserIntention = userPrompt; // 🔑 Store the RAW intent
+
     _currentPrompt = buildSofiPrompt(
       userPrompt: userPrompt,
       mode: mode,
@@ -61,7 +71,7 @@ class SofiStudioController extends ChangeNotifier {
     );
 
     debugPrint('[PROMPT BUILT]\n$_currentPrompt');
-    notifyListeners(); // 🔑 FIX #1: Explicit rebuild notification
+    notifyListeners();
   }
 
   // ---------------------------------------------------------------
@@ -79,13 +89,13 @@ class SofiStudioController extends ChangeNotifier {
     selectedMood = mood;
     selectedMode = mode;
 
-    // 🔑 FIX: Skip welcome overlay and auto-generate
     skipWelcomeOverlay = true;
 
+    // Use the mood name as the initial intention
     rebuildPrompt(
       userPrompt: mood,
       mode: mode.id,
-      mood: mood, // 🔑 FIX: Pass mood for style flavor
+      mood: mood,
     );
 
     hasPendingGeneration = true;
@@ -106,13 +116,12 @@ class SofiStudioController extends ChangeNotifier {
     rebuildPrompt(
       userPrompt: visualPrompt,
       mode: selectedMode.id,
-      mood: mood, // 🔑 Pass mood for style preset mapping
+      mood: mood,
     );
 
     hasPendingGeneration = true;
     notifyListeners();
 
-    // 🔑 STEP 3: Auto-trigger generation on mood change
     debugPrint('[UI] Triggering generateFromSelfie');
     if (selfieBytes != null && !isGenerating) {
       generateFromSelfie(selfieBytes: selfieBytes!);
@@ -140,22 +149,23 @@ class SofiStudioController extends ChangeNotifier {
     if (isGenerating) throw Exception('Already generating in progress');
 
     // Snapshot current state
-    final userPromptSnapshot =
-        selectedMood.isNotEmpty ? selectedMood : _currentPrompt;
-    final modeSnapshot = selectedMode.id;
+    final intentionSnapshot = _rawUserIntention.isNotEmpty
+        ? _rawUserIntention
+        : 'high quality portrait';
+    final fullPromptSnapshot = _currentPrompt;
 
-    // 🔒 Build focused prompts
-    final identityPrompt = buildSofiPrompt(
-      userPrompt: userPromptSnapshot,
-      mode: modeSnapshot,
-      identityOnly: true,
-    );
-
-    final fullPrompt = _currentPrompt;
-
-    if (fullPrompt.isEmpty) {
+    if (fullPromptSnapshot.isEmpty) {
       throw Exception('Prompt missing at generation time');
     }
+
+    // 🔒 Build focused prompts for each step
+    // Step 1: Identity Lock (uses RAW intent to avoid double-templating)
+    final identityPrompt = buildStep1IdentityPrompt(
+      userIntent: intentionSnapshot,
+    );
+
+    // Step 2: Style Application (uses the full TEMPLATED prompt we already built)
+    final fullPrompt = fullPromptSnapshot;
 
     await Future<void>.delayed(const Duration(milliseconds: 300));
 

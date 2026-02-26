@@ -51,9 +51,9 @@ class PremiumStudioPage extends StatefulWidget {
 }
 
 enum ExportPreset {
-  story,      // 9:16
-  post,       // 1:1
-  wallpaper,  // 9:16 (full height)
+  story, // 9:16
+  post, // 1:1
+  wallpaper, // 9:16 (full height)
 }
 
 /// Compress + downscale favorite images so they fit inside web localStorage limits.
@@ -71,7 +71,8 @@ Uint8List _compressFavoriteImageIsolate(Uint8List bytes) {
     decoded,
     width: decoded.width >= decoded.height ? maxDim : null,
     height: decoded.height > decoded.width ? maxDim : null,
-    interpolation: img.Interpolation.cubic, // Better quality interpolation for faces
+    interpolation:
+        img.Interpolation.cubic, // Better quality interpolation for faces
   );
 
   // Higher JPEG quality to preserve facial details and reduce artifacts
@@ -388,70 +389,29 @@ class _PremiumStudioPageState extends State<PremiumStudioPage> {
   }
 
   // ---------------- PROMPTS ----------------
-
   String _buildIdentityLockPrompt() {
-    // Step 1 goal: convert headshot -> full-body identity locked
-    // ENHANCED: Strong face preservation directives to prevent distortion
-    return '''
-Create a full-body, head-to-toe image of the EXACT SAME person from the input photo.
-
-[ABSOLUTE FACE LOCK DIRECTIVE]
-The face from the input image is SACRED and must be preserved with pixel-perfect accuracy.
-- Copy EXACT eye shape, eye color, eye spacing, eye symmetry from input
-- Copy EXACT nose shape, nostril size, nose bridge from input
-- Copy EXACT lip shape, lip fullness, lip color from input
-- Copy EXACT skin tone, skin texture, complexion from input
-- Copy EXACT facial bone structure, jawline, cheekbones from input
-- Do NOT regenerate or modify ANY facial features
-- The face region must be IDENTICAL to the source photograph
-
-[BODY EXTENSION]
-Extend the image to show full body from head to toe.
-Add neutral clothing (simple shirt/top, pants/skirt, shoes).
-Keep the same person's body type and proportions.
-Simple, clean background.
-
-[QUALITY REQUIREMENTS - ABSOLUTE PRIORITY]
-MASTERPIECE, BEST QUALITY, ultra high resolution, 8K quality.
-Photorealistic, professional photography quality, crystal clear.
-Sharp focus, crisp details, perfect clarity, highly detailed.
-Smooth skin texture with natural pores, clean render.
-Professional studio lighting, no noise, no grain, no blur.
-No pixelation, no artifacts, no compression, pristine quality.
-Maintain exact photo-realistic quality matching the input face.
-No distortion, no warping, no degradation.
-''';
+    // We only pass the "raw" intent to PromptBuilder to avoid nesting
+    return buildStep1IdentityPrompt(
+      userIntent: 'Simple neutral character portrait, full body photography.',
+    );
   }
 
   String _buildPrompt(ThemePreset t, ThemeVariant? v) {
     final custom = _promptController.text.trim();
-    return '''
-[QUALITY DIRECTIVE - ABSOLUTE PRIORITY]
-MASTERPIECE, BEST QUALITY, ultra high resolution, 8K quality.
-Photorealistic, crystal clear, sharp focus, crisp details, highly detailed.
-Professional photography quality, smooth textures, pristine render.
-No noise, no grain, no blur, no pixelation, no artifacts, no compression.
 
-[FACE PRESERVATION - HIGHEST PRIORITY]
-The face from the identity-locked image MUST be preserved EXACTLY.
-Do NOT regenerate, modify, or distort ANY facial features.
-Copy exact: eye shape, eye color, nose shape, lip shape, skin tone, facial proportions.
-The face region is LOCKED and IMMUTABLE.
-Maintain crystal-clear, high-resolution facial details from source.
+    // Assemble the clean "User Intent" part
+    final buffer = StringBuffer();
+    buffer.writeln(t.basePrompt);
+    if (v != null) buffer.writeln(v.prompt);
+    if (custom.isNotEmpty) buffer.writeln('Custom user detail: $custom');
 
-[STYLE APPLICATION]
-${t.basePrompt}
-${v?.prompt ?? ''}
-${custom.isNotEmpty ? 'User instruction: $custom' : ''}
+    final userIntent = buffer.toString().trim();
 
-[CONSTRAINTS]
-Apply style changes ONLY to clothing, accessories, and background.
-Preserve pose, proportions, full-body framing.
-Ensure character is fully clothed and wearing shoes.
-Do not crop or zoom.
-Face must remain pixel-identical to source with pristine quality.
-If style conflicts with face preservation, ALWAYS preserve the face.
-''';
+    // Delegate system directive assembly to PromptBuilder
+    return buildStep2StylePrompt(
+      userIntent: userIntent,
+      styleStrength: 7.5, // Premium user default
+    );
   }
 
   // ---------------- STEP 1 ----------------
@@ -509,18 +469,25 @@ If style conflicts with face preservation, ALWAYS preserve the face.
                 const Center(
                   child: Text(
                     'Select Photo',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF333333)),
                   ),
                 ),
                 const SizedBox(height: 12),
                 ListTile(
-                  leading: const Icon(Icons.camera_alt_outlined, color: Color(0xFF333333)),
-                  title: const Text('Take Photo', style: TextStyle(color: Color(0xFF333333))),
+                  leading: const Icon(Icons.camera_alt_outlined,
+                      color: Color(0xFF333333)),
+                  title: const Text('Take Photo',
+                      style: TextStyle(color: Color(0xFF333333))),
                   onTap: () => Navigator.pop(ctx, 0),
                 ),
                 ListTile(
-                  leading: const Icon(Icons.photo_library_outlined, color: Color(0xFF333333)),
-                  title: const Text('Choose from Gallery', style: TextStyle(color: Color(0xFF333333))),
+                  leading: const Icon(Icons.photo_library_outlined,
+                      color: Color(0xFF333333)),
+                  title: const Text('Choose from Gallery',
+                      style: TextStyle(color: Color(0xFF333333))),
                   onTap: () => Navigator.pop(ctx, 1),
                 ),
               ],
@@ -674,8 +641,7 @@ If style conflicts with face preservation, ALWAYS preserve the face.
       // We ALWAYS pass lockedBodyBytes as the identity image.
       // NEVER pass styledBytes or history images here.
       // ------------------------------------------------------------
-      final result =
-          await widget.generationService.generateStyledOnly(
+      final result = await widget.generationService.generateStyledOnly(
         lockedBodyBytes!,
         prompt,
       );
@@ -830,8 +796,9 @@ If style conflicts with face preservation, ALWAYS preserve the face.
                         child: Text(
                           'Refine Crop',
                           style: TextStyle(
-                            color: Color(0xFF333333),
-                              fontSize: 18, fontWeight: FontWeight.bold),
+                              color: Color(0xFF333333),
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
@@ -1124,7 +1091,6 @@ If style conflicts with face preservation, ALWAYS preserve the face.
 
   // ---------------- THEME SHEET ----------------
 
-
   void _openThemeSheet(ThemePreset theme) {
     selectedTheme = theme;
     showAdvanced = false;
@@ -1189,7 +1155,10 @@ If style conflicts with face preservation, ALWAYS preserve the face.
                   const SizedBox(height: 24),
                   const Text(
                     'Choose a style',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF333333)),
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Color(0xFF333333)),
                   ),
                   const SizedBox(height: 12),
                   Wrap(
@@ -1341,7 +1310,8 @@ If style conflicts with face preservation, ALWAYS preserve the face.
                                           children: [
                                             Positioned.fill(
                                               child: StageImage(
-                                                  base64: _b64(lockedBodyBytes)!),
+                                                  base64:
+                                                      _b64(lockedBodyBytes)!),
                                             ),
                                             Positioned(
                                               top: 8,

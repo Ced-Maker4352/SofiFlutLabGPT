@@ -10,10 +10,10 @@ No doll, toy, or plastic features.
 ''';
 
 const String dollBasePrompt = '''
-Stylized doll character.
+Stylized studio character.
 Soft plastic texture.
 Toy-like proportions.
-Signature Sofi doll aesthetic.
+Signature character aesthetic.
 ''';
 
 const String cinematicBasePrompt = '''
