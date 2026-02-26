@@ -1288,11 +1288,17 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       }
 
       // ================================
-      // STEP 2: DELEGATE TO TWO-STEP CONTROLLER
+      // STEP 2: SYNC & DELEGATE TO TWO-STEP CONTROLLER
       // ================================
-      // The controller already holds the correct prompt (built during
-      // enterFromMoodFlow or onMoodSelectedInStudio).
-      // DO NOT rebuild or wrap the prompt here — that causes nesting.
+      // We must sync the latest manual prompt edits from the UI to the controller
+      // so the two-step pipeline uses the fresh intention.
+      final freshIntent = _buildFinalPrompt();
+      controller.rebuildPrompt(
+        userPrompt: freshIntent,
+        mode: controller.selectedMode.id,
+        mood: _activeMood.id,
+      );
+
       debugPrint('[GEN] Delegating to Two-Step Pipeline');
       debugPrint(
           '[GEN] Controller prompt length: ${controller.currentPrompt.length}');
