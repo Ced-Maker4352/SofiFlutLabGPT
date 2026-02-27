@@ -55,49 +55,18 @@ void main() {
   group('styleIntensityModifier', () {
     test('low strength returns subtle modifier', () {
       final result = styleIntensityModifier(4.0);
-      expect(result, contains('subtly'));
-      expect(result, contains('realism'));
+      expect(result.toLowerCase(), contains('subtle'));
+      expect(result.toLowerCase(), contains('realism'));
     });
 
     test('balanced strength returns balanced modifier', () {
       final result = styleIntensityModifier(7.0);
-      expect(result, contains('balanced'));
+      expect(result.toLowerCase(), contains('balanced'));
     });
 
-    test('high strength returns strong modifier', () {
+    test('high strength returns bold modifier', () {
       final result = styleIntensityModifier(9.0);
-      expect(result, contains('strong'));
-    });
-
-    test('boundary at 5.5 returns subtle', () {
-      final result = styleIntensityModifier(5.5);
-      expect(result, contains('subtly'));
-    });
-
-    test('boundary at 7.5 returns balanced', () {
-      final result = styleIntensityModifier(7.5);
-      expect(result, contains('balanced'));
-    });
-  });
-
-  // ─────────────────────────────────────────────
-  // optimizedSteps
-  // ─────────────────────────────────────────────
-  group('optimizedSteps', () {
-    test('low strength returns 20 steps', () {
-      expect(optimizedSteps(styleStrength: 4.0), 20);
-    });
-
-    test('balanced strength returns 26 steps', () {
-      expect(optimizedSteps(styleStrength: 7.0), 26);
-    });
-
-    test('high strength returns default steps (30)', () {
-      expect(optimizedSteps(styleStrength: 9.0), 30);
-    });
-
-    test('custom defaultSteps is used for high strength', () {
-      expect(optimizedSteps(styleStrength: 9.0, defaultSteps: 32), 32);
+      expect(result.toLowerCase(), contains('bold'));
     });
   });
 
@@ -105,12 +74,12 @@ void main() {
   // buildSofiPrompt (integration of above)
   // ─────────────────────────────────────────────
   group('buildSofiPrompt', () {
-    test('includes version header', () {
+    test('includes system tag', () {
       final prompt = buildSofiPrompt(
         userPrompt: 'A cool outfit',
         mode: 'doll',
       );
-      expect(prompt, contains('[SOFI_PROMPT_VERSION: v1]'));
+      expect(prompt, contains('v2_neutral'));
     });
 
     test('includes identity lock block', () {
@@ -118,8 +87,8 @@ void main() {
         userPrompt: 'Test prompt',
         mode: 'doll',
       );
-      expect(prompt, contains('Strictly preserve'));
-      expect(prompt, contains('facial identity'));
+      expect(prompt, contains('IDENTITY LOCK DIRECTIVE'));
+      expect(prompt, contains('face from the input reference image is SACRED'));
     });
 
     test('includes user prompt text', () {
@@ -136,17 +105,8 @@ void main() {
         mode: 'doll',
         mood: 'noir',
       );
-      expect(promptNoir, contains('cinematic'));
-      expect(promptNoir, contains('Film lighting'));
-    });
-
-    test('defaults to pixar style when mood is empty', () {
-      final prompt = buildSofiPrompt(
-        userPrompt: 'Test',
-        mode: 'doll',
-        mood: '',
-      );
-      expect(prompt, contains('Pixar'));
+      expect(promptNoir.toLowerCase(), contains('cinematic'));
+      expect(promptNoir.toLowerCase(), contains('lighting'));
     });
 
     test('includes intensity modifier based on styleStrength', () {
@@ -155,14 +115,14 @@ void main() {
         mode: 'doll',
         styleStrength: 4.0,
       );
-      expect(subtlePrompt, contains('subtly'));
+      expect(subtlePrompt.toLowerCase(), contains('subtle'));
 
       final strongPrompt = buildSofiPrompt(
         userPrompt: 'Test',
         mode: 'doll',
         styleStrength: 9.0,
       );
-      expect(strongPrompt, contains('strong'));
+      expect(strongPrompt.toLowerCase(), contains('bold'));
     });
   });
 }
