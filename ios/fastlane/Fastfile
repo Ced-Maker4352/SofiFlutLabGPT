@@ -1,0 +1,46 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Push a new beta build to TestFlight"
+  lane :beta do
+    # Authenticate with App Store Connect
+    app_store_connect_api_key(
+      key_id: "697KACNAR2",
+      issuer_id: "c4730420-1bc4-4d8c-ac48-f415de693af3",
+      key_filepath: "/Users/cdericdoughty/.private_keys/AuthKey.p8",
+      in_house: false
+    )
+    
+    # Automatically get certificates and profiles
+    get_certificates
+    get_provisioning_profile
+    
+    # Increment the build number
+    increment_build_number(xcodeproj: "Runner.xcodeproj")
+    
+    # Switch to manual code signing for the archive
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path: "Runner.xcodeproj",
+      team_id: "GY7M3684QJ",
+      bundle_identifier: "com.sofi.saint",
+      code_sign_identity: "Apple Distribution",
+      profile_name: lane_context[SharedValues::SIGH_NAME]
+    )
+    
+    # Build the iOS app
+    build_app(
+      workspace: "Runner.xcworkspace",
+      scheme: "Runner",
+      export_method: "app-store",
+      export_options: {
+        provisioningProfiles: {
+          "com.sofi.saint" => lane_context[SharedValues::SIGH_NAME]
+        }
+      }
+    )
+    
+    # Upload to TestFlight
+    upload_to_testflight
+  end
+end
