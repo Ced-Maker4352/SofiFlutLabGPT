@@ -2317,7 +2317,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                   // Floating undo/redo/history just above the footer
                   Positioned(
                     right: 16,
-                    bottom: 130, // Lifted up to avoid touching footer
+                    bottom: 160, // LIFTED
                     child: floatingHistoryCluster(
                       canUndo: _history.length > 1,
                       canRedo: _redoStack.isNotEmpty,
@@ -2332,7 +2332,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                   if (!controller.isGenerating)
                     Positioned(
                       left: 16,
-                      bottom: 130,
+                      bottom: 160, // LIFTED
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -2359,7 +2359,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                     Positioned(
                       left: 24,
                       right: 24,
-                      bottom: 100,
+                      bottom: 130, // LIFTED
                       child: _buildPromptPreview(),
                     ),
 
@@ -2368,14 +2368,14 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                     Positioned(
                       left: 0,
                       right: 0,
-                      bottom: 86, // sits just above the footer pill
+                      bottom: 96, // LIFTED to prevent overlap
                       child: _buildQuickMoodBar(),
                     ),
 
                   // Preview Watermark (for free users using premium modes)
                   if (_shouldShowPreviewWatermark())
                     Positioned(
-                      bottom: 24,
+                      bottom: 210, // LIFTED to top corner equivalent above everything
                       right: 16,
                       child: Opacity(
                         opacity: 0.35,
@@ -2910,6 +2910,8 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                   children: [
                     // Drawer Toggle
                     IconButton(
+                      padding: const EdgeInsets.symmetric(horizontal: 4), // Slimmed for space
+                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                       tooltip: 'Options',
                       icon: const Icon(Icons.tune),
                       color: isDark ? Colors.white70 : Colors.black54,
@@ -2949,6 +2951,8 @@ class _SofiStudioPageState extends State<SofiStudioPage>
 
                     // Voice Coach Settings
                     IconButton(
+                      padding: const EdgeInsets.symmetric(horizontal: 4), // Slimmed for space
+                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                       tooltip: 'Voice Coach',
                       icon: const Icon(Icons.record_voice_over),
                       color: isDark ? Colors.white70 : Colors.black54,
@@ -2969,6 +2973,8 @@ class _SofiStudioPageState extends State<SofiStudioPage>
 
                     // App Settings (Performance Mode, etc.)
                     IconButton(
+                      padding: const EdgeInsets.symmetric(horizontal: 4), // Slimmed for space
+                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                       tooltip: 'Settings',
                       icon: const Icon(Icons.settings),
                       color: isDark ? Colors.white70 : Colors.black54,
@@ -2991,6 +2997,8 @@ class _SofiStudioPageState extends State<SofiStudioPage>
 
                     // Mic
                     IconButton(
+                      padding: const EdgeInsets.symmetric(horizontal: 4), // Slimmed for space
+                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                       tooltip: _listening ? 'Stop' : 'Dictate',
                       icon: Icon(_listening ? Icons.mic : Icons.mic_none),
                       color: _listening

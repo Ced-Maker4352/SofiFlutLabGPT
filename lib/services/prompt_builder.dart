@@ -38,21 +38,16 @@ String styleIntensityModifier(double strength) {
 }
 
 /// Step 1 — Identity Lock Prompt
-/// This is used to convert a headshot into a stable full-body body-double.
+/// This pass focuses solely on converting the raw image into a stable base.
 String buildStep1IdentityPrompt({
   required String userIntent,
 }) {
   return '''
-[SYSTEM_TASK: IDENTITY_STABILIZATION]
+[TASK: IDENTITY_FIXATION]
 $commonQualityDirectives
 $commonIdentityDirectives
 
-[BODY_EXTENSION]
-Extend the subject to a full-body, head-to-toe pose.
-Add clean, neutral styling. Keep the subject's original body type.
-Simple, clean background.
-
-Context Intention: $userIntent
+Identity context: $userIntent
 ''';
 }
 

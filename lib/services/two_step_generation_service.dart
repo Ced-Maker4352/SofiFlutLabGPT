@@ -36,8 +36,8 @@ class TwoStepGenerationService {
       initImageBase64: initImageBase64,
       aspectRatio: aspectRatio,
       steps: 24, // identity lock converges fast
-      guidanceScale: 8.5, // 🔑 HIGH GUIDANCE for sharper identity
-      strength: 0.35, // 🔑 LOW STRENGTH: preserve face exactly
+      guidanceScale: 12.0, // 🔑 INCREASED GUIDANCE for sharper identity
+      strength: 0.20, // 🔑 TIGHTER STRENGTH: preserve face exactly
     );
 
     return _downloadBytes(imageUrl);
@@ -71,7 +71,7 @@ class TwoStepGenerationService {
       aspectRatio: aspectRatio,
       steps: 28,
       guidanceScale: 7.5,
-      strength: 0.65, // 🔑 MODERATE STRENGTH: apply style while keeping base
+      strength: 0.55, // 🔑 LOWERED STRENGTH: preserve face locked in Step 1
     );
 
     return _downloadBytes(imageUrl);
@@ -80,12 +80,7 @@ class TwoStepGenerationService {
   // ---- helpers ----
 
   String _mergePrompt(String prompt, String lockLine, String? negative) {
-    final p = prompt.trim();
-    final n = (negative ?? '').trim();
-
-    final base = '$p\n\n$lockLine';
-    if (n.isEmpty) return base;
-    return '$base\n\nNEGATIVE: $n';
+    return '$prompt\n\n$lockLine';
   }
 
   Future<Uint8List> _downloadBytes(String url) async {
