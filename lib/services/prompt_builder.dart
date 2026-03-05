@@ -13,18 +13,13 @@ Professional photography quality, smooth textures, pristine render.
 No noise, no grain, no blur, no pixelation, no artifacts, no compression.
 ''';
 
-/// Strong instructions for maintaining facial identity
+/// balanced instructions for maintaining facial identity without locking the image completely
 const String commonIdentityDirectives = '''
-[IDENTITY LOCK DIRECTIVE]
-The face from the input reference image is SACRED and must be preserved with pixel-perfect accuracy.
-- Copy EXACT eye shape, eye color, eye spacing, and symmetry from the input.
-- Copy EXACT nose structure, nostril size, and nose bridge.
-- Copy EXACT lip shape, fullness, and mouth width.
-- Copy EXACT skin tone, skin texture, and complexion.
-- Copy EXACT facial bone structure, jawline, and cheekbones.
-- Maintain the original gender characteristics, ethnicity, and age.
-- The face region (hairline to chin, ear to ear) must remain UNCHANGED.
-- If style conflicts with identity preservation, ALWAYS PRIORITIZE IDENTITY.
+[IDENTITY DIRECTIVE]
+Preserve the core facial identity from the input reference image.
+- Retain eye color, nose structure, and distinct facial features.
+- Maintain original gender characteristics and ethnicity.
+- Allow changes to hair styling, lighting, makeup, and expression to fit the requested mood.
 ''';
 
 String styleIntensityModifier(double strength) {

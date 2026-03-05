@@ -72,7 +72,7 @@ class TwoStepGenerationService {
       aspectRatio: aspectRatio,
       steps: 28,
       guidanceScale: 7.5,
-      strength: 0.55, // 🔑 LOWERED STRENGTH: preserve face locked in Step 1
+      strength: 0.75, // 🔑 INCREASED STRENGTH: allow more style/outfit changes
     );
 
     return _downloadBytes(imageUrl);

@@ -7,6 +7,9 @@ import '../../services/two_step_generation_service.dart';
 import '../../services/prompt_builder.dart';
 import '../../services/mood_visual_mapper.dart';
 import '../mood/mood_mode.dart';
+import '../../services/models_lab_service.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class SofiStudioController extends ChangeNotifier {
   // ---------------------------------------------------------------
@@ -175,21 +178,30 @@ class SofiStudioController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // STEP 1 — identity lock (uses CLEAN identity-only prompt)
-      final locked = await _twoStep.runStep1IdentityLock(
-        selfieBytes,
-        identityPrompt,
+      // SINGLE PASS GENERATION
+      // Bypasses the strict 2-step lock to allow moods/clothing to actually apply
+      final initImageBase64 = 'data:image/png;base64,${base64Encode(selfieBytes)}';
+      
+      final imageUrl = await ModelsLabService.generateKontextPro(
+        prompt: fullPrompt,
+        negativePrompt: 'changed face, different person, altered identity, '
+            'bad anatomy, deformed, worst quality, uncanny valley',
+        initImageBase64: initImageBase64,
+        aspectRatio: '9:16',
+        steps: 8, // Optimized for Turbo
+        guidanceScale: 0.0, // Optimized for Turbo
+        strength: 0.70, // 🔑 Balanced: High enough to allow clothing/style changes, low enough to keep face structural anchor
       );
 
-      // STEP 2 — style application (uses FULL stylized prompt)
-      final styled = await _twoStep.generateStyledOnly(
-        locked,
-        fullPrompt,
-      );
+      final resp = await http.get(Uri.parse(imageUrl));
+      if (resp.statusCode != 200) {
+        throw Exception('Failed to download generated image: ${resp.statusCode}');
+      }
+      final resultBytes = resp.bodyBytes;
 
-      generatedImageBytes = styled;
+      generatedImageBytes = resultBytes;
       skipWelcomeOverlay = false;
-      return styled;
+      return resultBytes;
     } catch (e) {
       generationError = e.toString();
       debugPrint('[SofiStudio] Generation error: $e');
