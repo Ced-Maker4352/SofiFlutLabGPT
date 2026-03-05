@@ -300,58 +300,156 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                 /// MOOD GRID
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _moods.length,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 4,
-                      mainAxisSpacing: 10,
-                      crossAxisSpacing: 10,
-                      childAspectRatio: 2.4,
-                    ),
-                    itemBuilder: (context, index) {
-                      final mood = _moods[index];
-                      final isSelected = mood == _selectedMood;
-
-                      return GestureDetector(
-                        onTap: () {
-                          if (!mounted) return;
-                          setState(() => _selectedMood = mood);
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          decoration: BoxDecoration(
-                            gradient: isSelected
-                                ? SofiStudioTheme.brandGradient
-                                : null,
-                            color:
-                                isSelected ? null : DarkModeColors.darkSurface,
-                            borderRadius: BorderRadius.circular(20),
-                            border: isSelected
-                                ? null
-                                : Border.all(
-                                    color: SofiStudioTheme.purple
-                                        .withValues(alpha: 0.3),
-                                    width: 1,
-                                  ),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            mood,
-                            style: TextStyle(
-                              color: isSelected
-                                  ? Colors.white
-                                  : DarkModeColors.darkOnBackground,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
+                        // MOOD GRID (Stylish & Visual)
+                        child: Expanded(
+                          child: GridView.builder(
+                            itemCount: _moods.length,
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              mainAxisSpacing: 16,
+                              crossAxisSpacing: 16,
+                              childAspectRatio: 0.85, // Taller for stacked icon + text
                             ),
+                            itemBuilder: (context, index) {
+                              final mood = _moods[index];
+                              final isSelected = mood == _selectedMood;
+
+                              // Map moods to modern, youth-friendly icons
+                              final IconData iconInfo;
+                              final List<Color> bgGradient;
+
+                              switch (mood) {
+                                case 'Bold':
+                                  iconInfo = Icons.local_fire_department_rounded;
+                                  bgGradient = [Color(0xFFFF512F), Color(0xFFDD2476)]; // Vibrant Orange/Pink
+                                  break;
+                                case 'Happy':
+                                  iconInfo = Icons.emoji_emotions_rounded;
+                                  bgGradient = [Color(0xFFFFD700), Color(0xFFF7971E)]; // Sunny Yellow
+                                  break;
+                                case 'Calm':
+                                  iconInfo = Icons.spa_rounded;
+                                  bgGradient = [Color(0xFF4CB8C4), Color(0xFF3CD3AD)]; // Minty Teal
+                                  break;
+                                case 'Confident':
+                                  iconInfo = Icons.star_rounded;
+                                  bgGradient = [Color(0xFF8A2387), Color(0xFFE94057)]; // Deep Purple to Pink
+                                  break;
+                                case 'Creative':
+                                  iconInfo = Icons.color_lens_rounded;
+                                  bgGradient = [Color(0xFFa18cd1), Color(0xFFfbc2eb)]; // Pastel Purple/Pink
+                                  break;
+                                case 'Soft':
+                                  iconInfo = Icons.favorite_rounded;
+                                  bgGradient = [Color(0xFFff9a9e), Color(0xFFfecfef)]; // Soft Rose
+                                  break;
+                                case 'Powerful':
+                                  iconInfo = Icons.bolt_rounded;
+                                  bgGradient = [Color(0xFF00c6fb), Color(0xFF005bea)]; // Electric Blue
+                                  break;
+                                case 'Mysterious':
+                                  iconInfo = Icons.dark_mode_rounded;
+                                  bgGradient = [Color(0xFF304352), Color(0xFFd7d2cc)]; // Midnight Silver
+                                  break;
+                                default:
+                                  iconInfo = Icons.auto_awesome_rounded;
+                                  bgGradient = [Color(0xFFA770EF), Color(0xFFCF8BF3)]; // Default Purple
+                              }
+
+                              return GestureDetector(
+                                onTap: () {
+                                  if (!mounted) return;
+                                  setState(() => _selectedMood = mood);
+                                },
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  curve: Curves.easeOutBack, // Playful bounce
+                                  decoration: BoxDecoration(
+                                    gradient: isSelected
+                                        ? LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: bgGradient,
+                                          )
+                                        : null,
+                                    color: isSelected
+                                        ? null
+                                        : DarkModeColors.darkSurface.withValues(alpha: 0.6),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? Colors.white.withValues(alpha: 0.8)
+                                          : Colors.white.withValues(alpha: 0.1),
+                                      width: isSelected ? 2 : 1,
+                                    ),
+                                    boxShadow: isSelected
+                                        ? [
+                                            BoxShadow(
+                                              color: bgGradient.first.withValues(alpha: 0.4),
+                                              blurRadius: 12,
+                                              spreadRadius: 2,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ]
+                                        : [],
+                                  ),
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          // ICON
+                                          Icon(
+                                            iconInfo,
+                                            size: 40, // Slightly larger on web
+                                            color: isSelected
+                                                ? Colors.white
+                                                : Colors.white.withValues(alpha: 0.5),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          // TEXT
+                                          Text(
+                                            mood,
+                                            textAlign: TextAlign.center,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.clip,
+                                            style: TextStyle(
+                                              color: isSelected
+                                                  ? Colors.white
+                                                  : Colors.white.withValues(alpha: 0.5),
+                                              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                              fontSize: 14, // Larger on web
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      if (isSelected)
+                                        Positioned(
+                                          top: 8,
+                                          right: 8,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            padding: EdgeInsets.all(4),
+                                            child: Icon(
+                                              Icons.check,
+                                              size: 14,
+                                              color: bgGradient.first,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
-                      );
-                    },
-                  ),
                 ),
 
                 const SizedBox(height: 12),

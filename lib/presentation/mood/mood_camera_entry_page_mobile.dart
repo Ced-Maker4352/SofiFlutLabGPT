@@ -298,7 +298,7 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
 
                 const SizedBox(height: 16),
 
-                /// MOOD GRID
+                /// MOOD GRID (Stylish & Visual)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: GridView.builder(
@@ -308,13 +308,55 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 4,
-                      mainAxisSpacing: 10,
-                      crossAxisSpacing: 10,
-                      childAspectRatio: 2.4,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 0.85, // Taller for stacked icon + text
                     ),
                     itemBuilder: (context, index) {
                       final mood = _moods[index];
                       final isSelected = mood == _selectedMood;
+
+                      // Map moods to modern, youth-friendly icons
+                      final IconData iconInfo;
+                      final List<Color> bgGradient;
+
+                      switch (mood) {
+                        case 'Bold':
+                          iconInfo = Icons.local_fire_department_rounded;
+                          bgGradient = [Color(0xFFFF512F), Color(0xFFDD2476)]; // Vibrant Orange/Pink
+                          break;
+                        case 'Happy':
+                          iconInfo = Icons.emoji_emotions_rounded;
+                          bgGradient = [Color(0xFFFFD700), Color(0xFFF7971E)]; // Sunny Yellow
+                          break;
+                        case 'Calm':
+                          iconInfo = Icons.spa_rounded;
+                          bgGradient = [Color(0xFF4CB8C4), Color(0xFF3CD3AD)]; // Minty Teal
+                          break;
+                        case 'Confident':
+                          iconInfo = Icons.star_rounded;
+                          bgGradient = [Color(0xFF8A2387), Color(0xFFE94057)]; // Deep Purple to Pink
+                          break;
+                        case 'Creative':
+                          iconInfo = Icons.color_lens_rounded;
+                          bgGradient = [Color(0xFFa18cd1), Color(0xFFfbc2eb)]; // Pastel Purple/Pink
+                          break;
+                        case 'Soft':
+                          iconInfo = Icons.favorite_rounded;
+                          bgGradient = [Color(0xFFff9a9e), Color(0xFFfecfef)]; // Soft Rose
+                          break;
+                        case 'Powerful':
+                          iconInfo = Icons.bolt_rounded;
+                          bgGradient = [Color(0xFF00c6fb), Color(0xFF005bea)]; // Electric Blue
+                          break;
+                        case 'Mysterious':
+                          iconInfo = Icons.dark_mode_rounded;
+                          bgGradient = [Color(0xFF304352), Color(0xFFd7d2cc)]; // Midnight Silver
+                          break;
+                        default:
+                          iconInfo = Icons.auto_awesome_rounded;
+                          bgGradient = [Color(0xFFA770EF), Color(0xFFCF8BF3)]; // Default Purple
+                      }
 
                       return GestureDetector(
                         onTap: () {
@@ -322,32 +364,89 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                           setState(() => _selectedMood = mood);
                         },
                         child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOutBack, // Playful bounce
                           decoration: BoxDecoration(
+                            // When selected, show vibrant gradient. When unselected, subtle dark frosted glass.
                             gradient: isSelected
-                                ? SofiStudioTheme.brandGradient
+                                ? LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: bgGradient,
+                                  )
                                 : null,
-                            color:
-                                isSelected ? null : DarkModeColors.darkSurface,
-                            borderRadius: BorderRadius.circular(20),
-                            border: isSelected
+                            color: isSelected
                                 ? null
-                                : Border.all(
-                                    color: SofiStudioTheme.purple
-                                        .withValues(alpha: 0.3),
-                                    width: 1,
-                                  ),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            mood,
-                            style: TextStyle(
+                                : DarkModeColors.darkSurface.withValues(alpha: 0.6),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
                               color: isSelected
-                                  ? Colors.white
-                                  : DarkModeColors.darkOnBackground,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
+                                  ? Colors.white.withValues(alpha: 0.8)
+                                  : Colors.white.withValues(alpha: 0.1),
+                              width: isSelected ? 2 : 1,
                             ),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color: bgGradient.first.withValues(alpha: 0.4),
+                                      blurRadius: 12,
+                                      spreadRadius: 2,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ]
+                                : [],
+                          ),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  // ICON
+                                  Icon(
+                                    iconInfo,
+                                    size: 32, // Large bold icon
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.white.withValues(alpha: 0.5),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  // TEXT
+                                  Text(
+                                    mood,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.clip, // Prevent clipping ellipsis on small screens
+                                    style: TextStyle(
+                                      color: isSelected
+                                          ? Colors.white
+                                          : Colors.white.withValues(alpha: 0.5),
+                                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                      fontSize: 10, // Small but legible text
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              // Optional: Small absolute positioned checkmark when selected
+                              if (isSelected)
+                                Positioned(
+                                  top: 6,
+                                  right: 6,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    padding: EdgeInsets.all(2),
+                                    child: Icon(
+                                      Icons.check,
+                                      size: 10,
+                                      color: bgGradient.first, // Match parent gradient
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                       );
