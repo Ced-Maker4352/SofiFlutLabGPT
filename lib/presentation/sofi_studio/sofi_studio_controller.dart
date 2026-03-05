@@ -3,9 +3,7 @@
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'sofi_studio_models.dart';
-import '../../services/two_step_generation_service.dart';
 import '../../services/prompt_builder.dart';
-import '../../services/mood_visual_mapper.dart';
 import '../mood/mood_mode.dart';
 import '../../services/models_lab_service.dart';
 import 'package:http/http.dart' as http;
@@ -40,7 +38,7 @@ class SofiStudioController extends ChangeNotifier {
   String selectedMood = '';
   MoodMode selectedMode = MoodMode.doll;
 
-  final _twoStep = const TwoStepGenerationService();
+
 
   VoidCallback? onClearGenerated;
 
@@ -64,14 +62,14 @@ class SofiStudioController extends ChangeNotifier {
     String mood = '',
     double styleStrength = 7.0,
   }) {
-    _rawUserIntention = userPrompt; // 🔑 Store the RAW intent
+    _rawUserIntention = userPrompt;
 
-    _currentPrompt = buildSofiPrompt(
-      userPrompt: userPrompt,
-      mode: mode,
-      mood: mood,
-      styleStrength: styleStrength,
-    );
+    // Use instruction-style prompt for flux-kontext-pro
+    if (mood.isNotEmpty) {
+      _currentPrompt = buildMoodEditInstruction(mood);
+    } else {
+      _currentPrompt = buildCustomEditInstruction(userPrompt);
+    }
 
     debugPrint('[PROMPT BUILT]\n$_currentPrompt');
     notifyListeners();
@@ -109,18 +107,18 @@ class SofiStudioController extends ChangeNotifier {
   }
 
   // ---------------------------------------------------------------
+  // ---------------------------------------------------------------
   // MOOD SELECTION HANDLER (RE-ARM GENERATION)
   // ---------------------------------------------------------------
   void onMoodSelectedInStudio(String mood) {
     selectedMood = mood;
 
-    final visualPrompt = MoodVisualMapper.map(mood);
+    // Use instruction-style prompt for flux-kontext-pro
+    _rawUserIntention = mood;
+    _currentPrompt = buildMoodEditInstruction(mood);
 
-    rebuildPrompt(
-      userPrompt: visualPrompt,
-      mode: selectedMode.id,
-      mood: mood,
-    );
+    debugPrint('[Studio] Mood selected: $mood');
+    debugPrint('[Studio] Instruction prompt: $_currentPrompt');
 
     hasPendingGeneration = true;
     notifyListeners();
@@ -139,31 +137,19 @@ class SofiStudioController extends ChangeNotifier {
   }
 
   // ---------------------------------------------------------------
-  // GENERATION METHOD (KONTEXT PRO - INTERNAL)
+  // GENERATION METHOD (KONTEXT PRO via flux-kontext-pro V7)
   // ---------------------------------------------------------------
   Future<Uint8List> generateFromSelfie({
     required Uint8List selfieBytes,
   }) async {
     if (isGenerating) throw Exception('Already generating in progress');
 
-    // Snapshot current state
-    final intentionSnapshot = _rawUserIntention.isNotEmpty
-        ? _rawUserIntention
-        : 'high quality portrait';
-    final fullPromptSnapshot = _currentPrompt;
+    // Build instruction prompt from current mood or custom text
+    final prompt = _currentPrompt.isNotEmpty
+        ? _currentPrompt
+        : buildMoodEditInstruction(selectedMood.isNotEmpty ? selectedMood : 'creative');
 
-    if (fullPromptSnapshot.isEmpty) {
-      throw Exception('Prompt missing at generation time');
-    }
-
-    // 🔒 Build focused prompts for each step
-    // Step 1: Identity Lock (uses RAW intent to avoid double-templating)
-    final identityPrompt = buildStep1IdentityPrompt(
-      userIntent: intentionSnapshot,
-    );
-
-    // Step 2: Style Application (uses the full TEMPLATED prompt we already built)
-    final fullPrompt = fullPromptSnapshot;
+    debugPrint('[SofiStudio] Generating with instruction prompt: $prompt');
 
     await Future<void>.delayed(const Duration(milliseconds: 300));
 
@@ -173,24 +159,21 @@ class SofiStudioController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // SINGLE PASS GENERATION
-      // Bypasses the strict 2-step lock to allow moods/clothing to actually apply
+      // flux-kontext-pro: instruction-following model
+      // No strength/steps/guidanceScale needed — model understands "change X, keep face"
       final initImageBase64 = 'data:image/png;base64,${base64Encode(selfieBytes)}';
-      
+
       final imageUrl = await ModelsLabService.generateKontextPro(
-        prompt: fullPrompt,
-        negativePrompt: 'changed face, different person, altered identity, '
-            'bad anatomy, deformed, worst quality, uncanny valley',
+        prompt: prompt,
+        negativePrompt: 'deformed face, changed identity, different person, '
+            'bad anatomy, worst quality, blurry',
         initImageBase64: initImageBase64,
         aspectRatio: '9:16',
-        steps: 10, // Slightly more steps for better refinement
-        guidanceScale: 1.5, // 🔑 Slight guidance forces text prompt adherence (clothing)
-        strength: 0.76, // 🔑 Sweet spot: face structure remains, but 76% noise allows new clothing
       );
 
       final resp = await http.get(Uri.parse(imageUrl));
       if (resp.statusCode != 200) {
-        throw Exception('Failed to download generated image: ${resp.statusCode}');
+        throw Exception('Failed to download generated image: \${resp.statusCode}');
       }
       final resultBytes = resp.bodyBytes;
 
@@ -199,12 +182,12 @@ class SofiStudioController extends ChangeNotifier {
       return resultBytes;
     } catch (e) {
       generationError = e.toString();
-      debugPrint('[SofiStudio] Generation error: $e');
+      debugPrint('[SofiStudio] Generation error: \$e');
       rethrow;
     } finally {
       isGenerating = false;
       debugPrint('[GENERATION] Completed. Image bytes: '
-          '${generatedImageBytes?.length}');
+          '\${generatedImageBytes?.length}');
       notifyListeners();
     }
   }

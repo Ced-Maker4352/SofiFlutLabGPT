@@ -5,29 +5,20 @@ import 'package:flutter/foundation.dart';
 class ModelsLabService {
   static final FirebaseFunctions _functions = FirebaseFunctions.instance;
 
-  /// CLEAN: Single-call generation (NO polling)
+  /// Generates an image using flux-kontext-pro (V7 API).
   ///
-  /// Backend handles:
-  /// - upload init image
-  /// - signed URL init_image
-  /// - ModelsLab submit + poll
-  /// - returns final imageUrl
+  /// flux-kontext-pro is an instruction-following edit model.
+  /// It understands "change the outfit, keep the face" semantics natively.
+  /// Do NOT pass strength/steps/guidanceScale — the model handles this itself.
   static Future<String> generateKontextPro({
     required String prompt,
     String? negativePrompt,
     required String initImageBase64,
     String aspectRatio = '9:16',
-    int steps = 28,
-    double guidanceScale = 7,
-    double? strength,
     int? seed,
   }) async {
-    // 🔑 Turbo models require guidanceScale to be 0 for best quality
-    // and steps to be low (max 8)
-    final turboGuidance = 0.0;
-    final turboSteps = 8;
-
-    debugPrint('[ModelsLab] Calling generateImageFunc (CLEAN)...');
+    debugPrint('[ModelsLab] Calling flux-kontext-pro via generateImageFunc...');
+    debugPrint('[ModelsLab] Prompt: ${prompt.substring(0, prompt.length.clamp(0, 120))}...');
 
     final callable = _functions.httpsCallable(
       'generateImageFunc',
@@ -39,9 +30,6 @@ class ModelsLabService {
       if (negativePrompt != null) 'negative_prompt': negativePrompt,
       'initImageBase64': initImageBase64,
       'aspect_ratio': aspectRatio,
-      'steps': turboSteps,
-      'guidance_scale': turboGuidance,
-      if (strength != null) 'strength': strength,
       if (seed != null) 'seed': seed,
     });
 
