@@ -40,8 +40,8 @@ exports.generateImageFunc = onCall(
       height = 1024,
       strength,
       seed,
-      num_inference_steps = 26,
-      guidance_scale = 7.5,
+      steps = 8,
+      guidance_scale = 0.0,
     } = data;
 
     const safeW = Math.min(width, 1024);
@@ -83,7 +83,7 @@ exports.generateImageFunc = onCall(
       negative_prompt: negative_prompt || "",
       width: safeW,
       height: safeH,
-      num_inference_steps: num_inference_steps,
+      num_inference_steps: steps,
       guidance_scale: guidance_scale,
       samples: 1,
       safety_checker: false,
