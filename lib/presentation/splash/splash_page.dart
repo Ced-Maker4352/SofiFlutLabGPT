@@ -114,48 +114,13 @@ class _SplashPageState extends State<SplashPage> {
     if (!_minimumTimeElapsed || _hasNavigated || !mounted) return;
     _hasNavigated = true;
 
-    // 1️⃣ OPEN MOOD PAGE (DO NOT REPLACE)
-    final result = await Navigator.of(context).push(
+    // Replace Splash with Mood Page
+    Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (_, __, ___) => const MoodCameraEntryPage(),
         transitionsBuilder: (_, animation, __, child) =>
             FadeTransition(opacity: animation, child: child),
         transitionDuration: const Duration(milliseconds: 400),
-      ),
-    );
-
-    if (!mounted) return;
-
-    // 2️⃣ OPEN SOFI STUDIO (USING onControllerReady CALLBACK)
-    final selfieBytes = result?['selfieBytes'] as Uint8List?;
-    final selectedMood = result?['mood'] as String?;
-    final selectedMode = result?['mode'] as String?;
-
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (context) {
-          return SofiStudioPage(
-            onControllerReady: (controller) {
-              if (selfieBytes != null && selectedMood != null && selectedMode != null) {
-                // Parse mode string to MoodMode enum
-                final mode = switch (selectedMode) {
-                  'human' => MoodMode.human,
-                  'cinematic' => MoodMode.cinematic,
-                  'fantasy' => MoodMode.fantasy,
-                  'artistic' => MoodMode.artistic,
-                  'doll' => MoodMode.doll,
-                  _ => MoodMode.doll,
-                };
-                
-                controller.enterFromMoodFlow(
-                  selfie: selfieBytes,
-                  mood: selectedMood,
-                  mode: mode,
-                );
-              }
-            },
-          );
-        },
       ),
     );
   }

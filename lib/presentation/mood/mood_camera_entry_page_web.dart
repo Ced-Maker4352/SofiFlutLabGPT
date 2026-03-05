@@ -9,6 +9,7 @@ import '../../theme.dart';
 import '../sofi_studio/sofi_studio_theme.dart';
 import '../../services/theme_manager.dart';
 import '../../presentation/premium/paywall_sheet.dart';
+import '../sofi_studio/sofi_studio_page.dart';
 
 class MoodCameraEntryPageImpl extends StatefulWidget {
   const MoodCameraEntryPageImpl({super.key});
@@ -65,11 +66,30 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
 
     if (!mounted) return;
 
-    Navigator.of(context).pop({
-      'mood': _selectedMood, // REQUIRED for auto-gen
-      'mode': _selectedMode.id, // additive
-      'selfieBytes': _selfieBytes,
-    });
+    final selfieBytes = _selfieBytes;
+    final mood = _selectedMood!;
+    final mode = _selectedMode;
+
+    // Direct push to Studio (keeping Mood page in history)
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) {
+          return SofiStudioPage(
+            onControllerReady: (controller) {
+              controller.enterFromMoodFlow(
+                selfie: selfieBytes ?? Uint8List(0), // Controller handles null or empty
+                mood: mood,
+                mode: mode,
+              );
+            },
+          );
+        },
+      ),
+    );
+
+    if (mounted) {
+      setState(() => _isGenerating = false);
+    }
   }
 
   @override
