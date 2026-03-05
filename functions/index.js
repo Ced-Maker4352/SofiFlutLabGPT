@@ -78,7 +78,7 @@ exports.generateImageFunc = onCall(
     // ── Build request body ─────────────────────────────────────────────
     const body = {
       key: apiKey,
-      model_id: "flux-dev",
+      model_id: "z-image-turbo",
       prompt: prompt,
       negative_prompt: negative_prompt || "",
       width: safeW,
