@@ -1,5 +1,7 @@
 const { onCall } = require("firebase-functions/v2/https");
 const { setGlobalOptions } = require("firebase-functions/v2");
+const admin = require("firebase-admin");
+admin.initializeApp();
 
 // Set global options for V2 functions (region etc.)
 setGlobalOptions({ region: "us-central1" });
@@ -21,14 +23,8 @@ exports.generateImageFunc = onCall({
   cpu: 1,
 }, async (request) => {
   // Lazy load heavy modules
-  const admin = require("firebase-admin");
   const fetch = require("node-fetch");
   const crypto = require("crypto");
-
-  // Initialize Firebase Admin (safe to call multiple times as it checks if already initialized)
-  if (!admin.apps.length) {
-    admin.initializeApp();
-  }
 
   const data = request.data;
   const apiKey = process.env.MODELSLAB_API_KEY;
@@ -72,14 +68,16 @@ exports.generateImageFunc = onCall({
       await file.save(buffer, {
         metadata: {
           contentType: "image/png",
-          metadata: {
-            firebaseStorageDownloadTokens: crypto.randomUUID(),
-          },
         },
-        public: true,
       });
 
-      initImageUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+      // Provide a signed URL so ModelsLab can read the image regardless of bucket ACL settings
+      const [signedUrl] = await file.getSignedUrl({
+        action: 'read',
+        expires: Date.now() + 60 * 60 * 1000 // 1 hour valid
+      });
+      initImageUrl = signedUrl;
+      console.log(`Successfully uploaded init image, signed URL generated.`);
     } catch (uploadErr) {
       console.error("Failed to upload init image:", uploadErr.message);
     }
@@ -100,7 +98,7 @@ exports.generateImageFunc = onCall({
 
   if (initImageUrl) {
     submitBody.init_image = initImageUrl;
-    // 🔑 Use provided strength or default to 0.45
+    // �� Use provided strength or default to 0.45
     submitBody.strength = strength !== undefined ? strength : 0.45;
     console.log(`Using init_image with strength=${submitBody.strength} model=${submitBody.model_id}`);
   }
@@ -209,7 +207,7 @@ exports.fetchImageFunc = onCall({
   const apiKey = process.env.MODELSLAB_API_KEY;
   const { id } = data;
 
-  if (!apiKey || !id) {
+  if (!apiKey || id == null) {
     throw new Error("Missing params");
   }
 

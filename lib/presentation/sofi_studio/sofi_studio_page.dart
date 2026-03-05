@@ -2317,7 +2317,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                   // Floating undo/redo/history just above the footer
                   Positioned(
                     right: 16,
-                    bottom: 160, // LIFTED
+                    bottom: 180, // LIFTED further to clear Mood Bar
                     child: floatingHistoryCluster(
                       canUndo: _history.length > 1,
                       canRedo: _redoStack.isNotEmpty,
@@ -2332,7 +2332,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                   if (!controller.isGenerating)
                     Positioned(
                       left: 16,
-                      bottom: 160, // LIFTED
+                      bottom: 180, // LIFTED further to clear Mood Bar
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -2359,7 +2359,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                     Positioned(
                       left: 24,
                       right: 24,
-                      bottom: 130, // LIFTED
+                      bottom: 154, // LIFTED
                       child: _buildPromptPreview(),
                     ),
 
@@ -2368,14 +2368,14 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                     Positioned(
                       left: 0,
                       right: 0,
-                      bottom: 96, // LIFTED to prevent overlap
+                      bottom: 114, // LIFTED to explicitly clear 110px tall footer pill
                       child: _buildQuickMoodBar(),
                     ),
 
                   // Preview Watermark (for free users using premium modes)
                   if (_shouldShowPreviewWatermark())
                     Positioned(
-                      bottom: 210, // LIFTED to top corner equivalent above everything
+                      bottom: 240, // LIFTED to top corner equivalent above everything
                       right: 16,
                       child: Opacity(
                         opacity: 0.35,
