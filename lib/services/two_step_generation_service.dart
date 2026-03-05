@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
@@ -84,11 +85,27 @@ class TwoStepGenerationService {
   }
 
   Future<Uint8List> _downloadBytes(String url) async {
-    final resp = await http.get(Uri.parse(url));
-    if (resp.statusCode < 200 || resp.statusCode >= 300) {
+    const maxRetries = 5;
+    const retryDelay = Duration(seconds: 2);
+
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      final resp = await http.get(Uri.parse(url));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        debugPrint('[Download] ✅ Got ${resp.bodyBytes.length} bytes on attempt $attempt');
+        return resp.bodyBytes;
+      }
+
+      // If 404, the CDN file may not have propagated yet — retry
+      if (resp.statusCode == 404 && attempt < maxRetries) {
+        debugPrint('[Download] ⏳ 404 on attempt $attempt, retrying in ${retryDelay.inSeconds}s...');
+        await Future.delayed(retryDelay);
+        continue;
+      }
+
       throw Exception(
           'Failed to download generated image ($url): ${resp.statusCode}');
     }
-    return resp.bodyBytes;
+
+    throw Exception('Failed to download image after $maxRetries attempts');
   }
 }

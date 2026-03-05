@@ -2566,7 +2566,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 150),
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 7),
+                              horizontal: 8, vertical: 5), // Reduced padding
                           decoration: BoxDecoration(
                             borderRadius: _radius16,
                             color: active
@@ -2586,19 +2586,21 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                             children: [
                               Icon(
                                 m.icon,
-                                size: 14,
+                                size: 12, // Reduced icon size
                                 color: active
                                     ? theme.accentColor
                                     : (isDark
                                         ? Colors.white54
                                         : Colors.black45),
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: 4),
                               Text(
                                 m.label,
                                 style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
+                                  fontSize: 10, // Reduced font size
+                                  fontWeight: active
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
                                   color: active
                                       ? (isDark ? Colors.white : Colors.black87)
                                       : (isDark
