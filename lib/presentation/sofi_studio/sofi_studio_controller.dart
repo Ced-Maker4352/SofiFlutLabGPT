@@ -183,9 +183,9 @@ class SofiStudioController extends ChangeNotifier {
             'bad anatomy, deformed, worst quality, uncanny valley',
         initImageBase64: initImageBase64,
         aspectRatio: '9:16',
-        steps: 8, // Optimized for Turbo
-        guidanceScale: 0.0, // Optimized for Turbo
-        strength: 0.85, // 🔑 Aggressive style application
+        steps: 10, // Slightly more steps for better refinement
+        guidanceScale: 1.5, // 🔑 Slight guidance forces text prompt adherence (clothing)
+        strength: 0.76, // 🔑 Sweet spot: face structure remains, but 76% noise allows new clothing
       );
 
       final resp = await http.get(Uri.parse(imageUrl));
