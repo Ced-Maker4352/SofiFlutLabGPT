@@ -2636,12 +2636,35 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Left: Sofi Saint Logo + Theme Switcher
+          // Left: Back Button + Sofi Saint Logo
           Align(
             alignment: Alignment.centerLeft,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    height: 32,
+                    width: 32,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.1)
+                          : Colors.black.withValues(alpha: 0.05),
+                      border: Border.all(
+                        color: isDark ? Colors.white24 : Colors.black12,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      Icons.arrow_back_ios_new,
+                      size: 16,
+                      color: theme.headerTextColor,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Container(
                   height: 32,
                   width: 32,
