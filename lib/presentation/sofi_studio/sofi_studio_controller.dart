@@ -124,11 +124,6 @@ class SofiStudioController extends ChangeNotifier {
 
     hasPendingGeneration = true;
     notifyListeners();
-
-    debugPrint('[UI] Triggering generateFromSelfie');
-    if (selfieBytes != null && !isGenerating) {
-      generateFromSelfie(selfieBytes: selfieBytes!);
-    }
   }
 
   // ---------------------------------------------------------------
@@ -190,7 +185,7 @@ class SofiStudioController extends ChangeNotifier {
         aspectRatio: '9:16',
         steps: 8, // Optimized for Turbo
         guidanceScale: 0.0, // Optimized for Turbo
-        strength: 0.70, // 🔑 Balanced: High enough to allow clothing/style changes, low enough to keep face structural anchor
+        strength: 0.85, // 🔑 Aggressive style application
       );
 
       final resp = await http.get(Uri.parse(imageUrl));
