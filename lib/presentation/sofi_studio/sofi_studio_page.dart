@@ -3374,7 +3374,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
         builder: (context, value, child) {
           return Transform.scale(
             scale: value,
-            child: Opacity(opacity: value, child: child),
+            child: Opacity(opacity: value.clamp(0.0, 1.0), child: child),
           );
         },
         child: GestureDetector(
