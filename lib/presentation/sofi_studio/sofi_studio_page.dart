@@ -535,11 +535,10 @@ class _SofiStudioPageState extends State<SofiStudioPage>
         : widget.initialMood;
     if (initialMood != null && controller.currentPrompt.isEmpty) {
       controller.selectedMood = initialMood;
-      final visualPrompt = MoodVisualMapper.map(initialMood);
       controller.rebuildPrompt(
-        userPrompt: visualPrompt,
+        userPrompt: initialMood,
         mode: controller.selectedMode.id,
-        mood: initialMood, // 🔑 Pass mood for style preset mapping
+        mood: initialMood,
       );
       controller.hasPendingGeneration = true;
       debugPrint('[Controller] Initial prompt: ${controller.currentPrompt}');

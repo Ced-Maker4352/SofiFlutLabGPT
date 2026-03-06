@@ -389,16 +389,15 @@ class _PremiumStudioPageState extends State<PremiumStudioPage> {
 
   // ---------------- PROMPTS ----------------
   String _buildIdentityLockPrompt() {
-    // We only pass the "raw" intent to PromptBuilder to avoid nesting
-    return buildStep1IdentityPrompt(
-      userIntent: 'Simple neutral character portrait, full body photography.',
+    return buildCustomEditInstruction(
+      'Simple neutral character portrait, full body photography.',
     );
   }
 
   String _buildPrompt(ThemePreset t, ThemeVariant? v) {
     final custom = _promptController.text.trim();
 
-    // Assemble the clean "User Intent" part
+    // Assemble the clean edit instruction
     final buffer = StringBuffer();
     buffer.writeln(t.basePrompt);
     if (v != null) buffer.writeln(v.prompt);
@@ -406,11 +405,8 @@ class _PremiumStudioPageState extends State<PremiumStudioPage> {
 
     final userIntent = buffer.toString().trim();
 
-    // Delegate system directive assembly to PromptBuilder
-    return buildStep2StylePrompt(
-      userIntent: userIntent,
-      styleStrength: 7.5, // Premium user default
-    );
+    // Use instruction-style prompt for flux-kontext-pro
+    return buildCustomEditInstruction(userIntent);
   }
 
   // ---------------- STEP 1 ----------------

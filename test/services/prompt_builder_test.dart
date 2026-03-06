@@ -1,128 +1,64 @@
 // test/services/prompt_builder_test.dart
 //
-// Unit tests for the prompt builder and mood style preset mapper.
-// These are pure functions with zero dependencies — ideal for testing.
+// Unit tests for the new instruction-style prompt builder.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sofi_test_connect/services/prompt_builder.dart';
-import 'package:sofi_test_connect/services/mood_style_preset.dart';
 
 void main() {
   // ─────────────────────────────────────────────
-  // MoodStylePresetMapper
+  // buildMoodEditInstruction
   // ─────────────────────────────────────────────
-  group('MoodStylePresetMapper', () {
-    test('maps "glow" to pixar', () {
-      expect(MoodStylePresetMapper.map('glow'), MoodStylePreset.pixar);
+  group('buildMoodEditInstruction', () {
+    test('includes face preservation directive', () {
+      final prompt = buildMoodEditInstruction('Bold');
+      expect(prompt.toLowerCase(), contains('face'));
+      expect(prompt.toLowerCase(), contains('identical'));
     });
 
-    test('maps "noir" to cinematic', () {
-      expect(MoodStylePresetMapper.map('noir'), MoodStylePreset.cinematic);
+    test('includes outfit change for Bold mood', () {
+      final prompt = buildMoodEditInstruction('Bold');
+      expect(prompt.toLowerCase(), contains('bold'));
+      expect(prompt.toLowerCase(), contains('outfit'));
     });
 
-    test('maps "pastel" to softIllustration', () {
-      expect(MoodStylePresetMapper.map('pastel'),
-          MoodStylePreset.softIllustration);
+    test('includes pastel aesthetic for Soft mood', () {
+      final prompt = buildMoodEditInstruction('Soft');
+      expect(prompt.toLowerCase(), contains('pastel'));
+      expect(prompt.toLowerCase(), contains('soft'));
     });
 
-    test('maps "street" to fashion', () {
-      expect(MoodStylePresetMapper.map('street'), MoodStylePreset.fashion);
+    test('includes dark aesthetic for Mysterious mood', () {
+      final prompt = buildMoodEditInstruction('Mysterious');
+      expect(prompt.toLowerCase(), contains('dark'));
+      expect(prompt.toLowerCase(), contains('mysterious'));
     });
 
-    test('maps "lux" to fashion', () {
-      expect(MoodStylePresetMapper.map('lux'), MoodStylePreset.fashion);
-    });
-
-    test('maps "bold" to fashion', () {
-      expect(MoodStylePresetMapper.map('bold'), MoodStylePreset.fashion);
-    });
-
-    test('maps unknown mood to pixar (default)', () {
-      expect(MoodStylePresetMapper.map('unknown_mood'), MoodStylePreset.pixar);
-    });
-
-    test('is case-insensitive', () {
-      expect(MoodStylePresetMapper.map('GLOW'), MoodStylePreset.pixar);
-      expect(MoodStylePresetMapper.map('Noir'), MoodStylePreset.cinematic);
-      expect(MoodStylePresetMapper.map('PASTEL'),
-          MoodStylePreset.softIllustration);
+    test('handles unknown mood gracefully', () {
+      final prompt = buildMoodEditInstruction('CustomMood');
+      expect(prompt.toLowerCase(), contains('change the outfit'));
+      expect(prompt.toLowerCase(), contains('face'));
     });
   });
 
   // ─────────────────────────────────────────────
-  // styleIntensityModifier
+  // buildCustomEditInstruction
   // ─────────────────────────────────────────────
-  group('styleIntensityModifier', () {
-    test('low strength returns subtle modifier', () {
-      final result = styleIntensityModifier(4.0);
-      expect(result.toLowerCase(), contains('subtle'));
-      expect(result.toLowerCase(), contains('realism'));
+  group('buildCustomEditInstruction', () {
+    test('includes user text in instruction', () {
+      final prompt = buildCustomEditInstruction('Red dress with gold details');
+      expect(prompt, contains('Red dress with gold details'));
     });
 
-    test('balanced strength returns balanced modifier', () {
-      final result = styleIntensityModifier(7.0);
-      expect(result.toLowerCase(), contains('balanced'));
+    test('includes face preservation directive', () {
+      final prompt = buildCustomEditInstruction('A cool outfit');
+      expect(prompt.toLowerCase(), contains('face'));
+      expect(prompt.toLowerCase(), contains('identical'));
     });
 
-    test('high strength returns bold modifier', () {
-      final result = styleIntensityModifier(9.0);
-      expect(result.toLowerCase(), contains('bold'));
-    });
-  });
-
-  // ─────────────────────────────────────────────
-  // buildSofiPrompt (integration of above)
-  // ─────────────────────────────────────────────
-  group('buildSofiPrompt', () {
-    test('includes system tag', () {
-      final prompt = buildSofiPrompt(
-        userPrompt: 'A cool outfit',
-        mode: 'doll',
-      );
-      expect(prompt, contains('v2_neutral'));
-    });
-
-    test('includes identity lock block', () {
-      final prompt = buildSofiPrompt(
-        userPrompt: 'Test prompt',
-        mode: 'doll',
-      );
-      expect(prompt, contains('IDENTITY LOCK DIRECTIVE'));
-      expect(prompt, contains('face from the input reference image is SACRED'));
-    });
-
-    test('includes user prompt text', () {
-      final prompt = buildSofiPrompt(
-        userPrompt: 'A red dress with gold details',
-        mode: 'doll',
-      );
-      expect(prompt, contains('A red dress with gold details'));
-    });
-
-    test('includes mood-based style when mood is provided', () {
-      final promptNoir = buildSofiPrompt(
-        userPrompt: 'Test',
-        mode: 'doll',
-        mood: 'noir',
-      );
-      expect(promptNoir.toLowerCase(), contains('cinematic'));
-      expect(promptNoir.toLowerCase(), contains('lighting'));
-    });
-
-    test('includes intensity modifier based on styleStrength', () {
-      final subtlePrompt = buildSofiPrompt(
-        userPrompt: 'Test',
-        mode: 'doll',
-        styleStrength: 4.0,
-      );
-      expect(subtlePrompt.toLowerCase(), contains('subtle'));
-
-      final strongPrompt = buildSofiPrompt(
-        userPrompt: 'Test',
-        mode: 'doll',
-        styleStrength: 9.0,
-      );
-      expect(strongPrompt.toLowerCase(), contains('bold'));
+    test('includes mood clause when mood is provided', () {
+      final prompt = buildCustomEditInstruction('Test', mood: 'Bold');
+      expect(prompt, contains('Bold'));
     });
   });
 }

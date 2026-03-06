@@ -36,9 +36,6 @@ class TwoStepGenerationService {
           'bad anatomy, deformed, worst quality',
       initImageBase64: initImageBase64,
       aspectRatio: aspectRatio,
-      steps: 24, // identity lock converges fast
-      guidanceScale: 12.0, // 🔑 INCREASED GUIDANCE for sharper identity
-      strength: 0.20, // 🔑 TIGHTER STRENGTH: preserve face exactly
     );
 
     return _downloadBytes(imageUrl);
@@ -70,9 +67,6 @@ class TwoStepGenerationService {
           'bad anatomy, deformed, worst quality, uncanny valley',
       initImageBase64: initImageBase64,
       aspectRatio: aspectRatio,
-      steps: 28,
-      guidanceScale: 7.5,
-      strength: 0.75, // 🔑 INCREASED STRENGTH: allow more style/outfit changes
     );
 
     return _downloadBytes(imageUrl);
