@@ -390,7 +390,9 @@ class _PremiumStudioPageState extends State<PremiumStudioPage> {
   // ---------------- PROMPTS ----------------
   String _buildIdentityLockPrompt() {
     return buildCustomEditInstruction(
-      'Simple neutral character portrait, full body photography.',
+      'Transform this into a full-body fashion doll portrait. '
+      'Show head-to-toe in a stylish pose with clean background. '
+      'Keep the face identical to the original photo.',
     );
   }
 
@@ -1376,185 +1378,212 @@ class _PremiumStudioPageState extends State<PremiumStudioPage> {
   }
 
   Widget _buildAfterGenerationPanel() {
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              IconButton(
-                onPressed: _canUndo ? _undo : null,
-                icon: const Icon(Icons.undo_rounded, size: 20),
-                tooltip: 'Undo',
-              ),
-              IconButton(
-                onPressed: _canRedo ? _redo : null,
-                icon: const Icon(Icons.redo_rounded, size: 20),
-                tooltip: 'Redo',
-              ),
-              if (_hasHistory)
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxHeight: 260),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ── Row 1: Undo/Redo/History + Refine/Discard ──
+            Row(
+              children: [
                 IconButton(
-                  onPressed: _openHistorySheet,
-                  icon: const Icon(Icons.history_rounded, size: 20),
-                  tooltip: 'History',
+                  onPressed: _canUndo ? _undo : null,
+                  icon: const Icon(Icons.undo_rounded, size: 20),
+                  tooltip: 'Undo',
+                  visualDensity: VisualDensity.compact,
                 ),
-              const Spacer(),
-              TextButton.icon(
-                onPressed: _openCropSheet,
-                icon: const Icon(Icons.crop, size: 18),
-                label: const Text('Refine'),
-              ),
-              TextButton.icon(
+                IconButton(
+                  onPressed: _canRedo ? _redo : null,
+                  icon: const Icon(Icons.redo_rounded, size: 20),
+                  tooltip: 'Redo',
+                  visualDensity: VisualDensity.compact,
+                ),
+                if (_hasHistory)
+                  IconButton(
+                    onPressed: _openHistorySheet,
+                    icon: const Icon(Icons.history_rounded, size: 20),
+                    tooltip: 'History',
+                    visualDensity: VisualDensity.compact,
+                  ),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: _openCropSheet,
+                  icon: const Icon(Icons.crop, size: 16),
+                  label: const Text('Refine', style: TextStyle(fontSize: 12)),
+                ),
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      styledBytes = null;
+                      _styledBytesOriginal = null;
+                      _cropAspect = null;
+                      _cropFocus = 0;
+                      _currentImageSaved = false;
+                    });
+                  },
+                  icon: const Icon(Icons.delete_outline, size: 16),
+                  label: const Text('Discard', style: TextStyle(fontSize: 12)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.red[400],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // ── Row 2: Save + Save & New ──
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _saveToFavorites(makeAnother: false),
+                    icon: Icon(
+                      _currentImageSaved ? Icons.favorite : Icons.favorite_border,
+                      size: 16,
+                    ),
+                    label: Text(
+                      _currentImageSaved ? 'Saved' : 'Save',
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      side: const BorderSide(color: Colors.pink),
+                      foregroundColor: Colors.pink,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _saveToFavorites(makeAnother: true),
+                    icon: const Icon(Icons.add_photo_alternate, size: 16),
+                    label: const Text('Save & New', style: TextStyle(fontSize: 13)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.purple,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // ── Row 3: Send to Studio (full width) ──
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
                 onPressed: () {
-                  setState(() {
-                    styledBytes = null;
-                    _styledBytesOriginal = null;
-                    _cropAspect = null;
-                    _cropFocus = 0;
-                    _currentImageSaved = false;
+                  if (styledBytes == null) return;
+                  final prompt = (selectedTheme == null)
+                      ? ''
+                      : _buildPrompt(selectedTheme!, selectedVariant);
+
+                  Navigator.pop(context, <String, String>{
+                    'image': _b64(styledBytes)!,
+                    'prompt': prompt,
                   });
                 },
-                icon: const Icon(Icons.delete_outline, size: 18),
-                label: const Text('Discard'),
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.red[400],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _saveToFavorites(makeAnother: false),
-                  icon: Icon(_currentImageSaved
-                      ? Icons.favorite
-                      : Icons.favorite_border),
-                  label: Text(_currentImageSaved ? 'Saved' : 'Save'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    side: const BorderSide(color: Colors.pink),
-                    foregroundColor: Colors.pink,
+                icon: const Icon(Icons.send, size: 16),
+                label: const Text('Send to Studio'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _saveToFavorites(makeAnother: true),
-                  icon: const Icon(Icons.add_photo_alternate),
-                  label: const Text('Save & New'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.purple,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                if (styledBytes == null) return;
-                final prompt = (selectedTheme == null)
-                    ? ''
-                    : _buildPrompt(selectedTheme!, selectedVariant);
+            ),
+            const SizedBox(height: 8),
 
-                Navigator.pop(context, <String, String>{
-                  'image': _b64(styledBytes)!,
-                  'prompt': prompt,
-                });
-              },
-              icon: const Icon(Icons.send),
-              label: const Text('Send to Studio'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+            // ── Row 4: Export & Share (compact row) ──
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _exportWithPreset(ExportPreset.story),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
+                    child: const Text('Story', style: TextStyle(fontSize: 11)),
+                  ),
                 ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Export Presets',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => _exportWithPreset(ExportPreset.story),
-                  child: const Text('Story (9:16)'),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _exportWithPreset(ExportPreset.post),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
+                    child: const Text('Post', style: TextStyle(fontSize: 11)),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => _exportWithPreset(ExportPreset.post),
-                  child: const Text('Post (1:1)'),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _exportWithPreset(ExportPreset.wallpaper),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
+                    child: const Text('Wallpaper', style: TextStyle(fontSize: 11)),
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () => _exportWithPreset(ExportPreset.wallpaper),
-              child: const Text('Wallpaper'),
+              ],
             ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _batchExportStoryAndPost,
-              child: const Text('Export Story + Post'),
-            ),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: _batchShareStoryAndPost,
-              child: const Text('Share Story + Post'),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => ShareHubPage(
-                      imageBase64: _b64(styledBytes),
-                      prompt: selectedVariant?.prompt ?? selectedTheme?.label,
-                      isPremiumImage: true,
+            const SizedBox(height: 6),
+
+            // ── Row 5: Batch export + Share ──
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _batchExportStoryAndPost,
+                    icon: const Icon(Icons.download_rounded, size: 14),
+                    label: const Text('Export Story + Post',
+                        style: TextStyle(fontSize: 11)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                     ),
                   ),
-                );
-              },
-              icon: const Icon(Icons.share_rounded),
-              label: const Text('Share Creation'),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ShareHubPage(
+                            imageBase64: _b64(styledBytes),
+                            prompt:
+                                selectedVariant?.prompt ?? selectedTheme?.label,
+                            isPremiumImage: true,
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.share_rounded, size: 14),
+                    label: const Text('Share',
+                        style: TextStyle(fontSize: 11)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
