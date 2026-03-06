@@ -876,25 +876,23 @@ class _SofiStudioPageState extends State<SofiStudioPage>
         throw Exception('Empty image bytes received');
       }
 
-      // Update canvas with the new doll image AND store as original base
+      // Update canvas with the new doll image AND store as base
       if (mounted) {
         setState(() {
+          // Always reset canvas to show the new doll
           generatedImageBytes = stageBytes;
-          // 🔒 Only store as base doll if there's NO active selfie session.
-          // If a selfie is loaded, the selfie stays as the identity anchor.
-          final hasSelfie = (controller.selfieBytes != null &&
-                  controller.selfieBytes!.isNotEmpty) ||
-              (widget.selfieBytes != null && widget.selfieBytes!.isNotEmpty);
-          if (!hasSelfie) {
-            _originalBaseDollBytes = stageBytes;
-          }
+          // Always store as the base doll image for generation
+          _originalBaseDollBytes = stageBytes;
           _history.add(stageBytes);
           _redoStack.clear();
           _isFavorited = false;
         });
-        debugPrint('[SofiStudio] Canvas state updated with new doll image');
+        // Clear stacked selections & prompt for a fresh start with new character
+        selectedOptions.updateAll((key, value) => null);
+        promptController.clear();
+        debugPrint('[SofiStudio] Canvas reset with new doll: ${doll.id}');
         debugPrint(
-            '[SofiStudio] ✅ Original base doll stored (${stageBytes.length} bytes) - will use for all generations');
+            '[SofiStudio] ✅ Base doll stored (${stageBytes.length} bytes)');
       }
 
       // Save to storage in background
@@ -1266,24 +1264,31 @@ class _SofiStudioPageState extends State<SofiStudioPage>
 
     try {
       // ================================
-      // STEP 1: GET THE SELFIE (IDENTITY SOURCE)
+      // STEP 1: GET THE INIT IMAGE (MODE-DEPENDENT)
       // ================================
-      // The selfie is the ONLY identity source. It comes from the
-      // controller (set during enterFromMoodFlow) or the widget prop.
+      // In DOLL mode: use the selected doll image (character) as the init.
+      // In SELFIE/MOOD mode: use the selfie as the identity anchor.
       final Uint8List? selfie = controller.selfieBytes ?? widget.selfieBytes;
+      final bool isDollMode = controller.selectedMode.id == 'doll';
 
       Uint8List initImageBytes;
-      if (selfie != null && selfie.isNotEmpty) {
+      if (isDollMode && _originalBaseDollBytes != null && _originalBaseDollBytes!.isNotEmpty) {
+        // DOLL MODE: Edit the doll character, not the selfie
+        initImageBytes = _originalBaseDollBytes!;
+        debugPrint(
+            '[Identity] 🎭 DOLL MODE: Using base doll as init image (${initImageBytes.length} bytes)');
+      } else if (selfie != null && selfie.isNotEmpty) {
+        // SELFIE/MOOD MODE: Use selfie as identity anchor
         initImageBytes = selfie;
         debugPrint(
-            '[Identity] ✅ Using SELFIE as identity anchor (${selfie.length} bytes)');
+            '[Identity] 📸 SELFIE MODE: Using selfie as identity anchor (${selfie.length} bytes)');
       } else {
-        // No selfie — fall back to base doll image
+        // No selfie, no doll — fall back to loading current doll from path
         initImageBytes = await _loadDollImage(
           controller.currentDoll!.stagePath,
           controller.currentDoll!.isStoragePath,
         );
-        debugPrint('[Identity] No selfie, using base doll');
+        debugPrint('[Identity] No selfie or doll loaded, using base doll from path');
       }
 
       // ================================
