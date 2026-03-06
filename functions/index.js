@@ -16,8 +16,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * =====================================================
  * GENERATE IMAGE — flux-kontext-pro (V7)
  * 
- * Instruction-following model: understands "change outfit,
- * keep face" semantics natively. Does NOT use strength.
+ * Instruction-following model. Understands "change outfit,
+ * keep face" semantics natively.
  * =====================================================
  */
 exports.generateImageFunc = onCall(
@@ -42,6 +42,24 @@ exports.generateImageFunc = onCall(
       seed,
     } = data;
 
+    // Parse optional params with sane defaults
+    const aspect_ratio =
+      typeof data.aspect_ratio === "string" && data.aspect_ratio.trim()
+        ? data.aspect_ratio.trim()
+        : typeof data.aspectRatio === "string" && data.aspectRatio.trim()
+          ? data.aspectRatio.trim()
+          : "9:16";
+
+    const steps =
+      Number.isFinite(Number(data.steps))
+        ? Math.max(1, Math.min(50, Math.floor(Number(data.steps))))
+        : 28;
+
+    const guidance_scale =
+      Number.isFinite(Number(data.guidance_scale))
+        ? Math.max(1, Math.min(20, Number(data.guidance_scale)))
+        : 7;
+
     if (!prompt) return { ok: false, error: "Missing prompt" };
     if (!initImageBase64) return { ok: false, error: "Missing initImageBase64" };
 
@@ -50,43 +68,50 @@ exports.generateImageFunc = onCall(
     let tempFilePath = null;
 
     try {
-      let raw = initImageBase64;
-      if (raw.includes(",")) raw = raw.split(",")[1];
+      // Strip data:image/xxx;base64, prefix if present
+      let rawB64 = initImageBase64;
+      if (rawB64.includes(",")) rawB64 = rawB64.split(",")[1];
 
-      const buf = Buffer.from(raw, "base64");
+      const buf = Buffer.from(rawB64, "base64");
+      if (buf.length < 16) throw new Error("Image too small");
+
+      const hash = crypto.createHash("md5").update(buf).digest("hex").slice(0, 12);
+      tempFilePath = `tmp/init_${hash}_${Date.now()}.png`;
+
       const bucket = admin.storage().bucket();
-      const name = "tmp/init_images/" + crypto.randomUUID() + ".png";
-      tempFilePath = name;
-      const file = bucket.file(name);
-
-      await file.save(buf, { metadata: { contentType: "image/png" } });
+      const file = bucket.file(tempFilePath);
+      await file.save(buf, {
+        resumable: false,
+        metadata: { contentType: "image/png" },
+      });
 
       const [url] = await file.getSignedUrl({
         action: "read",
-        expires: Date.now() + 60 * 60 * 1000,
+        expires: Date.now() + 1000 * 60 * 30, // 30 min
       });
       initImageUrl = url;
       console.log("Uploaded init image → signed URL ready");
     } catch (e) {
-      console.error("Init-image upload failed:", e.message);
+      console.error("Init upload failed:", e.message);
       return { ok: false, error: "Image upload failed: " + e.message };
     }
 
     // ── Build request body for flux-kontext-pro ────────────────────────
-    // Note: kontext-pro does NOT take strength, steps, or guidance_scale
-    // It understands the prompt as an edit instruction.
     const body = {
       key: apiKey,
       model_id: MODEL_ID,
       init_image: initImageUrl,
       prompt: prompt,
       negative_prompt: negative_prompt || "deformed face, bad anatomy, blurry, worst quality",
+      aspect_ratio: aspect_ratio,
+      steps: steps,
+      guidance_scale: guidance_scale,
       samples: 1,
       safety_checker: false,
       ...(seed ? { seed } : {}),
     };
 
-    console.log("POST →", V7_IMG2IMG, "model=", MODEL_ID);
+    console.log("POST →", V7_IMG2IMG, "model=", MODEL_ID, "aspect_ratio=", aspect_ratio, "steps=", steps, "guidance=", guidance_scale);
 
     // ── Submit ─────────────────────────────────────────────────────────
     let submitJson;
@@ -122,7 +147,7 @@ exports.generateImageFunc = onCall(
     }
 
     // Processing → poll
-    const jobId = submitJson.id;
+    const jobId = submitJson.id || submitJson.job_id;
     if (!jobId) {
       console.error("No job id:", JSON.stringify(submitJson));
       await cleanup(tempFilePath);
@@ -131,11 +156,18 @@ exports.generateImageFunc = onCall(
 
     const eta = submitJson.eta || 20;
     console.log("Job queued, id=" + jobId + " eta=" + eta + "s");
-    let delay = Math.max(eta * 1000, 5000);
 
-    for (let i = 0; i < 60; i++) {
-      await sleep(delay);
-      delay = 5000;
+    // Poll with 150s deadline, 2.5s interval (matches working reference)
+    const deadlineMs = Date.now() + 150000;
+    let pollCount = 0;
+
+    while (Date.now() < deadlineMs) {
+      // First wait uses ETA, then 2.5s intervals
+      if (pollCount === 0) {
+        await sleep(Math.max(eta * 1000, 3000));
+      } else {
+        await sleep(2500);
+      }
 
       try {
         const pr = await fetch(V7_FETCH + "/" + jobId, {
@@ -146,18 +178,17 @@ exports.generateImageFunc = onCall(
         const pj = await pr.json();
 
         if (pj.status === "processing") {
-          if (i % 5 === 0) console.log("Still processing... poll #" + i);
+          if (pollCount % 5 === 0) console.log("Still processing... poll #" + pollCount);
+          pollCount++;
           continue;
         }
 
-        if (
-          pj.status === "success" &&
-          Array.isArray(pj.output) &&
-          pj.output.length > 0
-        ) {
-          console.log("Generation complete! URL: " + pj.output[0].substring(0, 80));
+        // Check multiple output locations (ModelsLab varies between endpoints)
+        const outputUrl = extractOutputUrl(pj);
+        if (pj.status === "success" && outputUrl) {
+          console.log("Generation complete! URL: " + outputUrl.substring(0, 80));
           await cleanup(tempFilePath);
-          return { ok: true, imageUrl: pj.output[0] };
+          return { ok: true, imageUrl: outputUrl };
         }
 
         if (pj.status === "error" || pj.status === "failed") {
@@ -165,15 +196,36 @@ exports.generateImageFunc = onCall(
           await cleanup(tempFilePath);
           return { ok: false, error: pj?.message || "Generation failed" };
         }
+
+        pollCount++;
       } catch (e) {
         console.error("Poll exception:", e.message);
+        pollCount++;
       }
     }
 
     await cleanup(tempFilePath);
-    return { ok: false, error: "Timed out" };
+    return { ok: false, error: "Timed out after 150s" };
   }
 );
+
+/** Extract output URL from various ModelsLab response shapes */
+function extractOutputUrl(json) {
+  const candidates = [
+    json?.output,
+    json?.images,
+    json?.image,
+    json?.data?.output,
+    json?.data?.images,
+    json?.data?.image,
+  ];
+  for (const c of candidates) {
+    if (!c) continue;
+    if (Array.isArray(c) && c.length && typeof c[0] === "string") return c[0];
+    if (typeof c === "string") return c;
+  }
+  return null;
+}
 
 /** Temp-file cleanup helper */
 async function cleanup(path) {
