@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
 import 'package:sofi_test_connect/services/premium_service.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 
 /// A soft paywall bottom sheet that shows subscription options
 /// Can be dismissed but encourages users to subscribe
@@ -76,19 +77,61 @@ class _PaywallSheetState extends State<PaywallSheet> {
     setState(() => _isProcessing = true);
     
     try {
-      // NOTE: Hook up purchases via RevenueCat or in_app_purchase in production
-      // For now, simulate subscription activation
-      await PremiumService().activateSubscription(_selectedPlan);
+      // 1. Initialize Stripe (already done in PremiumService init, but safe to double check)
+      await PremiumService().initialize();
+
+      // 2. Simulate PaymentIntent creation (In production, call your server here)
+      // This is where you'd call Firebase Functions to get paymentIntentClientSecret, ephemeralKey, and customerId.
+      debugPrint('Simulating Stripe PaymentIntent for $_selectedPlan');
       
-      if (mounted) {
-        widget.onSubscribed?.call();
-        Navigator.of(context).pop(true); // Return true = subscribed
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Welcome to Premium! Enjoy unlimited generations.'),
-            backgroundColor: Colors.green,
+      // 3. Initialize Payment Sheet
+      // NOTE: Using try-catch because placeholder keys will cause errors
+      try {
+        await Stripe.instance.initPaymentSheet(
+          paymentSheetParameters: SetupPaymentSheetParameters(
+            merchantDisplayName: 'Sofi Saint',
+            paymentIntentClientSecret: 'pi_placeholder_secret', // Real production secret from backend
+            customerEphemeralKeySecret: 'ek_placeholder_secret',
+            customerId: 'cus_placeholder_id',
+            style: ThemeMode.dark,
+            appearance: const PaymentSheetAppearance(
+              colors: PaymentSheetAppearanceColors(
+                primary: Colors.purple,
+                background: Color(0xFF1A1A2E),
+                placeholderText: Colors.white24,
+              ),
+            ),
           ),
         );
+
+        // 4. Display Payment Sheet
+        await Stripe.instance.presentPaymentSheet();
+        
+        // 5. Payment successful
+        await PremiumService().activateSubscription(_selectedPlan);
+        
+        if (mounted) {
+          widget.onSubscribed?.call();
+          Navigator.of(context).pop(true);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Welcome to Premium!'), backgroundColor: Colors.green),
+          );
+        }
+      } catch (stripeError) {
+        debugPrint('Stripe Sheet Error: $stripeError');
+        if (stripeError.toString().contains('key') || stripeError.toString().contains('placeholder')) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Stripe Error: Please add your real Publishable Key to assets/.env'),
+                backgroundColor: Colors.red,
+                duration: Duration(seconds: 4),
+              ),
+            );
+          }
+        } else {
+          rethrow;
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -99,6 +142,47 @@ class _PaywallSheetState extends State<PaywallSheet> {
     } finally {
       if (mounted) setState(() => _isProcessing = false);
     }
+  }
+
+  final TextEditingController _couponController = TextEditingController();
+
+  Future<void> _handleRedeemCoupon() async {
+    final code = _couponController.text.trim();
+    if (code.isEmpty) return;
+
+    if (!mounted) return;
+    setState(() => _isProcessing = true);
+
+    try {
+      final success = await PremiumService().redeemCoupon(code);
+      if (mounted) {
+        if (success) {
+          widget.onSubscribed?.call();
+          Navigator.of(context).pop(true);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Coupon applied! Premium unlocked.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Invalid coupon code'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _couponController.dispose();
+    super.dispose();
   }
 
   Future<void> _handleRestore() async {
@@ -267,7 +351,37 @@ class _PaywallSheetState extends State<PaywallSheet> {
                     onPressed: _isProcessing ? null : _handleRestore,
                     child: Text('Restore Purchases', style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 14)),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 16),
+                  // Coupon Code Section
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(25),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _couponController,
+                            style: const TextStyle(color: Colors.white, fontSize: 14),
+                            decoration: InputDecoration(
+                              hintText: 'Have a coupon code?',
+                              hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+                              border: InputBorder.none,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _isProcessing ? null : _handleRedeemCoupon,
+                          child: const Text('Apply', style: TextStyle(color: Color(0xFFFFD700), fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   // Legal text
                   Text(
                     'Cancel anytime. Subscription auto-renews unless cancelled at least 24 hours before the end of the current period.',

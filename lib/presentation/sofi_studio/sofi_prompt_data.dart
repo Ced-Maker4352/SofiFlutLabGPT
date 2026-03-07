@@ -1,4 +1,5 @@
 // Master prompt data
+import 'package:sofi_test_connect/presentation/sofi_studio/sofi_studio_models.dart';
 //
 // IMPORTANT:
 // – Each section has EXACTLY 12 items (except full outfits = 24)
@@ -340,6 +341,18 @@ class SofiPromptData {
           "[FACE LOCK] clothing-only edit: fitted top, high-waisted trousers, and modern shoes. CRITICAL: Preserve face EXACTLY - do not modify eyes, nose, lips, skin tone, or any facial features.",
       "thumb": "images/full outfit/full_outfit_24.jpg",
     },
-
   ];
+
+  /// Check if a specific item in a category is premium-only
+  static bool isPremiumItem(EditCategory category, int index) {
+    // For now, items 7-12 (index 6-11) are premium for all categories
+    // except full outfits which have their own logic
+    if (category == EditCategory.fullOutfit) {
+      // Outfits 13-24 (index 12-23) are premium
+      return index >= 12;
+    }
+    
+    // For others, second half is premium
+    return index >= 6;
+  }
 }

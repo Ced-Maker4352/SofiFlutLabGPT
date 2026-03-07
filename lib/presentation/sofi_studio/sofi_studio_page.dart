@@ -1264,31 +1264,32 @@ class _SofiStudioPageState extends State<SofiStudioPage>
 
     try {
       // ================================
-      // STEP 1: GET THE INIT IMAGE (MODE-DEPENDENT)
+      // STEP 1: GET THE INIT IMAGE
       // ================================
-      // In DOLL mode: use the selected doll image (character) as the init.
-      // In SELFIE/MOOD mode: use the selfie as the identity anchor.
+      // If a doll/character is selected from the drawer, use it as the source.
+      // Otherwise, use the selfie as the identity anchor.
       final Uint8List? selfie = controller.selfieBytes ?? widget.selfieBytes;
-      final bool isDollMode = controller.selectedMode.id == 'doll';
 
       Uint8List initImageBytes;
-      if (isDollMode && _originalBaseDollBytes != null && _originalBaseDollBytes!.isNotEmpty) {
-        // DOLL MODE: Edit the doll character, not the selfie
+      if (_originalBaseDollBytes != null && _originalBaseDollBytes!.isNotEmpty) {
+        // A character is active on the canvas: edit the character, not the selfie
         initImageBytes = _originalBaseDollBytes!;
         debugPrint(
-            '[Identity] 🎭 DOLL MODE: Using base doll as init image (${initImageBytes.length} bytes)');
+            '[Identity] 🎭 CHARACTER MODE: Using selected character as init image (${initImageBytes.length} bytes)');
       } else if (selfie != null && selfie.isNotEmpty) {
-        // SELFIE/MOOD MODE: Use selfie as identity anchor
+        // SELFIE MODE: Use selfie as identity anchor
         initImageBytes = selfie;
         debugPrint(
             '[Identity] 📸 SELFIE MODE: Using selfie as identity anchor (${selfie.length} bytes)');
-      } else {
-        // No selfie, no doll — fall back to loading current doll from path
+      } else if (controller.currentDoll != null) {
+        // No selfie, no doll bytes loaded yet — fall back to loading current doll from path
         initImageBytes = await _loadDollImage(
           controller.currentDoll!.stagePath,
           controller.currentDoll!.isStoragePath,
         );
-        debugPrint('[Identity] No selfie or doll loaded, using base doll from path');
+        debugPrint('[Identity] No selfie or active bytes, loaded character from path');
+      } else {
+        throw Exception("No valid source image found to generate from.");
       }
 
       // ================================

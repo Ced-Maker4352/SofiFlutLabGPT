@@ -1306,9 +1306,14 @@ class _PremiumStudioPageState extends State<PremiumStudioPage> {
                                       ? Stack(
                                           children: [
                                             Positioned.fill(
-                                              child: StageImage(
-                                                  base64:
-                                                      _b64(lockedBodyBytes)!),
+                                              child: InteractiveViewer(
+                                                minScale: 1.0,
+                                                maxScale: 6.0,
+                                                child: StageImage(
+                                                  base64: _b64(lockedBodyBytes)!,
+                                                  fit: BoxFit.contain,
+                                                ),
+                                              ),
                                             ),
                                             Positioned(
                                               top: 8,
@@ -1326,9 +1331,13 @@ class _PremiumStudioPageState extends State<PremiumStudioPage> {
                                         )
                                       : const SizedBox.shrink())
                               : SizedBox.expand(
-                                  child: StageImage(
-                                    base64: _b64(styledBytes)!,
-                                    fit: BoxFit.cover,
+                                  child: InteractiveViewer(
+                                    minScale: 1.0,
+                                    maxScale: 6.0,
+                                    child: StageImage(
+                                      base64: _b64(styledBytes)!,
+                                      fit: BoxFit.contain,
+                                    ),
                                   ),
                                 ),
                         ),

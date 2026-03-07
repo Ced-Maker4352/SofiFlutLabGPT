@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sofi_test_connect/presentation/mood/mood_mode.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Subscription plan types
 enum SubscriptionPlan {
@@ -16,6 +18,13 @@ class PremiumService extends ChangeNotifier {
   static final PremiumService _instance = PremiumService._internal();
   factory PremiumService() => _instance;
   PremiumService._internal();
+
+  // Coupon codes mapping (for demo/simplicity)
+  static const Map<String, SubscriptionPlan> _validCoupons = {
+    'FREE_PREMIUM': SubscriptionPlan.monthly,
+    'STUDIO_ACCESS': SubscriptionPlan.weekly,
+    'SOPHIE_GIFT': SubscriptionPlan.annual,
+  };
 
   // Subscription state
   SubscriptionPlan _currentPlan = SubscriptionPlan.free;
@@ -58,6 +67,18 @@ class PremiumService extends ChangeNotifier {
     if (_isInitialized) return;
     
     try {
+      // Load environment variables for Stripe
+      try {
+        await dotenv.load(fileName: "assets/.env");
+        final publishableKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'];
+        if (publishableKey != null) {
+          Stripe.publishableKey = publishableKey;
+          await Stripe.instance.applySettings();
+        }
+      } catch (e) {
+        debugPrint('Stripe/Env init error: $e');
+      }
+
       final prefs = await SharedPreferences.getInstance();
       
       // Load subscription plan
@@ -174,6 +195,17 @@ class PremiumService extends ChangeNotifier {
     notifyListeners();
     
     debugPrint('Subscription activated: $plan, expires: $_subscriptionExpiryDate');
+  }
+
+  /// Redeem a coupon code to unlock premium
+  Future<bool> redeemCoupon(String code) async {
+    final normalizedCode = code.trim().toUpperCase();
+    if (_validCoupons.containsKey(normalizedCode)) {
+      final plan = _validCoupons[normalizedCode]!;
+      await activateSubscription(plan);
+      return true;
+    }
+    return false;
   }
   
   /// Restore a subscription (called when restoring purchases)

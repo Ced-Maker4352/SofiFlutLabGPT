@@ -9,7 +9,9 @@ import '../../theme.dart';
 import '../sofi_studio/sofi_studio_theme.dart';
 import '../../services/theme_manager.dart';
 import '../../presentation/premium/paywall_sheet.dart';
-import '../sofi_studio/sofi_studio_page.dart';
+import '../../presentation/sofi_studio/sofi_studio_page.dart';
+import '../../constants/mood_image_paths.dart';
+import '../../constants/mood_icons.dart';
 
 class MoodCameraEntryPageImpl extends StatefulWidget {
   const MoodCameraEntryPageImpl({super.key});
@@ -298,63 +300,46 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
 
                 const SizedBox(height: 16),
 
-                /// MOOD GRID (Stylish & Visual)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
+                /// MOOD HORIZONTAL LIST (Premium 'Netflix' Style Cards)
+                SizedBox(
+                  height: 130, // Compact height to let camera breathe
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    physics: const BouncingScrollPhysics(),
                     itemCount: _moods.length,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 4,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 0.85, // Taller for stacked icon + text
-                    ),
                     itemBuilder: (context, index) {
                       final mood = _moods[index];
                       final isSelected = mood == _selectedMood;
 
-                      // Map moods to modern, youth-friendly icons
-                      final IconData iconInfo;
+                      // Map moods to modern, youth-friendly gradients (used as fallback or overlay)
                       final List<Color> bgGradient;
-
                       switch (mood) {
                         case 'Bold':
-                          iconInfo = Icons.local_fire_department_rounded;
                           bgGradient = [Color(0xFFFF512F), Color(0xFFDD2476)]; // Vibrant Orange/Pink
                           break;
                         case 'Happy':
-                          iconInfo = Icons.emoji_emotions_rounded;
                           bgGradient = [Color(0xFFFFD700), Color(0xFFF7971E)]; // Sunny Yellow
                           break;
                         case 'Calm':
-                          iconInfo = Icons.spa_rounded;
                           bgGradient = [Color(0xFF4CB8C4), Color(0xFF3CD3AD)]; // Minty Teal
                           break;
                         case 'Confident':
-                          iconInfo = Icons.star_rounded;
                           bgGradient = [Color(0xFF8A2387), Color(0xFFE94057)]; // Deep Purple to Pink
                           break;
                         case 'Creative':
-                          iconInfo = Icons.color_lens_rounded;
                           bgGradient = [Color(0xFFa18cd1), Color(0xFFfbc2eb)]; // Pastel Purple/Pink
                           break;
                         case 'Soft':
-                          iconInfo = Icons.favorite_rounded;
                           bgGradient = [Color(0xFFff9a9e), Color(0xFFfecfef)]; // Soft Rose
                           break;
                         case 'Powerful':
-                          iconInfo = Icons.bolt_rounded;
                           bgGradient = [Color(0xFF00c6fb), Color(0xFF005bea)]; // Electric Blue
                           break;
                         case 'Mysterious':
-                          iconInfo = Icons.dark_mode_rounded;
                           bgGradient = [Color(0xFF304352), Color(0xFFd7d2cc)]; // Midnight Silver
                           break;
                         default:
-                          iconInfo = Icons.auto_awesome_rounded;
                           bgGradient = [Color(0xFFA770EF), Color(0xFFCF8BF3)]; // Default Purple
                       }
 
@@ -365,88 +350,114 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                         },
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
-                          curve: Curves.easeOutBack, // Playful bounce
+                          curve: Curves.easeOutCubic,
+                          width: 95, // Width of each horizontal card
+                          margin: const EdgeInsets.only(right: 12),
                           decoration: BoxDecoration(
-                            // When selected, show vibrant gradient. When unselected, subtle dark frosted glass.
-                            gradient: isSelected
-                                ? LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: bgGradient,
-                                  )
-                                : null,
-                            color: isSelected
-                                ? null
-                                : DarkModeColors.darkSurface.withValues(alpha: 0.6),
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: isSelected
-                                  ? Colors.white.withValues(alpha: 0.8)
+                                  ? Colors.white.withValues(alpha: 0.9)
                                   : Colors.white.withValues(alpha: 0.1),
-                              width: isSelected ? 2 : 1,
+                              width: isSelected ? 2.5 : 1,
                             ),
                             boxShadow: isSelected
                                 ? [
                                     BoxShadow(
-                                      color: bgGradient.first.withValues(alpha: 0.4),
-                                      blurRadius: 12,
+                                      color: bgGradient.first.withValues(alpha: 0.5),
+                                      blurRadius: 16,
                                       spreadRadius: 2,
                                       offset: const Offset(0, 4),
                                     ),
                                   ]
                                 : [],
                           ),
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  // ICON
-                                  Icon(
-                                    iconInfo,
-                                    size: 32, // Large bold icon
-                                    color: isSelected
-                                        ? Colors.white
-                                        : Colors.white.withValues(alpha: 0.5),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  // TEXT
-                                  Text(
-                                    mood,
-                                    textAlign: TextAlign.center,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.clip, // Prevent clipping ellipsis on small screens
-                                    style: TextStyle(
-                                      color: isSelected
-                                          ? Colors.white
-                                          : Colors.white.withValues(alpha: 0.5),
-                                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                      fontSize: 10, // Small but legible text
-                                      letterSpacing: 0.5,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(14),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                // 1. Background Image or Gradient Fallback
+                                // We rely on real generated assets. If missing, it shows the gradient.
+                                Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: MoodImagePaths.paths.containsKey(mood) ? 
+                                          [Colors.transparent, Colors.transparent] : bgGradient,
                                     ),
                                   ),
-                                ],
-                              ),
-                              // Optional: Small absolute positioned checkmark when selected
-                              if (isSelected)
-                                Positioned(
-                                  top: 6,
-                                  right: 6,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    padding: EdgeInsets.all(2),
-                                    child: Icon(
-                                      Icons.check,
-                                      size: 10,
-                                      color: bgGradient.first, // Match parent gradient
+                                  child: MoodImagePaths.paths.containsKey(mood)
+                                      ? Image.asset(
+                                          MoodImagePaths.paths[mood]!,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : null,
+                                ),
+
+                                // 2. Dark Vignette / Gradient Overlay for text readability
+                                Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Colors.transparent,
+                                        Colors.black.withValues(alpha: 0.6),
+                                        Colors.black.withValues(alpha: 0.85),
+                                      ],
+                                      stops: const [0.4, 0.8, 1.0],
                                     ),
                                   ),
                                 ),
-                            ],
+
+                                // 3. Mood Text
+                                Positioned(
+                                  bottom: 12,
+                                  left: 8,
+                                  right: 8,
+                                  child: Text(
+                                    mood,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                      fontSize: 13,
+                                      letterSpacing: 0.5,
+                                      shadows: [
+                                        Shadow(
+                                          color: Colors.black.withValues(alpha: 0.8),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+
+                                // 4. Selection Checkmark Badge
+                                if (isSelected)
+                                  Positioned(
+                                    top: 8,
+                                    right: 8,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.white,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        Icons.check,
+                                        size: 12,
+                                        color: bgGradient.first,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       );

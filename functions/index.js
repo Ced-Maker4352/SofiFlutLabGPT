@@ -3,234 +3,234 @@ const { setGlobalOptions } = require("firebase-functions/v2");
 const admin = require("firebase-admin");
 admin.initializeApp();
 
+// Set global options for V2 functions (region etc.)
 setGlobalOptions({ region: "us-central1" });
 
-// ✅ V7 API — flux-kontext-pro (instruction-following image editing)
-const V7_IMG2IMG = "https://modelslab.com/api/v7/images/image-to-image";
-const V7_FETCH = "https://modelslab.com/api/v7/images/fetch";
-const MODEL_ID = "flux-kontext-pro";
+const MODELSLAB_BASE = "https://modelslab.com/api/v7/images";
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// Helper: sleep for ms
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * =====================================================
- * GENERATE IMAGE — flux-kontext-pro (V7)
- * 
- * Instruction-following model. Understands "change outfit,
- * keep face" semantics natively.
+ * GENERATE IMAGE (Flux Kontext Pro) — SINGLE-CALL (V2)
  * =====================================================
  */
-exports.generateImageFunc = onCall(
-  {
-    secrets: ["MODELSLAB_API_KEY"],
-    timeoutSeconds: 300,
-    memory: "512MiB",
-    cpu: 1,
-  },
-  async (request) => {
-    const fetch = require("node-fetch");
-    const crypto = require("crypto");
+exports.generateImageFunc = onCall({
+  secrets: ["MODELSLAB_API_KEY"],
+  timeoutSeconds: 300,
+  memory: "512MiB",
+  cpu: 1,
+}, async (request) => {
+  // Lazy load heavy modules
+  const fetch = require("node-fetch");
+  const crypto = require("crypto");
 
-    const data = request.data;
-    const apiKey = process.env.MODELSLAB_API_KEY;
-    if (!apiKey) throw new Error("MODELSLAB_API_KEY missing");
+  const data = request.data;
+  const apiKey = process.env.MODELSLAB_API_KEY;
 
-    const {
-      prompt,
-      negative_prompt,
-      initImageBase64,
-      seed,
-    } = data;
+  if (!apiKey) {
+    throw new Error("MODELSLAB_API_KEY missing");
+  }
 
-    // Parse optional params with sane defaults
-    const aspect_ratio =
-      typeof data.aspect_ratio === "string" && data.aspect_ratio.trim()
-        ? data.aspect_ratio.trim()
-        : typeof data.aspectRatio === "string" && data.aspectRatio.trim()
-          ? data.aspectRatio.trim()
-          : "9:16";
+  const {
+    prompt,
+    negative_prompt,
+    initImageBase64,
+    width = 1024,
+    height = 1024,
+    num_inference_steps = 26,
+    guidance_scale = 7.5,
+    strength, // 🔑 Accept strength from request
+    seed,
+  } = data;
 
-    const steps =
-      Number.isFinite(Number(data.steps))
-        ? Math.max(1, Math.min(50, Math.floor(Number(data.steps))))
-        : 28;
+  const safeWidth = Math.min(width, 1024);
+  const safeHeight = Math.min(height, 1024);
 
-    const guidance_scale =
-      Number.isFinite(Number(data.guidance_scale))
-        ? Math.max(1, Math.min(20, Number(data.guidance_scale)))
-        : 7;
+  // ---- STEP 0: Upload init_image to Firebase Storage to get a public URL ----
+  let initImageUrl = null;
+  let tempFilePath = null;
 
-    if (!prompt) return { ok: false, error: "Missing prompt" };
-    if (!initImageBase64) return { ok: false, error: "Missing initImageBase64" };
-
-    // ── Upload init_image to Storage → signed URL ──────────────────────
-    let initImageUrl = null;
-    let tempFilePath = null;
-
+  if (initImageBase64 && initImageBase64.length > 0) {
     try {
-      // Strip data:image/xxx;base64, prefix if present
-      let rawB64 = initImageBase64;
-      if (rawB64.includes(",")) rawB64 = rawB64.split(",")[1];
+      let rawBase64 = initImageBase64;
+      if (rawBase64.includes(",")) {
+        rawBase64 = rawBase64.split(",")[1];
+      }
 
-      const buf = Buffer.from(rawB64, "base64");
-      if (buf.length < 16) throw new Error("Image too small");
-
-      const hash = crypto.createHash("md5").update(buf).digest("hex").slice(0, 12);
-      tempFilePath = `tmp/init_${hash}_${Date.now()}.png`;
-
+      const buffer = Buffer.from(rawBase64, "base64");
       const bucket = admin.storage().bucket();
-      const file = bucket.file(tempFilePath);
-      await file.save(buf, {
-        resumable: false,
-        metadata: { contentType: "image/png" },
+      const fileName = `tmp/init_images/${crypto.randomUUID()}.png`;
+      tempFilePath = fileName;
+      const file = bucket.file(fileName);
+
+      await file.save(buffer, {
+        metadata: {
+          contentType: "image/png",
+        },
       });
 
-      const [url] = await file.getSignedUrl({
-        action: "read",
-        expires: Date.now() + 1000 * 60 * 30, // 30 min
+      // Provide a signed URL so ModelsLab can read the image regardless of bucket ACL settings
+      const [signedUrl] = await file.getSignedUrl({
+        action: 'read',
+        expires: Date.now() + 60 * 60 * 1000 // 1 hour valid
       });
-      initImageUrl = url;
-      console.log("Uploaded init image → signed URL ready");
-    } catch (e) {
-      console.error("Init upload failed:", e.message);
-      return { ok: false, error: "Image upload failed: " + e.message };
+      initImageUrl = signedUrl;
+      console.log(`Successfully uploaded init image, signed URL generated.`);
+    } catch (uploadErr) {
+      console.error("Failed to upload init image:", uploadErr.message);
     }
+  }
 
-    // ── Build request body for flux-kontext-pro ────────────────────────
-    const body = {
-      key: apiKey,
-      model_id: MODEL_ID,
-      init_image: initImageUrl,
-      prompt: prompt,
-      negative_prompt: negative_prompt || "deformed face, bad anatomy, blurry, worst quality",
-      aspect_ratio: aspect_ratio,
-      steps: steps,
-      guidance_scale: guidance_scale,
-      samples: 1,
-      safety_checker: false,
-      ...(seed ? { seed } : {}),
-    };
+  // ---- STEP 1: Submit generation job ----
+  const submitBody = {
+    key: apiKey,
+    model_id: "flux-kontext-pro",
+    prompt,
+    negative_prompt,
+    width: safeWidth,
+    height: safeHeight,
+    num_inference_steps,
+    guidance_scale,
+    seed,
+  };
 
-    console.log("POST →", V7_IMG2IMG, "model=", MODEL_ID, "aspect_ratio=", aspect_ratio, "steps=", steps, "guidance=", guidance_scale);
+  if (initImageUrl) {
+    submitBody.init_image = initImageUrl;
+    // �� Use provided strength or default to 0.45
+    submitBody.strength = strength !== undefined ? strength : 0.45;
+    console.log(`Using init_image with strength=${submitBody.strength} model=${submitBody.model_id}`);
+  }
 
-    // ── Submit ─────────────────────────────────────────────────────────
-    let submitJson;
+  // Use img2img endpoint when we have an init_image, text2img otherwise
+  const endpoint = initImageUrl
+    ? `${MODELSLAB_BASE}/img2img`
+    : `${MODELSLAB_BASE}/text-to-image`;
+  console.log(`Using endpoint: ${endpoint}`);
+
+  const submitResponse = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(submitBody),
+  });
+
+  const submitJson = await submitResponse.json();
+
+  if (!submitJson || submitJson.status === "error") {
+    await cleanupTempFile(admin, tempFilePath);
+    return { ok: false, error: submitJson?.message || "ModelsLab submission failed" };
+  }
+
+  if (
+    submitJson.status === "success" &&
+    Array.isArray(submitJson.output) &&
+    submitJson.output.length > 0
+  ) {
+    await cleanupTempFile(admin, tempFilePath);
+    return { ok: true, imageUrl: submitJson.output[0] };
+  }
+
+  const jobId = submitJson.id;
+  if (!jobId) {
+    await cleanupTempFile(admin, tempFilePath);
+    return { ok: false, error: "ModelsLab job id missing" };
+  }
+
+  const eta = submitJson.status === "processing" ? (submitJson.eta || 15) : 10;
+
+  // ---- STEP 2: Poll ----
+  const MAX_POLLS = 60;
+  let pollDelay = Math.max(eta * 1000, 5000);
+
+  for (let i = 0; i < MAX_POLLS; i++) {
+    await sleep(pollDelay);
+    pollDelay = 5000;
+
     try {
-      const res = await fetch(V7_IMG2IMG, {
+      const fetchResponse = await fetch(`${MODELSLAB_BASE}/fetch/${jobId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ key: apiKey }),
       });
-      submitJson = await res.json();
-      console.log("Submit response:", submitJson.status, JSON.stringify(submitJson).substring(0, 400));
-    } catch (fetchErr) {
-      console.error("Fetch exception:", fetchErr.message);
-      await cleanup(tempFilePath);
-      return { ok: false, error: "Network error: " + fetchErr.message };
-    }
 
-    // Immediate success
-    if (
-      submitJson.status === "success" &&
-      Array.isArray(submitJson.output) &&
-      submitJson.output.length > 0
-    ) {
-      await cleanup(tempFilePath);
-      return { ok: true, imageUrl: submitJson.output[0] };
-    }
+      const fetchJson = await fetchResponse.json();
 
-    // Error
-    if (!submitJson || submitJson.status === "error") {
-      console.error("Submit error:", JSON.stringify(submitJson));
-      await cleanup(tempFilePath);
-      return { ok: false, error: submitJson?.message || "Submit failed" };
-    }
+      if (fetchJson.status === "processing") continue;
 
-    // Processing → poll
-    const jobId = submitJson.id || submitJson.job_id;
-    if (!jobId) {
-      console.error("No job id:", JSON.stringify(submitJson));
-      await cleanup(tempFilePath);
-      return { ok: false, error: "No job ID returned" };
-    }
-
-    const eta = submitJson.eta || 20;
-    console.log("Job queued, id=" + jobId + " eta=" + eta + "s");
-
-    // Poll with 150s deadline, 2.5s interval (matches working reference)
-    const deadlineMs = Date.now() + 150000;
-    let pollCount = 0;
-
-    while (Date.now() < deadlineMs) {
-      // First wait uses ETA, then 2.5s intervals
-      if (pollCount === 0) {
-        await sleep(Math.max(eta * 1000, 3000));
-      } else {
-        await sleep(2500);
+      if (
+        fetchJson.status === "success" &&
+        Array.isArray(fetchJson.output) &&
+        fetchJson.output.length > 0
+      ) {
+        await cleanupTempFile(admin, tempFilePath);
+        return { ok: true, imageUrl: fetchJson.output[0] };
       }
 
-      try {
-        const pr = await fetch(V7_FETCH + "/" + jobId, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ key: apiKey }),
-        });
-        const pj = await pr.json();
-
-        if (pj.status === "processing") {
-          if (pollCount % 5 === 0) console.log("Still processing... poll #" + pollCount);
-          pollCount++;
-          continue;
-        }
-
-        // Check multiple output locations (ModelsLab varies between endpoints)
-        const outputUrl = extractOutputUrl(pj);
-        if (pj.status === "success" && outputUrl) {
-          console.log("Generation complete! URL: " + outputUrl.substring(0, 80));
-          await cleanup(tempFilePath);
-          return { ok: true, imageUrl: outputUrl };
-        }
-
-        if (pj.status === "error" || pj.status === "failed") {
-          console.error("Poll error:", JSON.stringify(pj));
-          await cleanup(tempFilePath);
-          return { ok: false, error: pj?.message || "Generation failed" };
-        }
-
-        pollCount++;
-      } catch (e) {
-        console.error("Poll exception:", e.message);
-        pollCount++;
+      if (fetchJson.status === "error" || fetchJson.status === "failed") {
+        await cleanupTempFile(admin, tempFilePath);
+        return { ok: false, error: fetchJson?.message || "Generation failed" };
       }
+    } catch (e) {
+      console.error("Poll Error:", e.message);
     }
-
-    await cleanup(tempFilePath);
-    return { ok: false, error: "Timed out after 150s" };
   }
-);
 
-/** Extract output URL from various ModelsLab response shapes */
-function extractOutputUrl(json) {
-  const candidates = [
-    json?.output,
-    json?.images,
-    json?.image,
-    json?.data?.output,
-    json?.data?.images,
-    json?.data?.image,
-  ];
-  for (const c of candidates) {
-    if (!c) continue;
-    if (Array.isArray(c) && c.length && typeof c[0] === "string") return c[0];
-    if (typeof c === "string") return c;
-  }
-  return null;
-}
+  await cleanupTempFile(admin, tempFilePath);
+  return { ok: false, error: "Timed out polling ModelsLab" };
+});
 
-/** Temp-file cleanup helper */
-async function cleanup(path) {
-  if (!path) return;
+/**
+ * Helper: Clean up temporary init_image from Storage
+ */
+async function cleanupTempFile(admin, filePath) {
+  if (!filePath) return;
   try {
-    await admin.storage().bucket().file(path).delete();
-  } catch (_) { }
+    const bucket = admin.storage().bucket();
+    await bucket.file(filePath).delete();
+  } catch (e) {
+    console.log(`Temp cleanup skipped: ${e.message}`);
+  }
 }
+
+/**
+ * =====================================================
+ * FETCH IMAGE RESULT (V2)
+ * =====================================================
+ */
+exports.fetchImageFunc = onCall({
+  secrets: ["MODELSLAB_API_KEY"],
+  region: "us-central1"
+}, async (request) => {
+  const fetch = require("node-fetch");
+  const data = request.data;
+  const apiKey = process.env.MODELSLAB_API_KEY;
+  const { id } = data;
+
+  if (!apiKey || id == null) {
+    throw new Error("Missing params");
+  }
+
+  const response = await fetch(`${MODELSLAB_BASE}/fetch/${id}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key: apiKey }),
+  });
+
+  const json = await response.json();
+  if (json.status === "processing") return { status: "processing" };
+
+  if (
+    json.status === "success" &&
+    Array.isArray(json.output) &&
+    json.output.length
+  ) {
+    return {
+      ok: true,
+      status: "success",
+      imageUrl: json.output[0],
+    };
+  }
+
+  return { status: "error", message: json?.message || "Fetch failed" };
+});

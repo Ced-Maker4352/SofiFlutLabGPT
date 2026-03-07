@@ -65,10 +65,12 @@ class SofiStudioController extends ChangeNotifier {
     _rawUserIntention = userPrompt;
 
     // Use instruction-style prompt for flux-kontext-pro
-    if (mood.isNotEmpty) {
-      _currentPrompt = buildMoodEditInstruction(mood);
+    // If mood is neutral, it technically shouldn't override the whole instruction,
+    // but the builder now mixes them together anyway
+    if (mood.isNotEmpty && mood != 'neutral') {
+      _currentPrompt = buildMoodEditInstruction(mood, userText: userPrompt, mode: mode);
     } else {
-      _currentPrompt = buildCustomEditInstruction(userPrompt);
+      _currentPrompt = buildCustomEditInstruction(userPrompt, mood: mood == 'neutral' ? '' : mood, mode: mode);
     }
 
     debugPrint('[PROMPT BUILT]\n$_currentPrompt');

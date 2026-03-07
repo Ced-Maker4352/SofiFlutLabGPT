@@ -171,9 +171,20 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
     }
   }
   
-  /// Check if category is premium-locked
+  /// Check if category is premium-locked (entirely)
   bool _isCategoryLocked(EditCategory category) {
-    return !_isPremium && _premiumCategories.contains(category);
+    // Some categories might be entirely premium (e.g., Poses)
+    // but others have mixed free/premium items.
+    // If ANY item in the category is free, the category itself is NOT locked.
+    if (category == EditCategory.poses) return !_isPremium;
+    return false; // Categories like hair/top have free items at the start
+  }
+
+  /// Check if a specific option in a category is locked
+  bool _isOptionLocked(EditCategory category, int optionIndex) {
+    if (_isPremium) return false;
+    // index is 1-based in the UI logic, but SofiPromptData.isPremiumItem expects 0-based
+    return SofiPromptData.isPremiumItem(category, optionIndex - 1);
   }
   
   /// Handle category selection with premium check
@@ -187,10 +198,10 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
     setState(() => _selectedCategory = category);
   }
   
-  /// Handle option selection with premium check for premium dolls
+  /// Handle option selection with premium check for premium items
   void _onOptionTap(int optionIndex) {
-    if (_isCategoryLocked(_selectedCategory)) {
-      PaywallSheet.show(context, message: 'Unlock ${_selectedCategory.prettyName} with Premium!');
+    if (_isOptionLocked(_selectedCategory, optionIndex)) {
+      PaywallSheet.show(context, message: 'Unlock this ${_selectedCategory.prettyName} style with Premium!');
       return;
     }
     widget.onCategorySelected(_selectedCategory, optionIndex);
@@ -512,6 +523,9 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
         // Pass 1-based index as expected by _getPrompt in sofi_studio_page.dart
         final optionIndex = index + 1;
         
+        // Check if THIS specific option is locked
+        final isOptionLocked = _isOptionLocked(_selectedCategory, optionIndex);
+        
         // Get thumbnail path for this category
         final thumbPath = _getThumbnailPath(_selectedCategory, index);
         
@@ -529,7 +543,7 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
           label: label,
           thumbPath: thumbPath,
           optionIndex: optionIndex,
-          isLocked: isLocked,
+          isLocked: isOptionLocked,
         );
       },
     );
