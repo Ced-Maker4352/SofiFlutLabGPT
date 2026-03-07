@@ -234,3 +234,11 @@ exports.fetchImageFunc = onCall({
 
   return { status: "error", message: json?.message || "Fetch failed" };
 });
+
+/**
+ * =====================================================
+ * STRIPE PAYMENTS
+ * =====================================================
+ */
+const stripeFunctions = require("./stripe");
+exports.createStripePaymentIntent = stripeFunctions.createStripePaymentIntent;

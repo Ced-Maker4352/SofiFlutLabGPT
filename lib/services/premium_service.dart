@@ -153,6 +153,18 @@ class PremiumService extends ChangeNotifier {
     
     return true;
   }
+
+  /// DEBUG: Clear premium status completely for testing
+  Future<void> debugClearPremium() async {
+    _currentPlan = SubscriptionPlan.free;
+    _subscriptionExpiryDate = null;
+    
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_planKey);
+    await prefs.remove(_expiryKey);
+    
+    notifyListeners();
+  }
   
   /// Attempt to use a generation credit
   /// Returns true if allowed, false if limit reached

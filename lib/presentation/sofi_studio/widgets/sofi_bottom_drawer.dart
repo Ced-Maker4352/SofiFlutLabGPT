@@ -268,12 +268,22 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: Center(
-            child: Container(
-              width: 40,
-              height: 5,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(2.5),
+            child: GestureDetector(
+              onLongPress: () async {
+                await PremiumService().debugClearPremium();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('DEBUG: Premium Status Cleared')),
+                  );
+                }
+              },
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
           ),

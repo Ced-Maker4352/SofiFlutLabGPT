@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
 import 'package:sofi_test_connect/services/premium_service.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 /// A soft paywall bottom sheet that shows subscription options
 /// Can be dismissed but encourages users to subscribe
@@ -80,19 +81,21 @@ class _PaywallSheetState extends State<PaywallSheet> {
       // 1. Initialize Stripe (already done in PremiumService init, but safe to double check)
       await PremiumService().initialize();
 
-      // 2. Simulate PaymentIntent creation (In production, call your server here)
-      // This is where you'd call Firebase Functions to get paymentIntentClientSecret, ephemeralKey, and customerId.
-      debugPrint('Simulating Stripe PaymentIntent for $_selectedPlan');
+      // 2. Request PaymentIntent from Firebase Functions
+      debugPrint('Requesting Stripe PaymentIntent for $_selectedPlan');
+      final amount = _selectedPlan == SubscriptionPlan.weekly ? 4.99 : 
+                     _selectedPlan == SubscriptionPlan.monthly ? 9.99 : 49.99;
+                     
+      final callable = FirebaseFunctions.instance.httpsCallable('createStripePaymentIntent');
+      final response = await callable.call({'amount': amount, 'currency': 'usd'});
+      final clientSecret = response.data['clientSecret'];
       
       // 3. Initialize Payment Sheet
-      // NOTE: Using try-catch because placeholder keys will cause errors
       try {
         await Stripe.instance.initPaymentSheet(
           paymentSheetParameters: SetupPaymentSheetParameters(
             merchantDisplayName: 'Sofi Saint',
-            paymentIntentClientSecret: 'pi_placeholder_secret', // Real production secret from backend
-            customerEphemeralKeySecret: 'ek_placeholder_secret',
-            customerId: 'cus_placeholder_id',
+            paymentIntentClientSecret: clientSecret,
             style: ThemeMode.dark,
             appearance: const PaymentSheetAppearance(
               colors: PaymentSheetAppearanceColors(
