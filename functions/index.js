@@ -105,7 +105,7 @@ exports.generateImageFunc = onCall({
 
   // Use img2img endpoint when we have an init_image, text2img otherwise
   const endpoint = initImageUrl
-    ? `${MODELSLAB_BASE}/img2img`
+    ? `${MODELSLAB_BASE}/image-to-image`
     : `${MODELSLAB_BASE}/text-to-image`;
   console.log(`Using endpoint: ${endpoint}`);
 
