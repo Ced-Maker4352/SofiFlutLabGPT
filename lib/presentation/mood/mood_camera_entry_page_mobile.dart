@@ -12,6 +12,8 @@ import '../../presentation/premium/paywall_sheet.dart';
 import '../../presentation/sofi_studio/sofi_studio_page.dart';
 import '../../constants/mood_image_paths.dart';
 import '../../constants/mood_icons.dart';
+import 'package:flutter/cupertino.dart';
+import '../../services/user_preferences_service.dart';
 
 class MoodCameraEntryPageImpl extends StatefulWidget {
   const MoodCameraEntryPageImpl({super.key});
@@ -150,6 +152,7 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                         ),
                       ),
                       const SizedBox(width: 12),
+
                       // Title & Subtitle
                       Expanded(
                         child: Column(
@@ -182,6 +185,42 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                             ),
                           ],
                         ),
+                      ),
+                      // The Master Switch
+                      ListenableBuilder(
+                        listenable: UserPreferencesService.instance,
+                        builder: (context, _) {
+                          final isDollMode = UserPreferencesService.instance.isDollMode;
+                          return Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                isDollMode ? 'Doll\nMode' : 'Human\nMode',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  height: 1.1,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDollMode ? SofiStudioTheme.purple : Colors.white70,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              SizedBox(
+                                height: 28,
+                                child: FittedBox(
+                                  fit: BoxFit.contain,
+                                  child: CupertinoSwitch(
+                                    value: isDollMode,
+                                    activeColor: SofiStudioTheme.purple,
+                                    onChanged: (val) {
+                                      UserPreferencesService.instance.setDollMode(val);
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ),

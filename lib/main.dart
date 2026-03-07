@@ -8,6 +8,7 @@ import 'firebase_options.dart';
 import 'package:sofi_test_connect/presentation/splash/splash_page.dart';
 import 'package:sofi_test_connect/services/performance_service.dart';
 import 'package:sofi_test_connect/services/remote_debug_logger.dart';
+import 'package:sofi_test_connect/services/user_preferences_service.dart';
 import 'package:sofi_test_connect/utils/web_history_fix.dart';
 
 Future<void> main() async {
@@ -86,6 +87,14 @@ Future<void> main() async {
     );
   } catch (e) {
     debugPrint('[PerformanceService] init failed: $e');
+  }
+
+  // Initialize user preferences
+  try {
+    await UserPreferencesService.instance.initialize();
+    debugPrint('[UserPreferencesService] initialized');
+  } catch (e) {
+    debugPrint('[UserPreferencesService] init failed: $e');
   }
 
   // Flutter framework errors

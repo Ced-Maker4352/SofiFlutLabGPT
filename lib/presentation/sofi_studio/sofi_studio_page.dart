@@ -23,6 +23,8 @@ import 'package:sofi_test_connect/services/two_step_generation_service.dart';
 import 'package:sofi_test_connect/services/audio_service.dart';
 import 'package:sofi_test_connect/services/storage_service.dart';
 import 'package:sofi_test_connect/services/voice_coach_service.dart';
+import 'package:sofi_test_connect/services/user_preferences_service.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:sofi_test_connect/services/theme_manager.dart';
 import 'package:sofi_test_connect/services/remote_debug_logger.dart';
 import 'package:sofi_test_connect/presentation/sofi_studio/favorites_manager.dart';
@@ -2703,6 +2705,42 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                     color: theme.headerTextColor,
                     letterSpacing: -0.5,
                   ),
+                ),
+                const SizedBox(width: 12),
+                // The Master Switch
+                ListenableBuilder(
+                  listenable: UserPreferencesService.instance,
+                  builder: (context, _) {
+                    final isDollMode = UserPreferencesService.instance.isDollMode;
+                    return Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          isDollMode ? 'Doll' : 'Human',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: isDollMode ? SofiStudioTheme.purple : theme.headerTextColor,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        SizedBox(
+                          height: 24,
+                          width: 40,
+                          child: FittedBox(
+                            fit: BoxFit.contain,
+                            child: CupertinoSwitch(
+                              value: isDollMode,
+                              activeColor: SofiStudioTheme.purple,
+                              onChanged: (val) {
+                                UserPreferencesService.instance.setDollMode(val);
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),

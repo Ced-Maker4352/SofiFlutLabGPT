@@ -8,6 +8,7 @@ import '../mood/mood_mode.dart';
 import '../../services/models_lab_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:sofi_test_connect/services/user_preferences_service.dart';
 
 class SofiStudioController extends ChangeNotifier {
   // ---------------------------------------------------------------
@@ -146,10 +147,13 @@ class SofiStudioController extends ChangeNotifier {
   }) async {
     if (isGenerating) throw Exception('Already generating in progress');
 
+    final bool isDollMode = UserPreferencesService.instance.isDollMode;
+    final String generationMode = isDollMode ? 'doll' : 'human';
+
     // Build instruction prompt from current mood or custom text
     final prompt = _currentPrompt.isNotEmpty
-        ? _currentPrompt
-        : buildMoodEditInstruction(selectedMood.isNotEmpty ? selectedMood : 'creative');
+        ? buildCustomEditInstruction(_currentPrompt, mode: generationMode)
+        : buildMoodEditInstruction(selectedMood.isNotEmpty ? selectedMood : 'creative', mode: generationMode);
 
     debugPrint('[SofiStudio] Generating with instruction prompt: $prompt');
 
