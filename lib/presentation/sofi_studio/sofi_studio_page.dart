@@ -2809,6 +2809,15 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                       : theme.headerTextColor,
                 ),
                 const SizedBox(width: 8),
+                if (_latestImageUrl != null) ...[
+                  _headerBtn(
+                    Icons.report_problem_outlined,
+                    'Report',
+                    _reportContent,
+                    color: Colors.orangeAccent,
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 _PremiumEntryButton(onTap: _openPremium),
               ],
             ),
@@ -3204,9 +3213,62 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                   ],
                 ),
               ),
+              // App Store compliance: EULA/Privacy disclosure below the main action pill
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'By generating, you agree to our AI Safety Guidelines & EULA.',
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: isDark ? Colors.white38 : Colors.black38,
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      const SofiLegalLinks(fontSize: 9),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _reportContent() {
+    // App Store Guideline 1.1: Provide a way to report objectionable content
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Report Content'),
+        content: const Text(
+          'Does this image violate our safety guidelines or contain objectionable content? Reporting helps keep Sofi Saint safe.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () {
+              Navigator.pop(context);
+              unawaited(RemoteDebugLogger.instance.logInteraction('CONTENT_REPORTED', {
+                'imageUrl': _latestImageUrl,
+                'timestamp': DateTime.now().toIso8601String(),
+              }));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Thank you. This content has been reported for review.')),
+              );
+            },
+            child: const Text('Report', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }

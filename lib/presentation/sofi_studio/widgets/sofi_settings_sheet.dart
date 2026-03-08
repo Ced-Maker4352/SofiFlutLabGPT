@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sofi_test_connect/services/performance_service.dart';
 import 'package:sofi_test_connect/presentation/sofi_studio/sofi_studio_theme.dart';
+import 'package:sofi_test_connect/presentation/shared/sofi_legal_links.dart';
 
 class SofiSettingsSheet extends StatefulWidget {
   final bool autoSave;

@@ -2,8 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sofi_test_connect/presentation/mood/mood_mode.dart';
-import 'package:flutter_stripe/flutter_stripe.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
+import 'dart:async';
 
 /// Subscription plan types
 enum SubscriptionPlan {
@@ -14,12 +14,22 @@ enum SubscriptionPlan {
 }
 
 /// Premium service that manages subscription state and daily limits
+/// Refactored to use Apple In-App Purchases (IAP) for Guideline 3.1.1 compliance.
 class PremiumService extends ChangeNotifier {
   static final PremiumService _instance = PremiumService._internal();
   factory PremiumService() => _instance;
   PremiumService._internal();
 
-  // Coupon codes mapping (for demo/simplicity)
+  // App Store Product IDs (Replace these with your real IDs from App Store Connect)
+  static const String _idWeekly = 'sofi_premium_weekly';
+  static const String _idMonthly = 'sofi_premium_monthly';
+  static const String _idAnnual = 'sofi_premium_annual';
+
+  final InAppPurchase _iap = InAppPurchase.instance;
+  StreamSubscription<List<PurchaseDetails>>? _subscription;
+  List<ProductDetails> _products = [];
+
+  // Coupon codes mapping
   static const Map<String, SubscriptionPlan> _validCoupons = {
     'FREE_PREMIUM': SubscriptionPlan.monthly,
     'STUDIO_ACCESS': SubscriptionPlan.weekly,
@@ -42,7 +52,7 @@ class PremiumService extends ChangeNotifier {
   static const String _lastResetKey = 'daily_reset_date';
   static const String _abKey = 'ab_default_mode';
   
-  // Pricing (in USD)
+  // Pricing (Fallbacks if StoreKit is unavailable)
   static const double weeklyPrice = 4.99;
   static const double monthlyPrice = 9.99;
   static const double annualPrice = 49.99;
@@ -61,22 +71,31 @@ class PremiumService extends ChangeNotifier {
       : (freeUserDailyLimit - _dailyGenerationsUsed).clamp(0, freeUserDailyLimit);
   bool get canGenerate => isPremium || dailyGenerationsRemaining > 0;
   bool get isInitialized => _isInitialized;
+  List<ProductDetails> get products => _products;
   
   /// Initialize the service and load saved state
   Future<void> initialize() async {
     if (_isInitialized) return;
     
     try {
-      // Load environment variables for Stripe
-      try {
-        await dotenv.load(fileName: "assets/.env");
-        final publishableKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'];
-        if (publishableKey != null) {
-          Stripe.publishableKey = publishableKey;
-          await Stripe.instance.applySettings();
-        }
-      } catch (e) {
-        debugPrint('Stripe/Env init error: $e');
+      // Setup IAP Listener
+      final Stream<List<PurchaseDetails>> purchaseUpdated = _iap.purchaseStream;
+      _subscription = purchaseUpdated.listen((purchaseDetailsList) {
+        _listenToPurchaseUpdated(purchaseDetailsList);
+      }, onDone: () {
+        _subscription?.cancel();
+      }, onError: (error) {
+        debugPrint('IAP Stream Error: $error');
+      });
+
+      // Fetch Products
+      final bool available = await _iap.isAvailable();
+      if (available) {
+        final ProductDetailsResponse response = await _iap.queryProductDetails({
+          _idWeekly, _idMonthly, _idAnnual
+        });
+        _products = response.productDetails;
+        debugPrint('Fetched ${_products.length} IAP products');
       }
 
       final prefs = await SharedPreferences.getInstance();
@@ -107,8 +126,64 @@ class PremiumService extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('PremiumService init error: $e');
-      _isInitialized = true; // Still mark as initialized to prevent loops
+      _isInitialized = true;
     }
+  }
+
+  void _listenToPurchaseUpdated(List<PurchaseDetails> purchaseDetailsList) {
+    purchaseDetailsList.forEach((PurchaseDetails purchaseDetails) async {
+      if (purchaseDetails.status == PurchaseStatus.pending) {
+        // Show loading indicator in UI if needed
+      } else {
+        if (purchaseDetails.status == PurchaseStatus.error) {
+          debugPrint('Purchase Error: ${purchaseDetails.error}');
+        } else if (purchaseDetails.status == PurchaseStatus.purchased ||
+                   purchaseDetails.status == PurchaseStatus.restored) {
+          
+          // Verify purchase (server-side check recommended)
+          final plan = _getPlanFromId(purchaseDetails.productID);
+          if (plan != SubscriptionPlan.free) {
+            await activateSubscription(plan);
+          }
+        }
+        
+        if (purchaseDetails.pendingCompletePurchase) {
+          await _iap.completePurchase(purchaseDetails);
+        }
+      }
+    });
+  }
+
+  SubscriptionPlan _getPlanFromId(String id) {
+    if (id == _idWeekly) return SubscriptionPlan.weekly;
+    if (id == _idMonthly) return SubscriptionPlan.monthly;
+    if (id == _idAnnual) return SubscriptionPlan.annual;
+    return SubscriptionPlan.free;
+  }
+
+  /// Trigger a purchase for the selected plan
+  Future<void> buyPlan(SubscriptionPlan plan) async {
+    String? productId;
+    switch (plan) {
+      case SubscriptionPlan.weekly: productId = _idWeekly; break;
+      case SubscriptionPlan.monthly: productId = _idMonthly; break;
+      case SubscriptionPlan.annual: productId = _idAnnual; break;
+      default: return;
+    }
+
+    final ProductDetails productDetails = _products.firstWhere(
+      (p) => p.id == productId,
+      orElse: () => throw Exception('Product $productId not found'),
+    );
+
+    final PurchaseParam purchaseParam = PurchaseParam(productDetails: productDetails);
+    await _iap.buyNonConsumable(purchaseParam: purchaseParam);
+  }
+
+  /// Restore historical purchases
+  Future<void> restorePurchases() async {
+    debugPrint('Restoring purchases...');
+    await _iap.restorePurchases();
   }
   
   /// Check if daily count should be reset (at midnight local time)
@@ -117,7 +192,6 @@ class PremiumService extends ChangeNotifier {
     final today = DateTime(now.year, now.month, now.day);
     
     if (_lastResetDate == null) {
-      // First time - set reset date to today
       _lastResetDate = today;
       _dailyGenerationsUsed = 0;
       _saveState();
@@ -125,68 +199,48 @@ class PremiumService extends ChangeNotifier {
     }
     
     final lastReset = DateTime(_lastResetDate!.year, _lastResetDate!.month, _lastResetDate!.day);
-    
     if (today.isAfter(lastReset)) {
-      // New day - reset counter
       _dailyGenerationsUsed = 0;
       _lastResetDate = today;
       _saveState();
-      debugPrint('Daily generation counter reset');
     }
   }
   
-  /// Record a generation (call this when user generates an image)
+  /// Record a generation
   Future<bool> recordGeneration() async {
     await initialize();
-    
     _checkAndResetDailyCount();
     
-    if (!canGenerate) {
-      return false;
-    }
+    if (!canGenerate) return false;
     
     if (!isPremium) {
       _dailyGenerationsUsed++;
       await _saveState();
       notifyListeners();
     }
-    
     return true;
   }
 
-  /// DEBUG: Clear premium status completely for testing
+  /// DEBUG: Clear premium status
   Future<void> debugClearPremium() async {
     _currentPlan = SubscriptionPlan.free;
     _subscriptionExpiryDate = null;
-    
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_planKey);
     await prefs.remove(_expiryKey);
-    
     notifyListeners();
   }
   
-  /// Attempt to use a generation credit
-  /// Returns true if allowed, false if limit reached
   bool tryUseGeneration() {
     _checkAndResetDailyCount();
-    
-    if (isPremium) {
-      return true;
-    }
-    
-    if (_dailyGenerationsUsed >= freeUserDailyLimit) {
-      return false;
-    }
-    
+    if (isPremium) return true;
+    if (_dailyGenerationsUsed >= freeUserDailyLimit) return false;
     return true;
   }
   
-  /// Activate a subscription (called after successful purchase)
+  /// Activate a subscription local state
   Future<void> activateSubscription(SubscriptionPlan plan) async {
     _currentPlan = plan;
-    
-    // Set expiry date based on plan
     final now = DateTime.now();
     switch (plan) {
       case SubscriptionPlan.weekly:
@@ -202,14 +256,12 @@ class PremiumService extends ChangeNotifier {
         _subscriptionExpiryDate = null;
         break;
     }
-    
     await _saveState();
     notifyListeners();
-    
-    debugPrint('Subscription activated: $plan, expires: $_subscriptionExpiryDate');
+    debugPrint('Subscription UI updated: $plan');
   }
 
-  /// Redeem a coupon code to unlock premium
+  /// Redeem a coupon code (stays for demo purposes)
   Future<bool> redeemCoupon(String code) async {
     final normalizedCode = code.trim().toUpperCase();
     if (_validCoupons.containsKey(normalizedCode)) {
@@ -220,7 +272,7 @@ class PremiumService extends ChangeNotifier {
     return false;
   }
   
-  /// Restore a subscription (called when restoring purchases)
+  /// Restore a subscription (legacy manual call)
   Future<void> restoreSubscription({
     required SubscriptionPlan plan,
     required DateTime expiryDate,
@@ -233,30 +285,16 @@ class PremiumService extends ChangeNotifier {
     }
   }
   
-  /// Cancel subscription (revert to free)
-  Future<void> cancelSubscription() async {
-    // Note: In real app, subscription stays active until expiry
-    // This just removes the local record
-    _currentPlan = SubscriptionPlan.free;
-    _subscriptionExpiryDate = null;
-    await _saveState();
-    notifyListeners();
-  }
-  
-  /// Save state to shared preferences
   Future<void> _saveState() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_planKey, _currentPlan.index);
-      
       if (_subscriptionExpiryDate != null) {
         await prefs.setString(_expiryKey, _subscriptionExpiryDate!.toIso8601String());
       } else {
         await prefs.remove(_expiryKey);
       }
-      
       await prefs.setInt(_dailyCountKey, _dailyGenerationsUsed);
-      
       if (_lastResetDate != null) {
         await prefs.setString(_lastResetKey, _lastResetDate!.toIso8601String());
       }
@@ -265,47 +303,32 @@ class PremiumService extends ChangeNotifier {
     }
   }
   
-  /// Get formatted price string for a plan
   static String getPriceString(SubscriptionPlan plan) {
     switch (plan) {
-      case SubscriptionPlan.weekly:
-        return '\$${weeklyPrice.toStringAsFixed(2)}/week';
-      case SubscriptionPlan.monthly:
-        return '\$${monthlyPrice.toStringAsFixed(2)}/month';
-      case SubscriptionPlan.annual:
-        return '\$${annualPrice.toStringAsFixed(2)}/year';
-      case SubscriptionPlan.free:
-        return 'Free';
+      case SubscriptionPlan.weekly: return '\$${weeklyPrice.toStringAsFixed(2)}/week';
+      case SubscriptionPlan.monthly: return '\$${monthlyPrice.toStringAsFixed(2)}/month';
+      case SubscriptionPlan.annual: return '\$${annualPrice.toStringAsFixed(2)}/year';
+      case SubscriptionPlan.free: return 'Free';
     }
   }
   
-  /// Get savings percentage compared to weekly
   static String getSavingsString(SubscriptionPlan plan) {
     switch (plan) {
-      case SubscriptionPlan.monthly:
-        return 'Save 52%';
-      case SubscriptionPlan.annual:
-        return 'Save 80%';
-      default:
-        return '';
+      case SubscriptionPlan.monthly: return 'Save 52%';
+      case SubscriptionPlan.annual: return 'Save 80%';
+      default: return '';
     }
   }
   
-  /// Get monthly equivalent price
   static double getMonthlyEquivalent(SubscriptionPlan plan) {
     switch (plan) {
-      case SubscriptionPlan.weekly:
-        return weeklyPrice * 4.33; // ~$21.65/month
-      case SubscriptionPlan.monthly:
-        return monthlyPrice;
-      case SubscriptionPlan.annual:
-        return annualPrice / 12; // ~$4.17/month
-      case SubscriptionPlan.free:
-        return 0;
+      case SubscriptionPlan.weekly: return weeklyPrice * 4.33;
+      case SubscriptionPlan.monthly: return monthlyPrice;
+      case SubscriptionPlan.annual: return annualPrice / 12;
+      case SubscriptionPlan.free: return 0;
     }
   }
   
-  /// Debug: Reset daily count (for testing)
   Future<void> debugResetDailyCount() async {
     _dailyGenerationsUsed = 0;
     _lastResetDate = DateTime.now();
@@ -313,58 +336,34 @@ class PremiumService extends ChangeNotifier {
     notifyListeners();
   }
   
-  /// Check if user can use daily preview (1 free premium mode / 24h)
   bool canUseDailyPreview() {
     _checkAndResetDailyCount();
     return _dailyGenerationsUsed == 0;
   }
   
-  /// Mark preview as used (locks premium modes for the day)
   Future<void> markPreviewUsed() async {
     _dailyGenerationsUsed = 1;
     await _saveState();
     notifyListeners();
   }
   
-  /// Show paywall sheet (import PaywallSheet at call site)
-  /// Usage: await PremiumService().initialize(); PremiumService().showPaywall(context);
-  void showPaywall(BuildContext context) {
-    // Note: PaywallSheet must be imported where this is called
-    // This is a helper method for convenience
-    throw UnimplementedError('Import PaywallSheet and call PaywallSheet.show(context) directly');
-  }
-  
-  /// Debug: Grant premium (for testing)
-  Future<void> debugGrantPremium() async {
-    await activateSubscription(SubscriptionPlan.monthly);
-  }
-
-  /// A/B Test: Get default mood for user (50/50 split between Human and Doll)
-  /// Assignment is persistent and survives app restarts
   Future<MoodMode> getDefaultMoodForUser() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final saved = prefs.getString(_abKey);
-
       if (saved != null) {
-        // Return saved assignment
         try {
           return MoodMode.values.byName(saved);
-        } catch (_) {
-          // Invalid saved value, reassign
-        }
+        } catch (_) {}
       }
-
-      // Assign new cohort: 50/50 split based on timestamp
       final assigned = DateTime.now().millisecondsSinceEpoch % 2 == 0
           ? MoodMode.human
           : MoodMode.doll;
-
       await prefs.setString(_abKey, assigned.name);
       return assigned;
     } catch (e) {
       debugPrint('A/B test assignment error: $e');
-      return MoodMode.human; // Fallback
+      return MoodMode.human;
     }
   }
 }

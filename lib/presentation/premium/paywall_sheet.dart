@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
 import 'package:sofi_test_connect/services/premium_service.dart';
-import 'package:flutter_stripe/flutter_stripe.dart';
-import 'package:cloud_functions/cloud_functions.dart';
+import 'package:sofi_test_connect/presentation/shared/sofi_legal_links.dart';
 
 /// A soft paywall bottom sheet that shows subscription options
 /// Can be dismissed but encourages users to subscribe
@@ -78,63 +77,17 @@ class _PaywallSheetState extends State<PaywallSheet> {
     setState(() => _isProcessing = true);
     
     try {
-      // 1. Initialize Stripe (already done in PremiumService init, but safe to double check)
-      await PremiumService().initialize();
-
-      // 2. Request PaymentIntent from Firebase Functions
-      debugPrint('Requesting Stripe PaymentIntent for $_selectedPlan');
-      final amount = _selectedPlan == SubscriptionPlan.weekly ? 4.99 : 
-                     _selectedPlan == SubscriptionPlan.monthly ? 9.99 : 49.99;
-                     
-      final callable = FirebaseFunctions.instance.httpsCallable('createStripePaymentIntent');
-      final response = await callable.call({'amount': amount, 'currency': 'usd'});
-      final clientSecret = response.data['clientSecret'];
+      // Guideline 3.1.1: Use Apple In-App Purchase
+      await PremiumService().buyPlan(_selectedPlan);
       
-      // 3. Initialize Payment Sheet
-      try {
-        await Stripe.instance.initPaymentSheet(
-          paymentSheetParameters: SetupPaymentSheetParameters(
-            merchantDisplayName: 'Sofi Saint',
-            paymentIntentClientSecret: clientSecret,
-            style: ThemeMode.dark,
-            appearance: const PaymentSheetAppearance(
-              colors: PaymentSheetAppearanceColors(
-                primary: Colors.purple,
-                background: Color(0xFF1A1A2E),
-                placeholderText: Colors.white24,
-              ),
-            ),
-          ),
+      // Note: The listener in PremiumService handles the completion/activation.
+      // We don't pop here immediately because the purchase might be pending.
+      // However, for better UX, we can wait a bit or listen to the service.
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Processing purchase...')),
         );
-
-        // 4. Display Payment Sheet
-        await Stripe.instance.presentPaymentSheet();
-        
-        // 5. Payment successful
-        await PremiumService().activateSubscription(_selectedPlan);
-        
-        if (mounted) {
-          widget.onSubscribed?.call();
-          Navigator.of(context).pop(true);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Welcome to Premium!'), backgroundColor: Colors.green),
-          );
-        }
-      } catch (stripeError) {
-        debugPrint('Stripe Sheet Error: $stripeError');
-        if (stripeError.toString().contains('key') || stripeError.toString().contains('placeholder')) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Stripe Error: Please add your real Publishable Key to assets/.env'),
-                backgroundColor: Colors.red,
-                duration: Duration(seconds: 4),
-              ),
-            );
-          }
-        } else {
-          rethrow;
-        }
       }
     } catch (e) {
       if (mounted) {
@@ -193,13 +146,18 @@ class _PaywallSheetState extends State<PaywallSheet> {
     setState(() => _isProcessing = true);
     
     try {
-      // NOTE: Implement restore purchases via RevenueCat / in_app_purchase
-      // For now, just show a message
-      await Future.delayed(const Duration(seconds: 1));
+      // Guideline 3.1.1: Implement functional Restore
+      await PremiumService().restorePurchases();
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No previous purchases found')),
+          const SnackBar(content: Text('Restoring purchases...')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Restore failed: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -391,6 +349,9 @@ class _PaywallSheetState extends State<PaywallSheet> {
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11),
                   ),
+                  const SizedBox(height: 16),
+                  const SofiLegalLinks(),
+                  const SizedBox(height: 16),
                   const SizedBox(height: 16),
                   // Not now button
                   TextButton(
