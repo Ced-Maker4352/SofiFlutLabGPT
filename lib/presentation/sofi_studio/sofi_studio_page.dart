@@ -2980,7 +2980,10 @@ class _SofiStudioPageState extends State<SofiStudioPage>
             child: BackdropFilter(
               filter: ui.ImageFilter.blur(
                   sigmaX: isIOSWeb ? 5 : 10, sigmaY: isIOSWeb ? 5 : 10),
-              child: Container(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
                 padding: const EdgeInsets.only(left: 8, right: 8),
                 color: isDark
                     ? Colors.black.withValues(alpha: 0.6)
@@ -3212,27 +3215,10 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                     const SizedBox(width: 4),
                   ],
                 ),
-              ),
-              // App Store compliance: EULA/Privacy disclosure below the main action pill
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'By generating, you agree to our AI Safety Guidelines & EULA.',
-                        style: TextStyle(
-                          fontSize: 9,
-                          color: isDark ? Colors.white38 : Colors.black38,
-                        ),
-                      ),
-                      const SizedBox(height: 1),
-                      const SofiLegalLinks(fontSize: 9),
                     ],
                   ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
