@@ -17,6 +17,7 @@ class VoiceCoachService {
 
   // Public getters
   bool get enabled => _enabled;
+  bool get isSpeaking => speakingNotifier.value;
 
   final ValueNotifier<bool> speakingNotifier = ValueNotifier<bool>(false);
   final ValueNotifier<bool> exclusiveHoldNotifier = ValueNotifier<bool>(false);
