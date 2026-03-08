@@ -46,6 +46,16 @@ class AudioService {
   String slideUpPath = '';
   String slideDownPath = '';
   String popPath = '';
+  String coachIntroPath = 'assets/audio/coach_intro.mp3';
+  String coachStart0Path = 'assets/audio/coach_start_0.mp3';
+  String coachStart1Path = 'assets/audio/coach_start_1.mp3';
+  String coachStart2Path = 'assets/audio/coach_start_2.mp3';
+  String coachStart3Path = 'assets/audio/coach_start_3.mp3';
+  String coachSuccess0Path = 'assets/audio/coach_success_0.mp3';
+  String coachSuccess1Path = 'assets/audio/coach_success_1.mp3';
+  String coachSuccess2Path = 'assets/audio/coach_success_2.mp3';
+  String coachSuccess3Path = 'assets/audio/coach_success_3.mp3';
+  String coachError0Path = 'assets/audio/coach_error_0.mp3';
 
   bool _initialized = false;
   bool _hasLocalAssets = false;
@@ -215,6 +225,20 @@ class AudioService {
   Future<void> playSlideUp() => _playLocal(slideUpPath, volumeOverride: _volume * 0.5);
   Future<void> playSlideDown() => _playLocal(slideDownPath, volumeOverride: _volume * 0.5);
   Future<void> playPop() => _playLocal(popPath, volumeOverride: _volume * 0.6);
+
+  /// Play a custom voice recording asset
+  Future<void> playVoice(String assetPath) async {
+    await _ensureInitialized();
+    if (_muted || assetPath.isEmpty) return;
+    try {
+      await setDucking(true);
+      await _playLocal(assetPath, volumeOverride: _volume * 0.9);
+      // Unduck after short delay (approx average voice clip length)
+      unawaited(Future.delayed(const Duration(milliseconds: 2500), () => setDucking(false)));
+    } catch (e) {
+      debugPrint('[Audio] playVoice failed: $e');
+    }
+  }
 
   // === Generation Sound Effects (cloud) ===
   Future<void> playGenerateStart() => _playCloud('generate', volumeOverride: _volume * 0.8);
