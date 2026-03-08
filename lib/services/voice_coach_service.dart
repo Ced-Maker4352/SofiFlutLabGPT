@@ -26,8 +26,8 @@ class VoiceCoachService {
   String? _phonetic; // Optional phonetic spelling
   String? _voiceIdentifier; // Platform voice name/id
   final String _language = 'en-US';
-  final double _rate = 0.95; // Natural pacing
-  final double _pitch = 1.03; // Slightly bright
+  final double _rate = 0.5; // Normal passing pace
+  final double _pitch = 1.25; // High-pitched and bright
   DateTime _lastUtter = DateTime.fromMillisecondsSinceEpoch(0);
   bool _introSpokenThisSession = false; // prevent repeating welcome
 
@@ -116,8 +116,8 @@ class VoiceCoachService {
         Map<String, dynamic>? best;
         int bestScore = -9999;
         const femaleNameHints = <String>{
-          // iOS common female voices
-          'samantha', 'victoria', 'karen', 'moira', 'serena', 'tessa', 'ava', 'siri',
+          // iOS high-quality female voices
+          'samantha', 'siri', 'zoe', 'ava', 'allison', 'victoria', 'karen', 'tessa', 
           // Google/Android style identifiers often include x-... with gender hints
           'female', 'en-us-x',
           // Edge/Windows
