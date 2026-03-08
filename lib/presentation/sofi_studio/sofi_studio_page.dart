@@ -30,6 +30,7 @@ import 'package:sofi_test_connect/services/remote_debug_logger.dart';
 import 'package:sofi_test_connect/presentation/sofi_studio/favorites_manager.dart';
 import 'package:sofi_test_connect/presentation/sofi_studio/models/favorite_outfit.dart';
 import 'package:http/http.dart' as http;
+import 'package:sofi_test_connect/presentation/shared/sofi_legal_links.dart';
 
 import '../../constants/base_prompts.dart';
 import '../../services/sofi_export_service.dart';
@@ -3109,8 +3110,8 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                                   vertical: 10,
                                 ),
                                 decoration: BoxDecoration(
-                                  gradient: isDisabled ? null : SofiStudioTheme.brandGradient,
-                                  color: isDisabled ? Colors.grey.shade400 : null,
+                                  gradient: _isGenerating ? null : SofiStudioTheme.brandGradient,
+                                  color: _isGenerating ? Colors.grey.shade400 : null,
                                   borderRadius: _radius24,
                                 ),
                                 child: Row(
