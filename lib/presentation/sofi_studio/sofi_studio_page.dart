@@ -2984,241 +2984,179 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                padding: const EdgeInsets.only(left: 8, right: 8),
-                color: isDark
-                    ? Colors.black.withValues(alpha: 0.6)
-                    : theme.headerColor.withValues(alpha: 0.85),
-                child: Row(
-                  children: [
-                    // Drawer Toggle
-                    IconButton(
-                      padding: const EdgeInsets.symmetric(horizontal: 4), // Slimmed for space
-                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                      tooltip: 'Options',
-                      icon: const Icon(Icons.tune),
-                      color: isDark ? Colors.white70 : Colors.black54,
-                      onPressed: () async {
-                        await AudioService.instance.playClick();
-                        controller.openDrawer();
-                      },
-                    ),
-
-                    // Text Field
-                    Expanded(
-                      child: TextField(
-                        controller: promptController,
-                        style: GoogleFonts.poppins(
-                          color: isDark ? Colors.white : Colors.black87,
-                          fontSize: 15,
-                        ),
-                        maxLines: 1,
-                        decoration: InputDecoration(
-                          hintText: 'Describe outfit…',
-                          hintStyle: GoogleFonts.poppins(
-                            color: isDark ? Colors.white38 : Colors.black38,
-                          ),
-                          border: InputBorder.none, // ✅ No dynamic decoration
-                          contentPadding:
-                              const EdgeInsets.symmetric(horizontal: 8),
-                          isDense: true,
-                        ),
-                        textInputAction: TextInputAction.go,
-                        // TEMP: disable auto-generate to stabilize flow
-                        onSubmitted: (_) {
-                          debugPrint(
-                              '[UI] Prompt submitted (manual generate only)');
-                        },
-                      ),
-                    ),
-
-                    // Voice Coach Settings
-                    IconButton(
-                      padding: const EdgeInsets.symmetric(horizontal: 4), // Slimmed for space
-                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                      tooltip: 'Voice Coach',
-                      icon: const Icon(Icons.record_voice_over),
-                      color: isDark ? Colors.white70 : Colors.black54,
-                      onPressed: () async {
-                        await AudioService.instance.playClick();
-                        // Open small settings panel for Voice Coach
-                        if (!mounted) return;
-                        await showModalBottomSheet(
-                          context: context,
-                          backgroundColor: Colors.transparent,
-                          isScrollControlled: false,
-                          builder: (_) {
-                            return const VoiceCoachSettingsSheet();
+                    padding: const EdgeInsets.only(left: 8, right: 8),
+                    color: isDark
+                        ? Colors.black.withValues(alpha: 0.6)
+                        : theme.headerColor.withValues(alpha: 0.85),
+                    child: Row(
+                      children: [
+                        // Drawer Toggle
+                        IconButton(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                          tooltip: 'Options',
+                          icon: const Icon(Icons.tune),
+                          color: isDark ? Colors.white70 : Colors.black54,
+                          onPressed: () async {
+                            await AudioService.instance.playClick();
+                            controller.openDrawer();
                           },
-                        );
-                      },
-                    ),
-
-                    // App Settings (Performance Mode, etc.)
-                    IconButton(
-                      padding: const EdgeInsets.symmetric(horizontal: 4), // Slimmed for space
-                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                      tooltip: 'Settings',
-                      icon: const Icon(Icons.settings),
-                      color: isDark ? Colors.white70 : Colors.black54,
-                      onPressed: () async {
-                        await AudioService.instance.playClick();
-                        if (!mounted) return;
-                        await showModalBottomSheet(
-                          context: context,
-                          backgroundColor: Colors.transparent,
-                          builder: (_) => Theme(
-                            data: ThemeData.light(),
-                            child: SofiSettingsSheet(
-                              autoSave: false,
-                              onAutoSaveChanged: (_) {},
+                        ),
+                        // Text Field
+                        Expanded(
+                          child: TextField(
+                            controller: promptController,
+                            style: GoogleFonts.poppins(
+                              color: isDark ? Colors.white : Colors.black87,
+                              fontSize: 15,
                             ),
+                            maxLines: 1,
+                            decoration: InputDecoration(
+                              hintText: 'Describe outfit…',
+                              hintStyle: GoogleFonts.poppins(
+                                color: isDark ? Colors.white38 : Colors.black38,
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                              isDense: true,
+                            ),
+                            textInputAction: TextInputAction.go,
+                            onSubmitted: (_) {
+                              debugPrint('[UI] Prompt submitted (manual generate only)');
+                            },
                           ),
-                        );
-                      },
-                    ),
-
-                    // Mic
-                    IconButton(
-                      padding: const EdgeInsets.symmetric(horizontal: 4), // Slimmed for space
-                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                      tooltip: _listening ? 'Stop' : 'Dictate',
-                      icon: Icon(_listening ? Icons.mic : Icons.mic_none),
-                      color: _listening
-                          ? theme.accentColor
-                          : (isDark ? Colors.white70 : Colors.black54),
-                      onPressed: () async {
-                        await AudioService.instance.playClick();
-                        await _onMicPressed();
-                      },
-                    ),
-
-                    const SizedBox(width: 4),
-
-                    // Generate / Get Credits Button with pulse animation
-                    ScaleTransition(
-                      scale: _isGenerating
-                          ? const AlwaysStoppedAnimation(1.0)
-                          : (_generateBtnScale ??
-                              const AlwaysStoppedAnimation(1.0)),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          // STEP 2 — FORCE SINGLE, MANUAL GENERATE BUTTON
-                          // Only place in the UI that triggers generation.
-                          onTap: controller.isGenerating
-                              ? null
-                              : () async {
-                                  debugPrint('[UI] Manual generate pressed');
-                                  HapticFeedback.mediumImpact();
-
-                                  if (_outOfCredits) {
-                                    if (!context.mounted) return;
-                                    final didSubscribe =
-                                        await PaywallSheet.show(
-                                      context,
-                                      message:
-                                          "You're out of generation credits. Start your trial or add credits to continue.",
-                                    );
-                                    if (didSubscribe == true && mounted) {
-                                      setState(() => _outOfCredits = false);
-                                      _showSnack('Thanks! Try again.');
-                                    }
-                                    return;
-                                  }
-
-                                  final selfieBytes = _originalBaseDollBytes ??
-                                      widget.selfieBytes;
-                                  if (selfieBytes == null) {
-                                    debugPrint(
-                                        '[UI] Manual generate blocked: no selfieBytes');
-                                    return;
-                                  }
-
-                                  await _onGeneratePressed();
-                                },
-                          borderRadius: _radius24, // ✅ CONST
-                          splashColor: Colors.white.withValues(alpha: 0.2),
-                          highlightColor: Colors.white.withValues(alpha: 0.1),
-                          child: Builder(
-                            builder: (context) {
-                              final isDisabled = controller.isGenerating;
-                              return AnimatedContainer(
+                        ),
+                        // Voice Coach Settings
+                        IconButton(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                          tooltip: 'Voice Coach',
+                          icon: const Icon(Icons.record_voice_over),
+                          color: isDark ? Colors.white70 : Colors.black54,
+                          onPressed: () async {
+                            await AudioService.instance.playClick();
+                            if (!mounted) return;
+                            await showModalBottomSheet(
+                              context: context,
+                              backgroundColor: Colors.transparent,
+                              isScrollControlled: false,
+                              builder: (_) => const VoiceCoachSettingsSheet(),
+                            );
+                          },
+                        ),
+                        // App Settings
+                        IconButton(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                          tooltip: 'Settings',
+                          icon: const Icon(Icons.settings),
+                          color: isDark ? Colors.white70 : Colors.black54,
+                          onPressed: () async {
+                            await AudioService.instance.playClick();
+                            if (!mounted) return;
+                            await showModalBottomSheet(
+                              context: context,
+                              backgroundColor: Colors.transparent,
+                              builder: (_) => Theme(
+                                data: ThemeData.light(),
+                                child: SofiSettingsSheet(
+                                  autoSave: false,
+                                  onAutoSaveChanged: (_) {},
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        // Mic
+                        IconButton(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                          tooltip: _listening ? 'Stop' : 'Dictate',
+                          icon: Icon(_listening ? Icons.mic : Icons.mic_none),
+                          color: _listening
+                              ? theme.accentColor
+                              : (isDark ? Colors.white70 : Colors.black54),
+                          onPressed: () async {
+                            await AudioService.instance.playClick();
+                            await _onMicPressed();
+                          },
+                        ),
+                        const SizedBox(width: 4),
+                        // Generate Button
+                        ScaleTransition(
+                          scale: _isGenerating
+                              ? const AlwaysStoppedAnimation(1.0)
+                              : (_generateBtnScale ?? const AlwaysStoppedAnimation(1.0)),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: controller.isGenerating
+                                  ? null
+                                  : () async {
+                                      HapticFeedback.mediumImpact();
+                                      if (_outOfCredits) {
+                                        if (!context.mounted) return;
+                                        await PaywallSheet.show(context);
+                                        return;
+                                      }
+                                      await _onGeneratePressed();
+                                    },
+                              borderRadius: _radius24,
+                              child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
                                 padding: EdgeInsets.symmetric(
                                   horizontal: _isGenerating ? 20 : 16,
                                   vertical: 10,
                                 ),
                                 decoration: BoxDecoration(
-                                  gradient: isDisabled
-                                      ? null
-                                      : SofiStudioTheme.brandGradient,
-                                  color:
-                                      isDisabled ? Colors.grey.shade400 : null,
-                                  borderRadius: _radius24, // ✅ CONST
-                                  boxShadow: _isIOSWeb
-                                      ? null
-                                      : [
-                                          BoxShadow(
-                                            color: (isDisabled
-                                                    ? Colors.grey
-                                                    : SofiStudioTheme.purple)
-                                                .withValues(alpha: 0.35),
-                                            blurRadius: 12,
-                                            offset: const Offset(0, 3),
-                                          )
-                                        ],
+                                  gradient: isDisabled ? null : SofiStudioTheme.brandGradient,
+                                  color: isDisabled ? Colors.grey.shade400 : null,
+                                  borderRadius: _radius24,
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     if (_isGenerating)
-                                      const SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: Colors.white),
-                                      )
+                                      const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                                     else if (_outOfCredits) ...[
-                                      const Icon(Icons.lock,
-                                          size: 16, color: Colors.white),
+                                      const Icon(Icons.lock, size: 16, color: Colors.white),
                                       const SizedBox(width: 6),
-                                      Text(
-                                        'Get Credits',
-                                        style: GoogleFonts.poppins(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 13,
-                                        ),
-                                      ),
+                                      Text('Get Credits', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
                                     ] else ...[
-                                      const Icon(Icons.auto_awesome,
-                                          size: 16, color: Colors.white),
+                                      const Icon(Icons.auto_awesome, size: 16, color: Colors.white),
                                       const SizedBox(width: 6),
-                                      Text(
-                                        'Generate',
-                                        style: GoogleFonts.poppins(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 13,
-                                        ),
-                                      ),
+                                      Text('Generate', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
                                     ]
                                   ],
                                 ),
-                              );
-                            },
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                        const SizedBox(width: 4),
+                      ],
                     ),
-                    const SizedBox(width: 4),
-                  ],
-                ),
-                    ],
                   ),
-                ),
-              ],
+                  // App Store compliance: EULA/Privacy disclosure below the main action pill
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8, bottom: 4),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'By generating, you agree to our AI Safety Guidelines & EULA.',
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: isDark ? Colors.white38 : Colors.black38,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        SofiLegalLinks(fontSize: 9, textColor: isDark ? Colors.white38 : Colors.black38),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
