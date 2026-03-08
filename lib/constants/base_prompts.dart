@@ -10,10 +10,9 @@ No doll, toy, or plastic features.
 ''';
 
 const String dollBasePrompt = '''
-Stylized studio character.
+Transform this into a full-body fashion doll portrait.
+Show head-to-toe in a stylish pose with clean background.
 Soft plastic texture.
-Toy-like proportions.
-Signature character aesthetic.
 ''';
 
 const String cinematicBasePrompt = '''

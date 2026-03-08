@@ -6,6 +6,9 @@ import 'sofi_studio_models.dart';
 import '../../services/prompt_builder.dart';
 import '../mood/mood_mode.dart';
 import '../../services/models_lab_service.dart';
+import '../../services/remote_debug_logger.dart';
+import '../../services/performance_service.dart';
+import '../../services/two_step_generation_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:sofi_test_connect/services/user_preferences_service.dart';
@@ -148,12 +151,23 @@ class SofiStudioController extends ChangeNotifier {
     if (isGenerating) throw Exception('Already generating in progress');
 
     final bool isDollMode = UserPreferencesService.instance.isDollMode;
-    final String generationMode = isDollMode ? 'doll' : 'human';
 
-    // Build instruction prompt from current mood or custom text
-    final prompt = _currentPrompt.isNotEmpty
-        ? buildCustomEditInstruction(_currentPrompt, mode: generationMode)
-        : buildMoodEditInstruction(selectedMood.isNotEmpty ? selectedMood : 'creative', mode: generationMode);
+    // Use the already built _currentPrompt from the UI state.
+    String prompt = _currentPrompt;
+    
+    // If the prompt is somehow empty, fallback to the base mood instruction.
+    if (prompt.isEmpty) {
+      prompt = buildMoodEditInstruction(selectedMood.isNotEmpty ? selectedMood : 'creative');
+    }
+
+    // Now securely append the mode instruction at the time of generation.
+    // If doll mode is active, append its aesthetic override.
+    if (isDollMode) {
+      final dollAesthetic = 'Transform this into a full body fashion doll portrait. Show head-to-toe in a stylish pose with clean background. Soft plastic texture. ';
+      if (!prompt.contains('plastic texture')) {
+        prompt = '$prompt $dollAesthetic';
+      }
+    }
 
     debugPrint('[SofiStudio] Generating with instruction prompt: $prompt');
 
@@ -167,21 +181,40 @@ class SofiStudioController extends ChangeNotifier {
     try {
       // flux-kontext-pro: instruction-following model
       // No strength/steps/guidanceScale needed — model understands "change X, keep face"
-      final initImageBase64 = 'data:image/png;base64,${base64Encode(selfieBytes)}';
+      Uint8List resultBytes;
 
-      final imageUrl = await ModelsLabService.generateKontextPro(
-        prompt: prompt,
-        negativePrompt: 'deformed face, changed identity, different person, '
-            'bad anatomy, worst quality, blurry',
-        initImageBase64: initImageBase64,
-        aspectRatio: '9:16',
-      );
+      if (isDollMode) {
+        // DOLL MODE: Requires the Two-Step Pipeline to break identity lock
+        final twoStep = TwoStepGenerationService();
+        
+        // Step 1: Force body transformation
+        final lockedBody = await twoStep.runStep1IdentityLock(
+          selfieBytes,
+          'Transform this into a full body fashion doll portrait. Show head-to-toe in a stylish pose with clean background. Soft plastic texture. ',
+        );
 
-      final resp = await http.get(Uri.parse(imageUrl));
-      if (resp.statusCode != 200) {
-        throw Exception('Failed to download generated image: \${resp.statusCode}');
+        // Step 2: Apply the user's outfit/mood prompt
+        resultBytes = await twoStep.generateStyledOnly(
+          lockedBody,
+          prompt,
+        );
+      } else {
+        // HUMAN MODE: Standard single pass
+        final initImageBase64 = 'data:image/png;base64,${base64Encode(selfieBytes)}';
+        final imageUrl = await ModelsLabService.generateKontextPro(
+          prompt: prompt,
+          negativePrompt: 'deformed face, changed identity, different person, '
+              'bad anatomy, worst quality, blurry',
+          initImageBase64: initImageBase64,
+          aspectRatio: '9:16',
+        );
+
+        final resp = await http.get(Uri.parse(imageUrl));
+        if (resp.statusCode != 200) {
+          throw Exception('Failed to download generated image: \${resp.statusCode}');
+        }
+        resultBytes = resp.bodyBytes;
       }
-      final resultBytes = resp.bodyBytes;
 
       generatedImageBytes = resultBytes;
       skipWelcomeOverlay = false;

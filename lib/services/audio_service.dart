@@ -18,11 +18,12 @@ class AudioService {
     'success': 'audio/Magic zing.mp3',
     'error': 'audio/error_004.ogg',
     'startup': 'audio/Under Songs/copyright-free-musicroyalty-free-music100-free-music-437088.mp3',
+    'music_powermode': 'audio/Sofi Saint - Power Mode (ft. Top Adlerman) (Power Soca 2026).mp3',
     'music_bestill': 'audio/01 - Sofi Saint - Be Still.mp3',
     'music_allnight': 'audio/Sofi Saint - All Night  INSTRO.mp3',
     'music_notimeleft': 'audio/Sofi Saint NO TIME LEFT - No Time Left.mp3',
     // Generation tracks (rotating)
-    'gen_track_0': 'audio/Under Songs/10 sec no-copyright-music-corporate-background-367221.mp3',
+    'gen_track_0': 'audio/Sofi Saint - Power Mode (ft. Top Adlerman) (Power Soca 2026).mp3',
     'gen_track_1': 'audio/Under Songs/111no-copyright-music-181373.mp3',
     'gen_track_2': 'audio/Under Songs/background-corporate-music-short-version-65sec-no-copyright-music-378978.mp3',
     'gen_track_3': 'audio/Under Songs/pop-402324.mp3',
@@ -280,8 +281,9 @@ class AudioService {
   // === Background Music (cloud) ===
   
   /// Available music tracks
-  static const List<String> musicTracks = ['music_bestill', 'music_allnight', 'music_notimeleft'];
+  static const List<String> musicTracks = ['music_powermode', 'music_bestill', 'music_allnight', 'music_notimeleft'];
   static const Map<String, String> musicNames = {
+    'music_powermode': 'Power Mode',
     'music_bestill': 'Be Still',
     'music_allnight': 'All Night (Instrumental)',
     'music_notimeleft': 'No Time Left',

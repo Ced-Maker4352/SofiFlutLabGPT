@@ -13,10 +13,14 @@ String buildMoodEditInstruction(String mood, {String userText = '', String mode 
   final styleClause = _modeToStyleInstruction(mode);
   final userEdits = userText.isNotEmpty ? ' Additional specific edits: $userText.' : '';
   
-  return '$outfitInstruction $styleClause$userEdits '
-      'Keep the person\'s face, skin tone, body structure, and pose '
-      'identical to the original photo. '
-      'Only change the clothing, accessories, hair styling, and background.';
+  final isDoll = mode.toLowerCase() == 'doll';
+  final preservation = isDoll
+      ? 'Keep the person\'s underlying facial identity and pose identical, but apply the doll aesthetic to their skin, hair, and entire body.'
+      : 'Keep the person\'s face, skin tone, body structure, and pose '
+        'identical to the original photo. '
+        'Only change the clothing, accessories, hair styling, and background.';
+
+  return '$outfitInstruction $styleClause$userEdits $preservation';
 }
 
 /// Builds a custom-text edit instruction (e.g. from a user's typed prompt in Studio).
@@ -24,9 +28,12 @@ String buildCustomEditInstruction(String userText, {String mood = '', String mod
   final moodClause = mood.isNotEmpty ? ' Mood: $mood.' : '';
   final styleClause = _modeToStyleInstruction(mode);
   
-  return 'Edit this photo: $userText$moodClause $styleClause'
-      'Keep the person\'s face, skin tone, and body structure identical to '
-      'the original photo.';
+  final isDoll = mode.toLowerCase() == 'doll';
+  final preservation = isDoll
+      ? 'Keep the person\'s underlying facial identity identical, but cleanly apply the 3D doll plastic aesthetic to their skin and body without distortion.'
+      : 'Keep the person\'s face, skin tone, and body structure identical to the original photo.';
+
+  return 'Edit this photo: $userText$moodClause $styleClause $preservation';
 }
 
 /// Maps a mood name to a specific outfit-change instruction.
@@ -72,7 +79,7 @@ String _modeToStyleInstruction(String mode) {
     case 'artistic':
       return 'Transform the image into an anime illustration, vibrant colors, 2D shading, highly detailed manga art style. ';
     case 'doll':
-      return 'Transform into a 3D highly detailed fashion doll, plastic texture, toy-like appearance, immaculate styling. ';
+      return 'Transform this into a full body fashion doll portrait. Show head-to-toe in a stylish pose with clean background. ';
     default:
       return ''; // 'human' uses default realistic styles
   }

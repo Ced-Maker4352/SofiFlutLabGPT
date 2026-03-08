@@ -1130,12 +1130,14 @@ class _SofiStudioPageState extends State<SofiStudioPage>
   }
 
   String _buildFinalPrompt() {
+    final bool isDollMode = UserPreferencesService.instance.isDollMode;
+
     // 1. Start with the mode-specific base intent
     String base;
     if (_activeBaseStylePrompt != null) {
-      base = _activeBaseStylePrompt!;
+      base = isDollMode ? dollBasePrompt : _activeBaseStylePrompt!;
     } else {
-      final modeId = controller.selectedMode.id;
+      final modeId = isDollMode ? 'doll' : controller.selectedMode.id;
       base = switch (modeId) {
         'human' => humanBasePrompt,
         'cinematic' => cinematicBasePrompt,

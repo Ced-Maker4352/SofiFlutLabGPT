@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image/image.dart' as img;
@@ -10,6 +11,7 @@ import 'package:image/image.dart' as img;
 import 'package:sofi_test_connect/data/theme_presets_data.dart';
 import 'package:sofi_test_connect/models/theme_presets.dart';
 import 'package:sofi_test_connect/services/two_step_generation_service.dart';
+import 'package:sofi_test_connect/services/user_preferences_service.dart';
 import 'package:sofi_test_connect/services/prompt_builder.dart';
 import 'package:sofi_test_connect/presentation/shared/stage_image.dart';
 import 'package:sofi_test_connect/presentation/sofi_studio/widgets/generation_loader.dart';
@@ -389,11 +391,18 @@ class _PremiumStudioPageState extends State<PremiumStudioPage> {
 
   // ---------------- PROMPTS ----------------
   String _buildIdentityLockPrompt() {
-    return buildCustomEditInstruction(
-      'Transform this into a full-body fashion doll portrait. '
-      'Show head-to-toe in a stylish pose with clean background. '
-      'Keep the face identical to the original photo.',
-    );
+    final bool isDollMode = UserPreferencesService.instance.isDollMode;
+    if (isDollMode) {
+      return buildCustomEditInstruction(
+        'Transform this into a full-body fashion doll portrait. '
+        'Show head-to-toe in a stylish pose with clean background. '
+        'Keep the face identical to the original photo.',
+      );
+    } else {
+      return buildCustomEditInstruction(
+        'Enhance this portrait. Keep the face, skin tone, background, and identity identical to the original photo.',
+      );
+    }
   }
 
   String _buildPrompt(ThemePreset t, ThemeVariant? v) {
@@ -637,10 +646,11 @@ class _PremiumStudioPageState extends State<PremiumStudioPage> {
       // 🚨 IMPORTANT:
       // We ALWAYS pass lockedBodyBytes as the identity image.
       // NEVER pass styledBytes or history images here.
-      // ------------------------------------------------------------
+      // -----------------------------------------------------------      // Use step-2 (only style changes)
       final result = await widget.generationService.generateStyledOnly(
         lockedBodyBytes!,
-        prompt,
+        _buildPrompt(selectedTheme!, selectedVariant),
+        forceDollAesthetic: UserPreferencesService.instance.isDollMode,
       );
 
       if (!mounted) return;
@@ -1228,6 +1238,37 @@ class _PremiumStudioPageState extends State<PremiumStudioPage> {
         elevation: 0,
         foregroundColor: Colors.black,
         actions: [
+          ListenableBuilder(
+            listenable: UserPreferencesService.instance,
+            builder: (context, _) {
+              final isDoll = UserPreferencesService.instance.isDollMode;
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    isDoll ? 'Doll' : 'Human',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: isDoll ? Colors.pink : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Transform.scale(
+                    scale: 0.75,
+                    child: CupertinoSwitch(
+                      value: isDoll,
+                      activeColor: Colors.black,
+                      onChanged: (val) {
+                        UserPreferencesService.instance.setDollMode(val);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              );
+            },
+          ),
           if (!widget.isPremiumUser)
             GestureDetector(
               onTap: () => PaywallSheet.show(context),
