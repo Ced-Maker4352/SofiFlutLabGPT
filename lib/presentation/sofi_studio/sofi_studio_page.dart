@@ -2720,16 +2720,6 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                       color: Colors.white, size: 18),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  'Sofi Saint',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: theme.headerTextColor,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(width: 12),
                 // The Master Switch
                 ListenableBuilder(
                   listenable: UserPreferencesService.instance,
@@ -2773,7 +2763,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
               controller.openDrawer();
             }, // Connected to open options
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color:
                     isDark ? Colors.white.withValues(alpha: 0.1) : Colors.white,
@@ -2784,7 +2774,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
               child: Text(
                 'Design Studio',
                 style: GoogleFonts.poppins(
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: FontWeight.bold,
                   color: theme.accentColor,
                 ),
@@ -3192,7 +3182,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                   ),
                   // App Store compliance: EULA/Privacy disclosure below the main action pill
                   Padding(
-                    padding: const EdgeInsets.only(top: 8, bottom: 4),
+                    padding: const EdgeInsets.only(top: 12, bottom: 8),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
