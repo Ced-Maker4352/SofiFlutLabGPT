@@ -186,37 +186,69 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                           ],
                         ),
                       ),
-                      // The Master Switch
+                      // The Master Switches
                       ListenableBuilder(
                         listenable: UserPreferencesService.instance,
                         builder: (context, _) {
                           final isDollMode = UserPreferencesService.instance.isDollMode;
-                          return Column(
+                          final isMaleMode = UserPreferencesService.instance.isMaleMode;
+                          return Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                isDollMode ? 'Doll\nMode' : 'Human\nMode',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  height: 1.1,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDollMode ? SofiStudioTheme.purple : Colors.white70,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              SizedBox(
-                                height: 28,
-                                child: FittedBox(
-                                  fit: BoxFit.contain,
-                                  child: CupertinoSwitch(
-                                    value: isDollMode,
-                                    activeColor: SofiStudioTheme.purple,
-                                    onChanged: (val) {
-                                      UserPreferencesService.instance.setDollMode(val);
-                                    },
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    isDollMode ? 'Doll' : 'Human',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDollMode ? SofiStudioTheme.purple : Colors.white70,
+                                    ),
                                   ),
-                                ),
+                                  const SizedBox(height: 4),
+                                  SizedBox(
+                                    height: 24,
+                                    child: FittedBox(
+                                      child: CupertinoSwitch(
+                                        value: isDollMode,
+                                        activeColor: SofiStudioTheme.purple,
+                                        onChanged: (val) {
+                                          UserPreferencesService.instance.setDollMode(val);
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(width: 12),
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    isMaleMode ? 'Male' : 'Fem',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: isMaleMode ? Colors.blueAccent : Colors.white70,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  SizedBox(
+                                    height: 24,
+                                    child: FittedBox(
+                                      child: CupertinoSwitch(
+                                        value: isMaleMode,
+                                        activeColor: Colors.blueAccent,
+                                        onChanged: (val) {
+                                          UserPreferencesService.instance.setMaleMode(val);
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           );

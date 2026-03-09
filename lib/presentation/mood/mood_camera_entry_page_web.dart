@@ -146,39 +146,73 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                           );
                         }),
                       ),
-                      const SizedBox(width: 12),
-                      // Title & Subtitle
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ShaderMask(
-                              shaderCallback: (bounds) => LinearGradient(
-                                colors: [
-                                  SofiStudioTheme.purple,
-                                  SofiStudioTheme.blue
+                      // The Master Switches
+                      ListenableBuilder(
+                        listenable: UserPreferencesService.instance,
+                        builder: (context, _) {
+                          final isDollMode = UserPreferencesService.instance.isDollMode;
+                          final isMaleMode = UserPreferencesService.instance.isMaleMode;
+                          return Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    isDollMode ? 'Doll' : 'Human',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDollMode ? SofiStudioTheme.purple : Colors.white70,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  SizedBox(
+                                    height: 24,
+                                    child: FittedBox(
+                                      child: CupertinoSwitch(
+                                        value: isDollMode,
+                                        activeColor: SofiStudioTheme.purple,
+                                        onChanged: (val) {
+                                          UserPreferencesService.instance.setDollMode(val);
+                                        },
+                                      ),
+                                    ),
+                                  ),
                                 ],
-                              ).createShader(bounds),
-                              child: const Text(
-                                "How are you feeling today?",
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              "Pick a mood. Add a selfie if you want — we'll transform your look.",
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: theme.headerTextColor
-                                    .withValues(alpha: 0.7),
+                              const SizedBox(width: 12),
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    isMaleMode ? 'Male' : 'Fem',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: isMaleMode ? Colors.blueAccent : Colors.white70,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  SizedBox(
+                                    height: 24,
+                                    child: FittedBox(
+                                      child: CupertinoSwitch(
+                                        value: isMaleMode,
+                                        activeColor: Colors.blueAccent,
+                                        onChanged: (val) {
+                                          UserPreferencesService.instance.setMaleMode(val);
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ),
