@@ -212,9 +212,10 @@ class SofiStudioController extends ChangeNotifier {
         final twoStep = TwoStepGenerationService();
         
         // Step 1: Force body transformation
+        final genderLabel = isMaleMode ? 'male' : 'female';
         final lockedBody = await twoStep.runStep1IdentityLock(
           selfieBytes,
-          'Transform this into a full body fashion doll portrait. Show head-to-toe in a stylish pose with clean background. Soft plastic texture. ',
+          'Transform this into a full body $genderLabel fashion doll portrait. Show head-to-toe in a stylish pose with clean background. Soft plastic texture. ',
         );
 
         // Step 2: Apply the user's outfit/mood prompt

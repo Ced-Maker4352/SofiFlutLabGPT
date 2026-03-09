@@ -2663,172 +2663,170 @@ class _SofiStudioPageState extends State<SofiStudioPage>
         color: theme.headerColor,
         // No border radius to blend seamlessly with stage background
       ),
-      child: Stack(
-        alignment: Alignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Left: Back Button + Sofi Saint Logo
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  onTap: () => Navigator.of(context).pop(),
-                  child: Container(
-                    height: 32,
-                    width: 32,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isDark
-                          ? Colors.white.withValues(alpha: 0.1)
-                          : Colors.black.withValues(alpha: 0.05),
-                      border: Border.all(
-                        color: isDark ? Colors.white24 : Colors.black12,
-                      ),
-                    ),
-                    alignment: Alignment.center,
-                    child: Icon(
-                      Icons.arrow_back_ios_new,
-                      size: 16,
-                      color: theme.headerTextColor,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
+          // Row 1: Branding and Global Actions
+          Row(
+            children: [
+              GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Container(
                   height: 32,
                   width: 32,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFa855f7), Color(0xFFec4899)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : Colors.black.withValues(alpha: 0.05),
                     border: Border.all(
-                        color: isDark ? Colors.white54 : Colors.white,
-                        width: 1.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                      color: isDark ? Colors.white24 : Colors.black12,
+                    ),
                   ),
-                  child: const Icon(Icons.auto_awesome,
-                      color: Colors.white, size: 18),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.arrow_back_ios_new,
+                    size: 16,
+                    color: theme.headerTextColor,
+                  ),
                 ),
-                const SizedBox(width: 8),
-                // The Master Switch
-                ListenableBuilder(
-                  listenable: UserPreferencesService.instance,
-                  builder: (context, _) {
-                    final isDoll = UserPreferencesService.instance.isDollMode;
-                    final isMale = UserPreferencesService.instance.isMaleMode;
-                    return Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Doll Mode Toggle
-                        _buildHeaderToggle(
-                          label: isDoll ? 'Doll' : 'Human',
-                          value: isDoll,
-                          onChanged: (val) {
-                            UserPreferencesService.instance.setDollMode(val);
-                          },
-                          activeColor: SofiStudioTheme.purple,
-                        ),
-                        const SizedBox(width: 12),
-                        // Gender Toggle
-                        _buildHeaderToggle(
-                          label: isMale ? 'Male' : 'Fem',
-                          value: isMale,
-                          onChanged: (val) {
-                            UserPreferencesService.instance.setMaleMode(val);
-                          },
-                          activeColor: Colors.blueAccent,
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-
-          // Center: Design Studio Pill
-          GestureDetector(
-            onTap: () async {
-              await AudioService.instance.playClick();
-              controller.openDrawer();
-            }, // Connected to open options
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color:
-                    isDark ? Colors.white.withValues(alpha: 0.1) : Colors.white,
-                borderRadius: _radius20,
-                boxShadow: isDark ? null : SofiStudioTheme.softShadow,
-                border: isDark ? Border.all(color: Colors.white24) : null,
               ),
-              child: Text(
-                'Design Studio',
+              const SizedBox(width: 8),
+              Container(
+                height: 32,
+                width: 32,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFa855f7), Color(0xFFec4899)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  border: Border.all(
+                      color: isDark ? Colors.white54 : Colors.white,
+                      width: 1.5),
+                ),
+                child: const Icon(Icons.auto_awesome,
+                    color: Colors.white, size: 18),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Sofi Saint',
                 style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: theme.accentColor,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: theme.headerTextColor,
+                  letterSpacing: -0.5,
                 ),
               ),
-            ),
+              const Spacer(),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Share button (only show if image is generated)
+                  if (_latestImageUrl != null) ...[
+                    _headerBtn(
+                      Icons.share,
+                      'Share',
+                      _shareImage,
+                      color: theme.headerTextColor,
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  // Download button (only show if image is generated)
+                  if (_latestImageUrl != null) ...[
+                    _headerBtn(
+                      Icons.download,
+                      'Download',
+                      _downloadImage,
+                      color: theme.headerTextColor,
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  _headerBtn(
+                    _isFavorited ? Icons.favorite : Icons.favorite_border,
+                    'Save',
+                    _toggleFavorite,
+                    color: _isFavorited
+                        ? const Color(0xFFe94560)
+                        : theme.headerTextColor,
+                  ),
+                  const SizedBox(width: 8),
+                  if (_latestImageUrl != null) ...[
+                    _headerBtn(
+                      Icons.report_problem_outlined,
+                      'Report',
+                      _reportContent,
+                      color: Colors.orangeAccent,
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  _PremiumEntryButton(onTap: _openPremium),
+                ],
+              ),
+            ],
           ),
-
-          // Right: Action Buttons
-          Align(
-            alignment: Alignment.centerRight,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Share button (only show if image is generated)
-                if (_latestImageUrl != null) ...[
-                  _headerBtn(
-                    Icons.share,
-                    'Share',
-                    _shareImage,
-                    color: theme.headerTextColor,
+          const SizedBox(height: 12),
+          // Row 2: Studio Specific Control
+          ListenableBuilder(
+            listenable: UserPreferencesService.instance,
+            builder: (context, _) {
+              final isDoll = UserPreferencesService.instance.isDollMode;
+              final isMale = UserPreferencesService.instance.isMaleMode;
+              return Row(
+                children: [
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: _buildHeaderToggle(
+                        label: isDoll ? 'Doll' : 'Human',
+                        value: isDoll,
+                        onChanged: (val) {
+                          UserPreferencesService.instance.setDollMode(val);
+                        },
+                        activeColor: SofiStudioTheme.purple,
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 8),
-                ],
-                // Download button (only show if image is generated)
-                if (_latestImageUrl != null) ...[
-                  _headerBtn(
-                    Icons.download,
-                    'Download',
-                    _downloadImage,
-                    color: theme.headerTextColor,
+                  GestureDetector(
+                    onTap: () async {
+                      await AudioService.instance.playClick();
+                      controller.openDrawer();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.white,
+                        borderRadius: _radius20,
+                        boxShadow: isDark ? null : SofiStudioTheme.softShadow,
+                        border: isDark ? Border.all(color: Colors.white24) : null,
+                      ),
+                      child: Text(
+                        'Design Studio',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: theme.accentColor,
+                        ),
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 8),
-                ],
-                _headerBtn(
-                  _isFavorited ? Icons.favorite : Icons.favorite_border,
-                  'Save',
-                  _toggleFavorite,
-                  color: _isFavorited
-                      ? const Color(0xFFe94560)
-                      : theme.headerTextColor,
-                ),
-                const SizedBox(width: 8),
-                if (_latestImageUrl != null) ...[
-                  _headerBtn(
-                    Icons.report_problem_outlined,
-                    'Report',
-                    _reportContent,
-                    color: Colors.orangeAccent,
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: _buildHeaderToggle(
+                        label: isMale ? 'Male' : 'Fem',
+                        value: isMale,
+                        onChanged: (val) {
+                          UserPreferencesService.instance.setMaleMode(val);
+                        },
+                        activeColor: Colors.blueAccent,
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 8),
                 ],
-                _PremiumEntryButton(onTap: _openPremium),
-              ],
-            ),
+              );
+            },
           ),
         ],
       ),
@@ -3182,7 +3180,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                   ),
                   // App Store compliance: EULA/Privacy disclosure below the main action pill
                   Padding(
-                    padding: const EdgeInsets.only(top: 12, bottom: 8),
+                    padding: const EdgeInsets.only(top: 20, bottom: 12),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -3806,8 +3804,9 @@ class _HintButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 260,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        width: double.infinity,
+        constraints: const BoxConstraints(minHeight: 110),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.95),
           borderRadius: _SofiStudioPageState._radius16, // ✅ CONST
