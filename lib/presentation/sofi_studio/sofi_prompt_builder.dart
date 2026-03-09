@@ -21,21 +21,26 @@ class SofiPromptBuilder {
     required String styleLabel,
     required String freeText,
     required LookMode lookMode,
+    bool isMale = false,
   }) {
     final buffer = StringBuffer();
+    final gender = isMale ? 'male' : 'female';
+    final person = isMale ? 'boy/man' : 'girl/woman';
 
     // 1) Base style (MODE CONTROLS THIS)
     if (lookMode == LookMode.human) {
       buffer.write(
-        "Photorealistic human portrait. Natural human anatomy and facial proportions. "
-        "Realistic skin texture, pores, and lighting. No doll, toy, plastic, or cartoon features. ",
+        "Photorealistic $gender human portrait. Natural human anatomy and facial proportions. "
+        "Realistic skin texture, pores, and lighting. No cartoon features. "
+        "Ensure the person remains clearly $person. ",
       );
     } else {
       // This aligns with your original “Pixar-ish” app feel.
       // Intentionally avoids “plastic toy joints / twistable head”.
       buffer.write(
-        "High-quality 3D animated Pixar-like character render. Soft shading, smooth gradients, "
-        "cinematic but clean lighting. Maintain a believable human-like face and proportions. ",
+        "High-quality 3D animated Pixar-like $gender character render. Soft shading, smooth gradients, "
+        "cinematic but clean lighting. Maintain a believable human-like face and proportions. "
+        "Ensure the character remains clearly $person. ",
       );
     }
 

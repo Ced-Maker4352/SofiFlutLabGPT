@@ -1,15 +1,17 @@
-import 'dart:ui';
-
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 import 'package:sofi_test_connect/presentation/sofi_studio/sofi_studio_models.dart';
 import 'package:sofi_test_connect/presentation/sofi_studio/sofi_studio_theme.dart';
 import 'package:sofi_test_connect/presentation/sofi_studio/sofi_prompt_data.dart';
+import 'package:sofi_test_connect/presentation/sofi_studio/sofi_male_prompt_data.dart';
 import 'package:sofi_test_connect/presentation/premium/paywall_sheet.dart';
 import 'package:sofi_test_connect/services/storage_service.dart';
 import 'package:sofi_test_connect/services/premium_service.dart';
 import 'package:sofi_test_connect/services/performance_service.dart';
+import 'package:sofi_test_connect/services/user_preferences_service.dart';
 
 /// Apple Maps-style bottom drawer with peek / mid / full snapping.
 /// Optimized for iPhone with proper safe area handling.
@@ -66,11 +68,14 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
     _checkPremiumStatus();
     // Listen for future subscription changes to keep UI in sync
     PremiumService().addListener(_onPremiumChanged);
+    // Listen for gender changes
+    UserPreferencesService.instance.addListener(_onGenderChanged);
   }
   
   @override
   void dispose() {
     PremiumService().removeListener(_onPremiumChanged);
+    UserPreferencesService.instance.removeListener(_onGenderChanged);
     super.dispose();
   }
   
@@ -80,6 +85,10 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
     if (newValue != _isPremium && mounted) {
       setState(() => _isPremium = newValue);
     }
+  }
+
+  void _onGenderChanged() {
+    if (mounted) setState(() {});
   }
   
   Future<void> _checkPremiumStatus() async {
@@ -144,18 +153,23 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
   
   /// Get the Firebase Storage path for a category thumbnail
   String? _getThumbnailPath(EditCategory category, int index) {
+    final isMale = UserPreferencesService.instance.isMaleMode;
     final num = (index + 1).toString().padLeft(2, '0');
+    final folder = isMale ? 'male/' : '';
+
     switch (category) {
       case EditCategory.fullOutfit:
-        return 'images/full outfit/full_outfit_$num.jpg';
+        return isMale 
+          ? 'images/male/outfits/male_outfit_$num.jpg'
+          : 'images/full outfit/full_outfit_$num.jpg';
       case EditCategory.hair:
-        return 'images/hair/hair_$num.jpg';
+        return 'images/${folder}hair/hair_$num.jpg';
       case EditCategory.top:
-        return 'images/top/top_$num.jpg';
+        return 'images/${folder}top/top_$num.jpg';
       case EditCategory.bottom:
-        return 'images/bottom/bottom_$num.jpg';
+        return 'images/${folder}bottom/bottom_$num.jpg';
       case EditCategory.shoes:
-        return 'images/shoes/shoes_$num.jpg';
+        return 'images/${folder}shoes/shoes_$num.jpg';
       case EditCategory.accessories:
         return 'images/accessories/accessories_$num.jpg';
       case EditCategory.hats:
@@ -168,6 +182,34 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
         return 'images/posses/pose_$num.jpg';
       case EditCategory.background:
         return 'images/Background/background_$num.jpg';
+    }
+  }
+
+  List<dynamic> _getOptionsForCategory(EditCategory category) {
+    final isMale = UserPreferencesService.instance.isMaleMode;
+    if (isMale) {
+      switch (category) {
+        case EditCategory.fullOutfit: return SofiMalePromptData.fullOutfits;
+        case EditCategory.hair: return SofiMalePromptData.hair;
+        case EditCategory.top: return SofiMalePromptData.tops;
+        case EditCategory.bottom: return SofiMalePromptData.bottoms;
+        case EditCategory.shoes: return SofiMalePromptData.shoes;
+        default: break; // Fall through to standard data for others
+      }
+    }
+
+    switch (category) {
+      case EditCategory.fullOutfit: return SofiPromptData.fullOutfits;
+      case EditCategory.hair: return SofiPromptData.hair;
+      case EditCategory.top: return SofiPromptData.tops;
+      case EditCategory.bottom: return SofiPromptData.bottoms;
+      case EditCategory.shoes: return SofiPromptData.shoes;
+      case EditCategory.accessories: return SofiPromptData.accessories;
+      case EditCategory.hats: return SofiPromptData.hats;
+      case EditCategory.jewelry: return SofiPromptData.jewelry;
+      case EditCategory.glasses: return SofiPromptData.glasses;
+      case EditCategory.poses: return SofiPromptData.poses;
+      case EditCategory.background: return SofiPromptData.backgrounds;
     }
   }
   
@@ -248,7 +290,7 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
       child: ClipRRect(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: _buildDrawerContent(bottomPadding),
         ),
       ),
@@ -654,33 +696,6 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
     }
     
     return clean;
-  }
-
-  List<dynamic> _getOptionsForCategory(EditCategory category) {
-    switch (category) {
-      case EditCategory.fullOutfit:
-        return SofiPromptData.fullOutfits;
-      case EditCategory.hair:
-        return SofiPromptData.hair;
-      case EditCategory.top:
-        return SofiPromptData.tops;
-      case EditCategory.bottom:
-        return SofiPromptData.bottoms;
-      case EditCategory.shoes:
-        return SofiPromptData.shoes;
-      case EditCategory.background:
-        return SofiPromptData.backgrounds;
-      case EditCategory.accessories:
-        return SofiPromptData.accessories;
-      case EditCategory.hats:
-        return SofiPromptData.hats;
-      case EditCategory.jewelry:
-        return SofiPromptData.jewelry;
-      case EditCategory.glasses:
-        return SofiPromptData.glasses;
-      case EditCategory.poses:
-        return SofiPromptData.poses;
-    }
   }
 }
 

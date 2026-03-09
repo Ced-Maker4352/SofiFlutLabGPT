@@ -5,11 +5,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// such as the master switch for "Doll Mode" vs "Human Mode".
 class UserPreferencesService extends ChangeNotifier {
   static const String _dollModeKey = 'global_doll_mode_enabled';
+  static const String _maleModeKey = 'global_male_mode_enabled';
 
   bool _isDollMode = true;
+  bool _isMaleMode = false;
 
   /// Whether the user has toggled on the 3D Plastic Doll master switch.
   bool get isDollMode => _isDollMode;
+  
+  /// Whether the user has toggled on the Male generator switch.
+  bool get isMaleMode => _isMaleMode;
 
   /// Singleton instance
   static final UserPreferencesService instance = UserPreferencesService._();
@@ -19,6 +24,7 @@ class UserPreferencesService extends ChangeNotifier {
   Future<void> initialize() async {
     final prefs = await SharedPreferences.getInstance();
     _isDollMode = prefs.getBool(_dollModeKey) ?? true;
+    _isMaleMode = prefs.getBool(_maleModeKey) ?? false;
     notifyListeners();
   }
 
@@ -29,6 +35,17 @@ class UserPreferencesService extends ChangeNotifier {
     _isDollMode = value;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_dollModeKey, value);
+    
+    notifyListeners();
+  }
+
+  /// Toggles the male mode switch and saves to storage.
+  Future<void> setMaleMode(bool value) async {
+    if (_isMaleMode == value) return;
+    
+    _isMaleMode = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_maleModeKey, value);
     
     notifyListeners();
   }

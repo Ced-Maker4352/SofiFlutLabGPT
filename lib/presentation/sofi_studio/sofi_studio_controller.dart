@@ -48,6 +48,23 @@ class SofiStudioController extends ChangeNotifier {
 
   SofiStudioController() {
     onClearGenerated = clearGeneratedImage;
+    UserPreferencesService.instance.addListener(_onGenderPreferenceChanged);
+  }
+
+  @override
+  void dispose() {
+    UserPreferencesService.instance.removeListener(_onGenderPreferenceChanged);
+    super.dispose();
+  }
+
+  void _onGenderPreferenceChanged() {
+    // Reload dolls and rebuild prompt when gender changes
+    loadDolls();
+    rebuildPrompt(
+      userPrompt: _rawUserIntention,
+      mode: selectedMode.id,
+      mood: selectedMood,
+    );
   }
 
   /// Whether the bottom drawer is currently open.
@@ -67,14 +84,15 @@ class SofiStudioController extends ChangeNotifier {
     double styleStrength = 7.0,
   }) {
     _rawUserIntention = userPrompt;
+    final isMale = UserPreferencesService.instance.isMaleMode;
 
     // Use instruction-style prompt for flux-kontext-pro
     // If mood is neutral, it technically shouldn't override the whole instruction,
     // but the builder now mixes them together anyway
     if (mood.isNotEmpty && mood != 'neutral') {
-      _currentPrompt = buildMoodEditInstruction(mood, userText: userPrompt, mode: mode);
+      _currentPrompt = buildMoodEditInstruction(mood, userText: userPrompt, mode: mode, isMale: isMale);
     } else {
-      _currentPrompt = buildCustomEditInstruction(userPrompt, mood: mood == 'neutral' ? '' : mood, mode: mode);
+      _currentPrompt = buildCustomEditInstruction(userPrompt, mood: mood == 'neutral' ? '' : mood, mode: mode, isMale: isMale);
     }
 
     debugPrint('[PROMPT BUILT]\n$_currentPrompt');
@@ -121,7 +139,8 @@ class SofiStudioController extends ChangeNotifier {
 
     // Use instruction-style prompt for flux-kontext-pro
     _rawUserIntention = mood;
-    _currentPrompt = buildMoodEditInstruction(mood);
+    final isMale = UserPreferencesService.instance.isMaleMode;
+    _currentPrompt = buildMoodEditInstruction(mood, isMale: isMale);
 
     debugPrint('[Studio] Mood selected: $mood');
     debugPrint('[Studio] Instruction prompt: $_currentPrompt');
@@ -151,19 +170,24 @@ class SofiStudioController extends ChangeNotifier {
     if (isGenerating) throw Exception('Already generating in progress');
 
     final bool isDollMode = UserPreferencesService.instance.isDollMode;
+    final bool isMaleMode = UserPreferencesService.instance.isMaleMode;
 
     // Use the already built _currentPrompt from the UI state.
     String prompt = _currentPrompt;
     
     // If the prompt is somehow empty, fallback to the base mood instruction.
     if (prompt.isEmpty) {
-      prompt = buildMoodEditInstruction(selectedMood.isNotEmpty ? selectedMood : 'creative');
+      prompt = buildMoodEditInstruction(
+        selectedMood.isNotEmpty ? selectedMood : 'creative',
+        isMale: isMaleMode,
+      );
     }
 
     // Now securely append the mode instruction at the time of generation.
     // If doll mode is active, append its aesthetic override.
     if (isDollMode) {
-      final dollAesthetic = 'Transform this into a full body fashion doll portrait. Show head-to-toe in a stylish pose with clean background. Soft plastic texture. ';
+      final genderLabel = isMaleMode ? 'male' : 'female';
+      final dollAesthetic = 'Transform this into a full body $genderLabel fashion doll portrait. Show head-to-toe in a stylish pose with clean background. Soft plastic texture. ';
       if (!prompt.contains('plastic texture')) {
         prompt = '$prompt $dollAesthetic';
       }
@@ -272,18 +296,21 @@ class SofiStudioController extends ChangeNotifier {
     premiumDolls.clear();
     allDolls.clear();
 
+    final bool isMale = UserPreferencesService.instance.isMaleMode;
+    final String baseFolder = isMale ? "images/dolls/male/base" : "images/dolls/base";
+    final String specialFolder = isMale ? "images/dolls/male/special" : "images/dolls/special";
+
     // ---------------------------
     // 10 BASE DOLLS (Firebase Storage)
-    // Thumbs: images/dolls/base/thumbs/base_XX_base_thumb.png
-    // Stage: images/dolls/base/stage/base_XX_base_stage.png
     // ---------------------------
     for (int i = 1; i <= 10; i++) {
       final num = two(i);
+      final String prefix = isMale ? "male" : "base";
       baseDolls.add(
         SofiDoll(
-          id: "$i",
-          thumbPath: "images/dolls/base/thumbs/base_${num}_base_thumb.png",
-          stagePath: "images/dolls/base/stage/base_${num}_base_stage.png",
+          id: "${isMale ? 'm' : ''}$i",
+          thumbPath: "$baseFolder/thumbs/${prefix}_${num}_base_thumb.png",
+          stagePath: "$baseFolder/stage/${prefix}_${num}_base_stage.png",
           isPremium: false,
           isStoragePath: true, // Load from Firebase Storage
         ),
@@ -292,17 +319,16 @@ class SofiStudioController extends ChangeNotifier {
 
     // ---------------------------
     // 5 PREMIUM DOLLS (Firebase Storage)
-    // Thumbs: images/dolls/special/thumbs/special_XX_base_thumb.png
-    // Stage: images/dolls/special/stage/special_XX_base_stage.png
     // ---------------------------
     for (int i = 1; i <= 5; i++) {
       final num = two(i);
+      final String prefix = isMale ? "male_special" : "special";
       premiumDolls.add(
         SofiDoll(
-          id: "${100 + i}",
+          id: "${isMale ? 'ms' : ''}${100 + i}",
           thumbPath:
-              "images/dolls/special/thumbs/special_${num}_base_thumb.png",
-          stagePath: "images/dolls/special/stage/special_${num}_base_stage.png",
+              "$specialFolder/thumbs/${prefix}_${num}_base_thumb.png",
+          stagePath: "$specialFolder/stage/${prefix}_${num}_base_stage.png",
           isPremium: true,
           isStoragePath: true, // Load from Firebase Storage
         ),

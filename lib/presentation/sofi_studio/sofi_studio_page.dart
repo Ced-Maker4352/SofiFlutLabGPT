@@ -42,6 +42,7 @@ import 'sofi_prompt_data.dart';
 import 'sofi_studio_controller.dart';
 import 'sofi_studio_models.dart';
 import 'sofi_studio_theme.dart';
+import 'sofi_male_prompt_data.dart';
 import 'widgets/sofi_bottom_drawer.dart';
 import 'widgets/sofi_history_sheet.dart';
 import 'widgets/generation_loader.dart';
@@ -1104,6 +1105,25 @@ class _SofiStudioPageState extends State<SofiStudioPage>
 
   String _getPrompt(EditCategory category, int option) {
     final idx = option - 1;
+    final isMale = UserPreferencesService.instance.isMaleMode;
+
+    if (isMale) {
+      switch (category) {
+        case EditCategory.hair:
+          return idx < SofiMalePromptData.hair.length ? SofiMalePromptData.hair[idx] : 'natural haircut';
+        case EditCategory.top:
+          return idx < SofiMalePromptData.tops.length ? SofiMalePromptData.tops[idx] : 'stylish top';
+        case EditCategory.bottom:
+          return idx < SofiMalePromptData.bottoms.length ? SofiMalePromptData.bottoms[idx] : 'stylish bottom';
+        case EditCategory.shoes:
+          return idx < SofiMalePromptData.shoes.length ? SofiMalePromptData.shoes[idx] : 'stylish shoes';
+        case EditCategory.fullOutfit:
+          return idx < SofiMalePromptData.fullOutfits.length ? SofiMalePromptData.fullOutfits[idx]['prompt'] : 'full outfit';
+        default:
+          break; // Fall back to female data for backgrounds/accessories if missing
+      }
+    }
+
     switch (category) {
       case EditCategory.hair:
         return SofiPromptData.hair[idx];
@@ -2714,32 +2734,29 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                 ListenableBuilder(
                   listenable: UserPreferencesService.instance,
                   builder: (context, _) {
-                    final isDollMode = UserPreferencesService.instance.isDollMode;
+                    final isDoll = UserPreferencesService.instance.isDollMode;
+                    final isMale = UserPreferencesService.instance.isMaleMode;
                     return Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          isDollMode ? 'Doll' : 'Human',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: isDollMode ? SofiStudioTheme.purple : theme.headerTextColor,
-                          ),
+                        // Doll Mode Toggle
+                        _buildHeaderToggle(
+                          label: isDoll ? 'Doll' : 'Human',
+                          value: isDoll,
+                          onChanged: (val) {
+                            UserPreferencesService.instance.setDollMode(val);
+                          },
+                          activeColor: SofiStudioTheme.purple,
                         ),
-                        const SizedBox(width: 4),
-                        SizedBox(
-                          height: 24,
-                          width: 40,
-                          child: FittedBox(
-                            fit: BoxFit.contain,
-                            child: CupertinoSwitch(
-                              value: isDollMode,
-                              activeColor: SofiStudioTheme.purple,
-                              onChanged: (val) {
-                                UserPreferencesService.instance.setDollMode(val);
-                              },
-                            ),
-                          ),
+                        const SizedBox(width: 12),
+                        // Gender Toggle
+                        _buildHeaderToggle(
+                          label: isMale ? 'Male' : 'Fem',
+                          value: isMale,
+                          onChanged: (val) {
+                            UserPreferencesService.instance.setMaleMode(val);
+                          },
+                          activeColor: Colors.blueAccent,
                         ),
                       ],
                     );
@@ -2825,6 +2842,41 @@ class _SofiStudioPageState extends State<SofiStudioPage>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildHeaderToggle({
+    required String label,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+    required Color activeColor,
+  }) {
+    final theme = ThemeManager.instance.current;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: value ? activeColor : theme.headerTextColor.withValues(alpha: 0.7),
+          ),
+        ),
+        const SizedBox(width: 4),
+        SizedBox(
+          height: 20,
+          width: 32,
+          child: FittedBox(
+            fit: BoxFit.contain,
+            child: CupertinoSwitch(
+              value: value,
+              activeColor: activeColor,
+              onChanged: onChanged,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -2963,7 +3015,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         child: Container(
-          height: 64,
+          constraints: const BoxConstraints(minHeight: 64),
           decoration: BoxDecoration(
             borderRadius: _radius100, // ✅ CONST
             boxShadow: isIOSWeb
