@@ -90,6 +90,7 @@ class SofiStudioPage extends StatefulWidget {
 class _SofiStudioPageState extends State<SofiStudioPage>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   // Pre-define all BorderRadius constants to prevent null values during rebuilds (Flutter Web crash fix)
+  static const _radius32 = BorderRadius.all(Radius.circular(32));
   static const _radius24 = BorderRadius.all(Radius.circular(24));
   static const _radius20 = BorderRadius.all(Radius.circular(20));
   static const _radius16 = BorderRadius.all(Radius.circular(16));
@@ -3485,52 +3486,51 @@ class _SofiStudioPageState extends State<SofiStudioPage>
   }) {
     final bool isIOSWeb = kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
     return ClipRRect(
-      borderRadius: _radius24, // ✅ CONST
+      borderRadius: _radius24,
       child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.10),
-            borderRadius: _radius24, // ✅ CONST
-            border: isIOSWeb
-                ? null
-                : Border.all(
-                    color: Colors.black.withValues(alpha: 0.20), width: 1),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _HistoryButton(
-                icon: Icons.undo_rounded,
-                tooltip: 'Undo',
-                enabled: canUndo,
-                onTap: () {
-                  AudioService.instance.playTick();
-                  HapticFeedback.lightImpact();
-                  onUndo();
-                },
-              ),
-              _HistoryButton(
-                icon: Icons.redo_rounded,
-                tooltip: 'Redo',
-                enabled: canRedo,
-                onTap: () {
-                  AudioService.instance.playTick();
-                  HapticFeedback.lightImpact();
-                  onRedo();
-                },
-              ),
-              _HistoryButton(
-                icon: Icons.history_rounded,
-                tooltip: 'History',
-                enabled: hasHistory,
-                onTap: () {
-                  AudioService.instance.playClick();
-                  HapticFeedback.lightImpact();
-                  onOpenHistory();
-                },
-              ),
-            ],
-          ),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.10),
+          borderRadius: _radius24,
+          border: isIOSWeb
+              ? null
+              : Border.all(
+                  color: Colors.black.withValues(alpha: 0.20), width: 1),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _HistoryButton(
+              icon: Icons.undo_rounded,
+              tooltip: 'Undo',
+              enabled: canUndo,
+              onTap: () {
+                AudioService.instance.playTick();
+                HapticFeedback.lightImpact();
+                onUndo();
+              },
+            ),
+            _HistoryButton(
+              icon: Icons.redo_rounded,
+              tooltip: 'Redo',
+              enabled: canRedo,
+              onTap: () {
+                AudioService.instance.playTick();
+                HapticFeedback.lightImpact();
+                onRedo();
+              },
+            ),
+            _HistoryButton(
+              icon: Icons.history_rounded,
+              tooltip: 'History',
+              enabled: hasHistory,
+              onTap: () {
+                AudioService.instance.playClick();
+                HapticFeedback.lightImpact();
+                onOpenHistory();
+              },
+            ),
+          ],
         ),
       ),
     );
@@ -3955,7 +3955,6 @@ class _FrostyCircleButton extends StatelessWidget {
             ),
           ),
         ),
-      ),
     );
   }
 }
