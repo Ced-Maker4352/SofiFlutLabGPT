@@ -28,7 +28,7 @@ class SofiLegalLinks extends StatelessWidget {
       mainAxisAlignment: alignment,
       children: [
         GestureDetector(
-          onTap: () => _launchUrl('https://sofisaint.com/privacy'),
+          onTap: () => _launchUrl('https://sofi-saint-app.web.app/privacy'),
           child: Text(
             'Privacy Policy',
             style: TextStyle(
@@ -43,7 +43,7 @@ class SofiLegalLinks extends StatelessWidget {
           child: Text('|', style: TextStyle(color: textColor, fontSize: fontSize)),
         ),
         GestureDetector(
-          onTap: () => _launchUrl('https://sofisaint.com/terms'),
+          onTap: () => _launchUrl('https://sofi-saint-app.web.app/terms'),
           child: Text(
             'Terms of Service',
             style: TextStyle(

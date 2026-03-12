@@ -6,7 +6,8 @@ import 'package:share_plus/share_plus.dart';
 
 // Conditional imports for platform-specific functionality
 import 'package:sofi_test_connect/services/sofi_export_mobile.dart'
-    if (dart.library.html) 'package:sofi_test_connect/services/sofi_export_web.dart';
+    if (dart.library.html) 'package:sofi_test_connect/services/sofi_export_web.dart'
+    as save_impl;
 
 class SofiExportService {
   /// Downloads image bytes from a public/signed URL
@@ -62,5 +63,10 @@ class SofiExportService {
   }) async {
     final bytes = await _downloadBytes(imageUrl);
     await saveImageBytes(bytes, fileName);
+  }
+
+  static Future<void> saveImageBytes(Uint8List bytes, String fileName) async {
+    // This calls the top-level function from the conditional import
+    await save_impl.saveImageBytes(bytes, fileName);
   }
 }

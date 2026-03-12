@@ -4,6 +4,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/rendering.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image/image.dart' as img;
@@ -13,6 +15,7 @@ import 'package:sofi_test_connect/models/theme_presets.dart';
 import 'package:sofi_test_connect/services/two_step_generation_service.dart';
 import 'package:sofi_test_connect/services/user_preferences_service.dart';
 import 'package:sofi_test_connect/services/prompt_builder.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:sofi_test_connect/presentation/shared/stage_image.dart';
 import 'package:sofi_test_connect/presentation/sofi_studio/widgets/generation_loader.dart';
 import 'package:sofi_test_connect/presentation/sofi_studio/favorites_manager.dart';
@@ -119,6 +122,25 @@ class _PremiumStudioPageState extends State<PremiumStudioPage> {
   double? _cropAspect; // null = full
   double _cropFocus = 0; // -1 top, 0 center, 1 bottom
 
+  // --- TEXT CAPTION STATE ---
+  final GlobalKey _premiumStageKey = GlobalKey();
+  String _captionText = '';
+  String _captionFont = 'Fredoka';
+  Color _captionColor = Colors.white;
+  double _captionY = 0.85; // 0.1 (top), 0.5 (mid), 0.85 (bottom)
+  final List<String> _captionFonts = [
+    'Luckiest Guy',
+    'Pacifico',
+    'Bangers',
+    'Chewy',
+    'Fredoka',
+    'Indie Flower',
+    'Patrick Hand',
+    'Permanent Marker',
+    'Amatic SC',
+    'Comic Neue',
+  ];
+
   bool get _needsUpload => _userImageBytes == null && lockedBodyBytes == null;
 
   // ---------------- HELPERS ----------------
@@ -211,20 +233,36 @@ class _PremiumStudioPageState extends State<PremiumStudioPage> {
     try {
       if (share) {
         // Share flow
-        await SofiExportService.shareImage(
-          context: context,
-          imageUrl: await StorageService.instance
-              .uploadTempBytesAndGetUrl(cropped, fileName),
-          shareText: _captionForPreset(preset),
-          fileName: fileName,
-        );
+        if (_captionText.isEmpty) {
+          await SofiExportService.shareImage(
+            context: context,
+            imageUrl: await StorageService.instance
+                .uploadTempBytesAndGetUrl(cropped, fileName),
+            shareText: _captionForPreset(preset),
+            fileName: fileName,
+          );
+        } else {
+          // If caption exists, we MUST capture the composite. 
+          // preset crop isn't easily applied to the composite live UI, 
+          // but we'll capture the current view as is.
+          final bytes = await _captureCompositeImage() ?? cropped;
+          await Share.shareXFiles(
+            [XFile.fromData(bytes, name: fileName, mimeType: 'image/png')],
+            text: _captionForPreset(preset),
+          );
+        }
       } else {
         // Save to Photos / Download
-        await SofiExportService.saveImage(
-          imageUrl: await StorageService.instance
-              .uploadTempBytesAndGetUrl(cropped, fileName),
-          fileName: fileName,
-        );
+        if (_captionText.isEmpty) {
+          await SofiExportService.saveImage(
+            imageUrl: await StorageService.instance
+                .uploadTempBytesAndGetUrl(cropped, fileName),
+            fileName: fileName,
+          );
+        } else {
+          final bytes = await _captureCompositeImage() ?? cropped;
+          await SofiExportService.saveImageBytes(bytes, fileName);
+        }
       }
 
       if (!mounted) return;
@@ -387,6 +425,189 @@ class _PremiumStudioPageState extends State<PremiumStudioPage> {
   Future<void> _saveFavorites() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_favKey, favorites.toList());
+  }
+
+  Future<Uint8List?> _captureCompositeImage() async {
+    try {
+      final boundary =
+          _premiumStageKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return null;
+
+      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      final ByteData? byteData =
+          await image.toByteData(format: ui.ImageByteFormat.png);
+      return byteData?.buffer.asUint8List();
+    } catch (e) {
+      debugPrint('Capture failed: $e');
+      return null;
+    }
+  }
+
+  void _openCaptionSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(builder: (context, setSheetState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Add Caption',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+                TextField(
+                  autofocus: true,
+                  style: const TextStyle(color: Colors.black),
+                  decoration: InputDecoration(
+                    hintText: 'Type something fun...',
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none),
+                  ),
+                  controller: TextEditingController(text: _captionText)
+                    ..selection = TextSelection.collapsed(
+                        offset: _captionText.length),
+                  onChanged: (val) {
+                    setState(() => _captionText = val);
+                    setSheetState(() {});
+                  },
+                ),
+                const SizedBox(height: 20),
+                const Text('Font Style',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 50,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _captionFonts.length,
+                    itemBuilder: (context, index) {
+                      final f = _captionFonts[index];
+                      final isSelected = f == _captionFont;
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() => _captionFont = f);
+                          setSheetState(() {});
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: isSelected ? Colors.black : Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.black),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text('Abc',
+                              style: GoogleFonts.getFont(f,
+                                  color:
+                                      isSelected ? Colors.white : Colors.black,
+                                  fontSize: 16)),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text('Color',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Colors.white,
+                    Colors.black,
+                    Colors.yellow,
+                    Colors.pink,
+                    Colors.cyan,
+                    Colors.lime
+                  ].map((c) {
+                    final isSelected = c.value == _captionColor.value;
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() => _captionColor = c);
+                        setSheetState(() {});
+                      },
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        margin: const EdgeInsets.only(right: 12),
+                        decoration: BoxDecoration(
+                          color: c,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              color: isSelected ? Colors.purple : Colors.grey,
+                              width: isSelected ? 3 : 1),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 20),
+                const Text('Position',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    _posBtn('Top', 0.1, setSheetState),
+                    const SizedBox(width: 8),
+                    _posBtn('Middle', 0.5, setSheetState),
+                    const SizedBox(width: 8),
+                    _posBtn('Bottom', 0.85, setSheetState),
+                  ],
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          );
+        });
+      },
+    );
+  }
+
+  Widget _posBtn(String label, double y, StateSetter setSheetState) {
+    final isSelected = (_captionY - y).abs() < 0.01;
+    return Expanded(
+      child: ElevatedButton(
+        onPressed: () {
+          setState(() => _captionY = y);
+          setSheetState(() {});
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isSelected ? Colors.black : Colors.white,
+          foregroundColor: isSelected ? Colors.white : Colors.black,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Colors.black)),
+        ),
+        child: Text(label),
+      ),
+    );
   }
 
   // ---------------- PROMPTS ----------------
@@ -1371,14 +1592,51 @@ class _PremiumStudioPageState extends State<PremiumStudioPage> {
                                           ],
                                         )
                                       : const SizedBox.shrink())
-                              : SizedBox.expand(
-                                  child: InteractiveViewer(
-                                    minScale: 1.0,
-                                    maxScale: 6.0,
-                                    child: StageImage(
-                                      base64: _b64(styledBytes)!,
-                                      fit: BoxFit.contain,
-                                    ),
+                              : RepaintBoundary(
+                                  key: _premiumStageKey,
+                                  child: Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      InteractiveViewer(
+                                        minScale: 1.0,
+                                        maxScale: 6.0,
+                                        child: Center(
+                                          child: StageImage(
+                                            base64: _b64(styledBytes)!,
+                                            fit: BoxFit.contain,
+                                          ),
+                                        ),
+                                      ),
+                                      if (_captionText.isNotEmpty)
+                                        Positioned(
+                                          left: 30,
+                                          right: 30,
+                                          top: 0,
+                                          bottom: 0,
+                                          child: IgnorePointer(
+                                            child: Align(
+                                              alignment:
+                                                  Alignment(0, (_captionY * 2) - 1),
+                                              child: Text(
+                                                _captionText,
+                                                textAlign: TextAlign.center,
+                                                style: GoogleFonts.getFont(
+                                                  _captionFont,
+                                                  color: _captionColor,
+                                                  fontSize: 32,
+                                                  shadows: [
+                                                    const Shadow(
+                                                      blurRadius: 8.0,
+                                                      color: Colors.black54,
+                                                      offset: Offset(2.0, 2.0),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
                                   ),
                                 ),
                         ),
@@ -1460,6 +1718,11 @@ class _PremiumStudioPageState extends State<PremiumStudioPage> {
                   ),
                 const Spacer(),
                 TextButton.icon(
+                  onPressed: _openCaptionSheet,
+                  icon: const Icon(Icons.text_fields_rounded, size: 16),
+                  label: const Text('Caption', style: TextStyle(fontSize: 12)),
+                ),
+                TextButton.icon(
                   onPressed: _openCropSheet,
                   icon: const Icon(Icons.crop, size: 16),
                   label: const Text('Refine', style: TextStyle(fontSize: 12)),
@@ -1489,7 +1752,21 @@ class _PremiumStudioPageState extends State<PremiumStudioPage> {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => _saveToFavorites(makeAnother: false),
+                    onPressed: () async {
+                      if (_captionText.isEmpty) {
+                        _saveToFavorites(makeAnother: false);
+                      } else {
+                        final bytes = await _captureCompositeImage() ?? styledBytes;
+                        if (bytes != null) {
+                          // For now, save with caption doesn't support 'makeAnother' flow easily
+                          // unless we upload the composite. 
+                          // But user just wants to SAVE it.
+                          await SofiExportService.saveImageBytes(bytes, 'sofi_fav_${DateTime.now().millisecondsSinceEpoch}.png');
+                          setState(() => _currentImageSaved = true);
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✓ Saved with caption')));
+                        }
+                      }
+                    },
                     icon: Icon(
                       _currentImageSaved ? Icons.favorite : Icons.favorite_border,
                       size: 16,

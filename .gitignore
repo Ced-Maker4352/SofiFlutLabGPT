@@ -3,7 +3,7 @@
 *.log
 *.pyc
 *.swp
-.DS_Store
+*.DS_Store
 .atom/
 .build/
 .buildlog/
@@ -46,3 +46,8 @@ app.*.map.json
 
 *.hologram.dart
 .prompt_attachments
+
+# Build artifacts
+ios/*.ipa
+ios/*.zip
+.firebase/

@@ -42,7 +42,8 @@ enum EditCategory {
   hats('hats', 'Hats'),
   jewelry('jewelry', 'Jewelry'),
   glasses('glasses', 'Glasses'),
-  poses('poses', 'Poses');
+  poses('poses', 'Poses'),
+  caption('caption', 'Caption');
 
   final String promptTag;
   final String prettyName;

@@ -36,7 +36,8 @@ class ModelsLabService {
     final data = Map<String, dynamic>.from(result.data as Map);
 
     if (data['ok'] != true) {
-      throw Exception('Generation failed: ${data.toString()}');
+      debugPrint('[ModelsLab] ❌ Generation Error Data: $data');
+      throw Exception('Generation failed: ${data['message'] ?? data.toString()}');
     }
 
     final imageUrl = data['imageUrl'];

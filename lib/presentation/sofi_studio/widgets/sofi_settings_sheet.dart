@@ -129,6 +129,28 @@ class _SofiSettingsSheetState extends State<SofiSettingsSheet> {
                     trailing: _comingSoonBadge(),
                   ),
                   const SizedBox(height: 16),
+                  const Divider(height: 32),
+                  // Legal Section
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      children: [
+                        Icon(Icons.gavel_rounded, color: SofiStudioTheme.charcoal, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'Legal',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: SofiStudioTheme.charcoal,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const SofiLegalLinks(fontSize: 14, textColor: SofiStudioTheme.charcoal),
+                  const SizedBox(height: 24),
                   // Performance Mode explanation
                   if (PerformanceService.isIOSWeb) ...[
                     Container(

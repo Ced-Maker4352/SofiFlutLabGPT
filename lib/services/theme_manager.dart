@@ -68,7 +68,7 @@ class ThemeManager extends ChangeNotifier {
     ),
   };
 
-  AppThemeType _currentTheme = AppThemeType.blue;
+  AppThemeType _currentTheme = AppThemeType.yellow;
 
   AppThemeType get currentTheme => _currentTheme;
   AppThemeData get current => themes[_currentTheme]!;

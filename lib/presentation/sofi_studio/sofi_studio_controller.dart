@@ -80,22 +80,10 @@ class SofiStudioController extends ChangeNotifier {
   void rebuildPrompt({
     required String userPrompt,
     required String mode,
-    String mood = '',
-    double styleStrength = 7.0,
+    required String mood,
   }) {
-    _rawUserIntention = userPrompt;
-    final isMale = UserPreferencesService.instance.isMaleMode;
-
-    // Use instruction-style prompt for flux-kontext-pro
-    // If mood is neutral, it technically shouldn't override the whole instruction,
-    // but the builder now mixes them together anyway
-    if (mood.isNotEmpty && mood != 'neutral') {
-      _currentPrompt = buildMoodEditInstruction(mood, userText: userPrompt, mode: mode, isMale: isMale);
-    } else {
-      _currentPrompt = buildCustomEditInstruction(userPrompt, mood: mood == 'neutral' ? '' : mood, mode: mode, isMale: isMale);
-    }
-
-    debugPrint('[PROMPT BUILT]\n$_currentPrompt');
+    // Simply use the prompt as provided by the UI, which now handles full context.
+    _currentPrompt = userPrompt;
     notifyListeners();
   }
 
@@ -136,11 +124,6 @@ class SofiStudioController extends ChangeNotifier {
   // ---------------------------------------------------------------
   void onMoodSelectedInStudio(String mood) {
     selectedMood = mood;
-
-    // Use instruction-style prompt for flux-kontext-pro
-    _rawUserIntention = mood;
-    final isMale = UserPreferencesService.instance.isMaleMode;
-    _currentPrompt = buildMoodEditInstruction(mood, isMale: isMale);
 
     debugPrint('[Studio] Mood selected: $mood');
     debugPrint('[Studio] Instruction prompt: $_currentPrompt');
@@ -183,16 +166,7 @@ class SofiStudioController extends ChangeNotifier {
       );
     }
 
-    // Now securely append the mode instruction at the time of generation.
-    // If doll mode is active, append its aesthetic override.
-    if (isDollMode) {
-      final genderLabel = isMaleMode ? 'male' : 'female';
-      final dollAesthetic = 'Transform this into a full body $genderLabel fashion doll portrait. Show head-to-toe in a stylish pose with clean background. Soft plastic texture. ';
-      if (!prompt.contains('plastic texture')) {
-        prompt = '$prompt $dollAesthetic';
-      }
-    }
-
+    // prompt is already fully built by SofiStudioPage._buildFinalPrompt()
     debugPrint('[SofiStudio] Generating with instruction prompt: $prompt');
 
     await Future<void>.delayed(const Duration(milliseconds: 300));
@@ -234,11 +208,7 @@ class SofiStudioController extends ChangeNotifier {
           aspectRatio: '9:16',
         );
 
-        final resp = await http.get(Uri.parse(imageUrl));
-        if (resp.statusCode != 200) {
-          throw Exception('Failed to download generated image: \${resp.statusCode}');
-        }
-        resultBytes = resp.bodyBytes;
+        resultBytes = await _downloadBytes(imageUrl);
       }
 
       generatedImageBytes = resultBytes;
@@ -250,10 +220,39 @@ class SofiStudioController extends ChangeNotifier {
       rethrow;
     } finally {
       isGenerating = false;
-      debugPrint('[GENERATION] Completed. Image bytes: '
-          '\${generatedImageBytes?.length}');
       notifyListeners();
     }
+  }
+
+  /// Robust downloader with retries (CDNs can take a moment to propagate)
+  Future<Uint8List> _downloadBytes(String url) async {
+    const maxRetries = 5;
+    const retryDelay = Duration(seconds: 2);
+
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        final resp = await http.get(Uri.parse(url));
+        if (resp.statusCode >= 200 && resp.statusCode < 300) {
+          debugPrint('[Download] ✅ Got ${resp.bodyBytes.length} bytes on attempt $attempt');
+          return resp.bodyBytes;
+        }
+
+        // If 404, the CDN file may not have propagated yet — retry
+        if (resp.statusCode == 404) {
+          debugPrint('[Download] ⏳ 404 on attempt $attempt, retrying...');
+        } else {
+          debugPrint('[Download] ❌ HTTP ${resp.statusCode} on attempt $attempt');
+        }
+      } catch (e) {
+        debugPrint('[Download] ❌ Error on attempt $attempt: $e');
+      }
+
+      if (attempt < maxRetries) {
+        await Future.delayed(retryDelay);
+      }
+    }
+
+    throw Exception('Failed to download image after $maxRetries attempts');
   }
 
   // ---------------------------------------------------------------

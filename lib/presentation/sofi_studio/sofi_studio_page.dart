@@ -11,6 +11,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:flutter/rendering.dart';
 
 import 'package:sofi_test_connect/services/premium_service.dart';
 import 'package:sofi_test_connect/services/performance_service.dart';
@@ -30,7 +31,6 @@ import 'package:sofi_test_connect/services/remote_debug_logger.dart';
 import 'package:sofi_test_connect/presentation/sofi_studio/favorites_manager.dart';
 import 'package:sofi_test_connect/presentation/sofi_studio/models/favorite_outfit.dart';
 import 'package:http/http.dart' as http;
-import 'package:sofi_test_connect/presentation/shared/sofi_legal_links.dart';
 
 import '../../constants/base_prompts.dart';
 import '../../services/sofi_export_service.dart';
@@ -270,16 +270,29 @@ class _SofiStudioPageState extends State<SofiStudioPage>
   String _selectedRatio = 'portrait';
 
   final Map<EditCategory, int?> selectedOptions = {
-    EditCategory.hair: null,
-    EditCategory.top: null,
-    EditCategory.bottom: null,
-    EditCategory.shoes: null,
-    EditCategory.accessories: null,
-    EditCategory.hats: null,
-    EditCategory.jewelry: null,
-    EditCategory.glasses: null,
     EditCategory.background: null,
   };
+
+  // --- TEXT CAPTION STATE ---
+  final GlobalKey _stageKey = GlobalKey();
+  String _captionText = '';
+  String _captionFont = 'Fredoka';
+  EditCategory? _drawerInitialCategory;
+  bool _showUI = true;
+  Color _captionColor = Colors.white;
+  double _captionY = 0.85; // 0.1 (top), 0.5 (mid), 0.85 (bottom)
+  final List<String> _captionFonts = [
+    'Luckiest Guy',
+    'Pacifico',
+    'Bangers',
+    'Chewy',
+    'Fredoka',
+    'Indie Flower',
+    'Patrick Hand',
+    'Permanent Marker',
+    'Amatic SC',
+    'Comic Neue',
+  ];
 
   @override
   void initState() {
@@ -1119,6 +1132,8 @@ class _SofiStudioPageState extends State<SofiStudioPage>
           return idx < SofiMalePromptData.shoes.length ? SofiMalePromptData.shoes[idx] : 'stylish shoes';
         case EditCategory.fullOutfit:
           return idx < SofiMalePromptData.fullOutfits.length ? SofiMalePromptData.fullOutfits[idx]['prompt'] : 'full outfit';
+        case EditCategory.caption:
+          return '';
         default:
           break; // Fall back to female data for backgrounds/accessories if missing
       }
@@ -1147,6 +1162,8 @@ class _SofiStudioPageState extends State<SofiStudioPage>
         return SofiPromptData.backgrounds[idx];
       case EditCategory.fullOutfit:
         return SofiPromptData.fullOutfits[idx]['prompt'];
+      case EditCategory.caption:
+        return '';
     }
   }
 
@@ -1277,15 +1294,19 @@ class _SofiStudioPageState extends State<SofiStudioPage>
     // SFX: start generation
     try {
       unawaited(AudioService.instance.playGenerateStart());
+      unawaited(AudioService.instance.startGenerationLoop());
     } catch (e) {
-      debugPrint('\u26a0\ufe0f [Audio] playGenerateStart error: $e');
+      debugPrint('⚠️ [Audio] playGenerateStart error: $e');
     }
 
     // Platform-specific memory guard before heavy work
     _prepareForGenerationMemory();
 
     if (!mounted) return;
-    setState(() => _isGenerating = true);
+    setState(() {
+      _isGenerating = true;
+      _showUI = false;
+    });
 
     try {
       // ================================
@@ -1300,22 +1321,25 @@ class _SofiStudioPageState extends State<SofiStudioPage>
         // A character is active on the canvas: edit the character, not the selfie
         initImageBytes = _originalBaseDollBytes!;
         debugPrint(
-            '[Identity] 🎭 CHARACTER MODE: Using selected character as init image (${initImageBytes.length} bytes)');
+            '[Identity] 🎭 CHARACTER MODE: Using selected character as source');
       } else if (selfie != null && selfie.isNotEmpty) {
         // SELFIE MODE: Use selfie as identity anchor
         initImageBytes = selfie;
         debugPrint(
-            '[Identity] 📸 SELFIE MODE: Using selfie as identity anchor (${selfie.length} bytes)');
+            '[Identity] 📸 SELFIE MODE: Using selfie as source');
       } else if (controller.currentDoll != null) {
-        // No selfie, no doll bytes loaded yet — fall back to loading current doll from path
+        // No selfie, no doll bytes loaded yet
         initImageBytes = await _loadDollImage(
           controller.currentDoll!.stagePath,
           controller.currentDoll!.isStoragePath,
         );
-        debugPrint('[Identity] No selfie or active bytes, loaded character from path');
+        debugPrint('[Identity] Loaded character from path');
       } else {
         throw Exception("No valid source image found to generate from.");
       }
+
+      // NEW: Ensure payload size is reasonable for stability
+      initImageBytes = await _ensureReasonableSize(initImageBytes);
 
       // ================================
       // STEP 2: SYNC & DELEGATE TO TWO-STEP CONTROLLER
@@ -1387,8 +1411,9 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       // SFX: success
       try {
         unawaited(AudioService.instance.playSuccess());
+        unawaited(AudioService.instance.stopGenerationLoop());
       } catch (e) {
-        debugPrint('\u26a0\ufe0f [Audio] playSuccess error: $e');
+        debugPrint('⚠️ [Audio] playSuccess error: $e');
       }
 
       // Voice Coach: short success response only (no prompt narration)
@@ -1440,8 +1465,9 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       // SFX: error
       try {
         unawaited(AudioService.instance.playError());
+        unawaited(AudioService.instance.stopGenerationLoop());
       } catch (audioErr) {
-        debugPrint('\u26a0\ufe0f [Audio] playError failed: $audioErr');
+        debugPrint('⚠️ [Audio] playError failed: $audioErr');
       }
 
       // Voice Coach: explain and nudge
@@ -1473,7 +1499,17 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       } else {
         // Generic error fallback
         if (mounted) {
-          _showSnack('Generation failed. Please try again.');
+          final errorStr = e.toString().toLowerCase();
+          String userMsg = 'Generation failed. Please try again.';
+          if (errorStr.contains('safety')) {
+            userMsg = 'Safety filter triggered. Please try a different prompt.';
+          } else if (errorStr.contains('timeout')) {
+            userMsg = 'Request timed out. Please try again.';
+          } else {
+            // EXPOSE ACTUAL ERROR for debugging
+            userMsg = 'Error: ${e.toString().replaceAll('Exception: ', '')}';
+          }
+          _showSnack(userMsg);
         }
       }
     } finally {
@@ -1735,7 +1771,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       if (newW == w && newH == h) return input;
 
       debugPrint(
-          '\ud83d\udd0d [Crop] Cropping from ${w}x$h to ${newW}x$newH (${(cropPercentage * 100).toStringAsFixed(1)}% reduction)');
+          '\ud83d\udd0d [Crop] Cropping from ${w}x$h to ${newW}x${newH} (${(cropPercentage * 100).toStringAsFixed(1)}% reduction)');
 
       final ui.PictureRecorder recorder = ui.PictureRecorder();
       final ui.Canvas canvas = ui.Canvas(recorder);
@@ -1762,6 +1798,54 @@ class _SofiStudioPageState extends State<SofiStudioPage>
     }
   }
 
+  /// Ensures the image is not excessively large before sending to ModelsLab.
+  /// Downscales if either dimension exceeds [maxDimension].
+  Future<Uint8List> _ensureReasonableSize(Uint8List bytes, {int maxDimension = 1024}) async {
+    try {
+      final ui.ImmutableBuffer buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
+      final ui.ImageDescriptor descriptor = await ui.ImageDescriptor.encoded(buffer);
+      
+      final int w = descriptor.width;
+      final int h = descriptor.height;
+      
+      // If already small enough, skip processing
+      if (w <= maxDimension && h <= maxDimension) {
+        debugPrint('[Size] Image is already reasonable size: ${w}x$h');
+        return bytes;
+      }
+      
+      // Calculate scale to fit within maxDimension
+      double scale = 1.0;
+      if (w > h) {
+        scale = maxDimension / w;
+      } else {
+        scale = maxDimension / h;
+      }
+      
+      final int targetW = (w * scale).round();
+      final int targetH = (h * scale).round();
+      
+      debugPrint('[Size] Downscaling from ${w}x$h to ${targetW}x$targetH (scale: ${scale.toStringAsFixed(2)})');
+      
+      final ui.Codec codec = await descriptor.instantiateCodec(
+        targetWidth: targetW,
+        targetHeight: targetH,
+      );
+      final ui.FrameInfo frame = await codec.getNextFrame();
+      final ui.Image resized = frame.image;
+      
+      final ByteData? png = await resized.toByteData(format: ui.ImageByteFormat.png);
+      if (png == null) return bytes;
+      
+      final result = png.buffer.asUint8List();
+      debugPrint('[Size] Downscale complete: ${bytes.length} bytes -> ${result.length} bytes');
+      return result;
+    } catch (e) {
+      debugPrint('⚠️ _ensureReasonableSize failed: $e');
+      return bytes;
+    }
+  }
+
   void _undo() {
     if (_history.length <= 1) return;
     final last = _history.removeLast();
@@ -1775,6 +1859,21 @@ class _SofiStudioPageState extends State<SofiStudioPage>
     final bytes = _redoStack.removeLast();
     _history.add(bytes);
     _setCanvasAndAutosave(bytes, pushToStacks: false);
+  }
+
+  Future<Uint8List?> _captureCompositeImage() async {
+    try {
+      final boundary = _stageKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return null;
+      
+      // QUALITY: Use high pixel ratio for sharp text on save
+      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      return byteData?.buffer.asUint8List();
+    } catch (e) {
+      debugPrint('❌ Composite capture failed: $e');
+      return null;
+    }
   }
 
   void _openHistory() {
@@ -1803,7 +1902,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
 
   Future<void> _shareCurrent() async {
     try {
-      Uint8List? bytes = generatedImageBytes;
+      Uint8List? bytes = await _captureCompositeImage() ?? generatedImageBytes;
       String name = 'sofi.png';
 
       if (bytes == null) {
@@ -2266,17 +2365,26 @@ class _SofiStudioPageState extends State<SofiStudioPage>
     try {
       await AudioService.instance.playClick();
 
-      // If we have a URL, use it for sharing; otherwise we'll need to generate one
-      if (_latestImageUrl != null) {
+      // If we have a URL and NO caption, use the URL; otherwise capture composite
+      if (_captionText.isEmpty && _latestImageUrl != null) {
         await SofiExportService.shareImage(
           context: context,
           imageUrl: _latestImageUrl!,
-          shareText: 'Made with Sofi Studio',
+          shareText: 'Made with Sofi Saint',
           fileName: 'sofi_studio_${DateTime.now().millisecondsSinceEpoch}.png',
         );
         _showSnack('Opening share sheet...');
       } else {
-        _showSnack('Image URL not available');
+        final bytes = await _captureCompositeImage() ?? generatedImageBytes;
+        if (bytes != null) {
+          await Share.shareXFiles(
+            [XFile.fromData(bytes, name: 'sofi.png', mimeType: 'image/png')],
+            text: 'Made with Sofi Saint',
+            subject: 'Sofi Saint Creation',
+          );
+        } else {
+          _showSnack('No image to share');
+        }
       }
     } catch (e) {
       debugPrint('❌ Failed to share: $e');
@@ -2293,10 +2401,23 @@ class _SofiStudioPageState extends State<SofiStudioPage>
     try {
       await AudioService.instance.playClick();
 
-      await SofiExportService.saveImage(
-        imageUrl: _latestImageUrl ?? '',
-        fileName: 'sofi_studio_${DateTime.now().millisecondsSinceEpoch}.png',
-      );
+      // If we have no caption and a URL, use the service; otherwise save composite bytes
+      if (_captionText.isEmpty && _latestImageUrl != null) {
+        await SofiExportService.saveImage(
+          imageUrl: _latestImageUrl ?? '',
+          fileName: 'sofi_studio_${DateTime.now().millisecondsSinceEpoch}.png',
+        );
+      } else {
+        final bytes = await _captureCompositeImage() ?? generatedImageBytes;
+        if (bytes != null) {
+          await SofiExportService.saveImageBytes(
+            bytes,
+            'sofi_studio_${DateTime.now().millisecondsSinceEpoch}.png',
+          );
+        } else {
+          throw Exception('No image bytes to save');
+        }
+      }
       _showSnack(kIsWeb ? 'Image downloaded!' : 'Saved to Photos ✓');
     } catch (e) {
       debugPrint('❌ Failed to download: $e');
@@ -2339,73 +2460,58 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                   // Main layout: Header at top, Stage fills the rest
                   Column(
                     children: [
-                      SafeArea(bottom: false, child: _header()),
-                      Expanded(child: buildStage(controller)),
+                      SafeArea(
+                        bottom: false,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOutCubic,
+                          height: _showUI ? null : 0,
+                          child: AnimatedOpacity(
+                            duration: const Duration(milliseconds: 250),
+                            opacity: _showUI ? 1.0 : 0.0,
+                            child: _header(),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            setState(() => _showUI = !_showUI);
+                          },
+                          child: buildStage(controller),
+                        ),
+                      ),
                     ],
                   ),
 
-                  // Floating undo/redo/history just above the footer
-                  Positioned(
-                    right: 16,
-                    bottom: 180, // LIFTED further to clear Mood Bar
-                    child: floatingHistoryCluster(
-                      canUndo: _history.length > 1,
-                      canRedo: _redoStack.isNotEmpty,
-                      hasHistory: _history.isNotEmpty,
-                      onUndo: _undo,
-                      onRedo: _redo,
-                      onOpenHistory: _openHistory,
-                    ),
-                  ),
-
-                  // Floating Share button on the left, intentionally hidden while generating
-                  if (!controller.isGenerating)
-                    Positioned(
-                      left: 16,
-                      bottom: 180, // LIFTED further to clear Mood Bar
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _FrostyCircleButton(
-                            icon: Icons.ios_share,
-                            tooltip: 'Share',
-                            onTap: _shareCurrent,
-                          ),
-                          const SizedBox(width: 8),
-                          // Theme Switcher
-                          _FrostyCircleButton(
-                            icon: ThemeManager.instance.current.icon,
-                            tooltip: 'Change Theme',
-                            onTap: () => ThemeManager.instance.cycleTheme(),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                  // Floating Prompt Preview (above footer)
+                  // Floating Prompt Preview (above footer) (duck away)
                   if (promptController.text.isNotEmpty &&
                       !_isGenerating &&
                       !controller.isDrawerOpen)
-                    Positioned(
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 350),
+                      curve: Curves.easeOutCubic,
                       left: 24,
                       right: 24,
-                      bottom: 154, // LIFTED
-                      child: _buildPromptPreview(),
+                      bottom: _showUI ? MediaQuery.of(context).padding.bottom + 90 : -50,
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 250),
+                        opacity: _showUI ? 1.0 : 0.0,
+                        child: _buildPromptPreview(),
+                      ),
                     ),
 
-                  // Quick Mood Bar (always available, no drawer required)
-                  if (!_isGenerating && !controller.isDrawerOpen)
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 114, // LIFTED to explicitly clear 110px tall footer pill
-                      child: _buildQuickMoodBar(),
-                    ),
+                  // Sidebars (They handle their own Positioned/AnimatedPositioned internals)
+                  if (!_isGenerating && !controller.isDrawerOpen) ...[
+                    _buildQuickMoodBar(),
+                    _buildUtilityBar(),
+                  ],
 
                   // Preview Watermark (for free users using premium modes)
                   if (_shouldShowPreviewWatermark())
                     Positioned(
-                      bottom: 240, // LIFTED to top corner equivalent above everything
+                      bottom: 240, 
                       right: 16,
                       child: Opacity(
                         opacity: 0.35,
@@ -2428,20 +2534,16 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                       ),
                     ),
 
-                  // Floating "Giant Pill" Footer
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: _buildFloatingFooter(),
-                  ),
+                  // Floating "Giant Pill" Footer (handles its own AnimatedPositioned)
+                  _buildFloatingFooter(),
 
                   // Tap-outside scrim (Animated)
                   AnimatedBuilder(
                     animation: _drawerAnimation,
                     builder: (context, child) {
-                      if (_drawerAnimation.value == 0)
+                      if (_drawerAnimation.value == 0) {
                         return const SizedBox.shrink();
+                      }
                       return Positioned.fill(
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
@@ -2462,8 +2564,9 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                   AnimatedBuilder(
                     animation: _drawerAnimation,
                     builder: (context, child) {
-                      if (_drawerAnimation.value == 0)
+                      if (_drawerAnimation.value == 0) {
                         return const SizedBox.shrink();
+                      }
 
                       final double sheetHeight =
                           MediaQuery.of(context).size.height * 0.75;
@@ -2480,12 +2583,23 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                           child: Opacity(
                             opacity: _drawerAnimation.value.clamp(0.0, 1.0),
                             child: SofiBottomDrawer(
+                              initialCategory: _drawerInitialCategory,
                               onGenerate: _onGenerate,
-                              onCategorySelected: _onCategorySelected,
+                              onCategorySelected: (cat, opt) => _onCategorySelected(cat, opt),
+                              currentDoll: controller.currentDoll,
                               baseDolls: controller.baseDolls,
                               premiumDolls: controller.premiumDolls,
-                              currentDoll: controller.currentDoll,
                               onDollSelected: _selectDollAndLoadStage,
+                              // Caption integration
+                              captionText: _captionText,
+                              onCaptionChanged: (val) => setState(() => _captionText = val),
+                              captionFont: _captionFont,
+                              onCaptionFontChanged: (val) => setState(() => _captionFont = val),
+                              captionColor: _captionColor,
+                              onCaptionColorChanged: (val) => setState(() => _captionColor = val),
+                              captionY: _captionY,
+                              onCaptionYChanged: (val) => setState(() => _captionY = val),
+                              captionFonts: _captionFonts,
                             ),
                           ),
                         ),
@@ -2544,109 +2658,109 @@ class _SofiStudioPageState extends State<SofiStudioPage>
     final bool isDark = theme.type == AppThemeType.black;
     final bool isIOSWeb = kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: ClipRRect(
-        borderRadius: _radius20,
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(
-            sigmaX: isIOSWeb ? 5 : 10,
-            sigmaY: isIOSWeb ? 5 : 10,
-          ),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.black.withValues(alpha: 0.45)
-                  : theme.headerColor.withValues(alpha: 0.78),
-              borderRadius: _radius20, // ✅ CONST
-              border: Border.all(
-                color: isDark ? Colors.white24 : Colors.black12,
-              ),
-              boxShadow: isIOSWeb
-                  ? null
-                  : [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
-                      )
-                    ],
+    return AnimatedPositioned(
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+      left: _showUI ? 12 : -100, // Duck away to the left
+      top: MediaQuery.of(context).size.height * 0.2, // Positioned roughly middle-top
+      bottom: MediaQuery.of(context).size.height * 0.25,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 250),
+        opacity: _showUI ? 1.0 : 0.0,
+        child: Container(
+          width: 72,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.45)
+                : theme.headerColor.withValues(alpha: 0.78),
+            borderRadius: _radius24,
+            border: Border.all(
+              color: isDark ? Colors.white24 : Colors.black12,
             ),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              child: Row(
-                children: [
-                  Text(
-                    'Mood',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? Colors.white54 : Colors.black54,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  ..._quickMoods.map((m) {
+            boxShadow: isIOSWeb
+                ? null
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    )
+                  ],
+          ),
+          child: Column(
+            children: [
+              Text(
+                'Mood',
+                style: GoogleFonts.poppins(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? Colors.white54 : Colors.black54,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  itemCount: _quickMoods.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final m = _quickMoods[index];
                     final bool active = m.id == _activeMoodId;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: GestureDetector(
-                        onTap: () => _setQuickMood(m.id),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 5), // Reduced padding
-                          decoration: BoxDecoration(
-                            borderRadius: _radius16,
+                    return GestureDetector(
+                      onTap: () => _setQuickMood(m.id),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          borderRadius: _radius16,
+                          color: active
+                              ? theme.accentColor
+                                  .withValues(alpha: isDark ? 0.28 : 0.18)
+                              : (isDark
+                                  ? Colors.white.withValues(alpha: 0.06)
+                                  : Colors.white.withValues(alpha: 0.60)),
+                          border: Border.all(
                             color: active
-                                ? theme.accentColor
-                                    .withValues(alpha: isDark ? 0.28 : 0.18)
-                                : (isDark
-                                    ? Colors.white.withValues(alpha: 0.06)
-                                    : Colors.white.withValues(alpha: 0.60)),
-                            border: Border.all(
+                                ? theme.accentColor.withValues(alpha: 0.55)
+                                : (isDark ? Colors.white24 : Colors.black12),
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              m.icon,
+                              size: 16,
                               color: active
-                                  ? theme.accentColor.withValues(alpha: 0.55)
-                                  : (isDark ? Colors.white24 : Colors.black12),
+                                  ? theme.accentColor
+                                  : (isDark
+                                      ? Colors.white54
+                                      : Colors.black45),
                             ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                m.icon,
-                                size: 12, // Reduced icon size
+                            const SizedBox(height: 4),
+                            Text(
+                              m.label,
+                              style: GoogleFonts.poppins(
+                                fontSize: 9,
+                                fontWeight: active
+                                    ? FontWeight.w600
+                                    : FontWeight.w500,
                                 color: active
-                                    ? theme.accentColor
+                                    ? (isDark ? Colors.white : Colors.black87)
                                     : (isDark
-                                        ? Colors.white54
-                                        : Colors.black45),
+                                        ? Colors.white70
+                                        : Colors.black54),
                               ),
-                              const SizedBox(width: 4),
-                              Text(
-                                m.label,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 10, // Reduced font size
-                                  fontWeight: active
-                                      ? FontWeight.w600
-                                      : FontWeight.w500,
-                                  color: active
-                                      ? (isDark ? Colors.white : Colors.black87)
-                                      : (isDark
-                                          ? Colors.white70
-                                          : Colors.black54),
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     );
-                  }).toList(),
-                ],
+                  },
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -2708,16 +2822,6 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                 ),
                 child: const Icon(Icons.auto_awesome,
                     color: Colors.white, size: 18),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Sofi Saint',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: theme.headerTextColor,
-                  letterSpacing: -0.5,
-                ),
               ),
               const Spacer(),
               Row(
@@ -2788,28 +2892,66 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                       ),
                     ),
                   ),
-                  GestureDetector(
-                    onTap: () async {
-                      await AudioService.instance.playClick();
-                      controller.openDrawer();
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.white,
-                        borderRadius: _radius20,
-                        boxShadow: isDark ? null : SofiStudioTheme.softShadow,
-                        border: isDark ? Border.all(color: Colors.white24) : null,
-                      ),
-                      child: Text(
-                        'Design Studio',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: theme.accentColor,
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // New prominent Caption button
+                      GestureDetector(
+                        onTap: () async {
+                          await AudioService.instance.playClick();
+                          setState(() => _drawerInitialCategory = EditCategory.caption);
+                          controller.openDrawer();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                          decoration: BoxDecoration(
+                            gradient: SofiStudioTheme.brandGradient,
+                            borderRadius: _radius20,
+                            boxShadow: SofiStudioTheme.softShadow,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.closed_caption, color: Colors.white, size: 16),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Caption',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        onTap: () async {
+                          await AudioService.instance.playClick();
+                          setState(() => _drawerInitialCategory = EditCategory.fullOutfit);
+                          controller.openDrawer();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.white,
+                            borderRadius: _radius20,
+                            boxShadow: isDark ? null : SofiStudioTheme.softShadow,
+                            border: isDark ? Border.all(color: Colors.white24) : null,
+                          ),
+                          child: Text(
+                            'Design Studio',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: theme.accentColor,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   Expanded(
                     child: Align(
@@ -2907,17 +3049,52 @@ class _SofiStudioPageState extends State<SofiStudioPage>
         controller.selfieBytes;
 
     if (controller.isGenerating || _isGenerating) {
-      return const Center(child: CircularProgressIndicator());
+      // Don't show a spinner here; the main Stack shows the GenerationLoader
+      return const SizedBox.shrink();
     }
 
     if (selfie == null) {
       return const SizedBox();
     }
 
-    return Image.memory(
-      selfie,
-      fit: BoxFit.cover,
-      gaplessPlayback: true,
+    return RepaintBoundary(
+      key: _stageKey,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.memory(
+            selfie,
+            fit: BoxFit.cover,
+            gaplessPlayback: true,
+          ),
+          if (_captionText.isNotEmpty)
+            Positioned(
+              left: 20,
+              right: 20,
+              top: 0,
+              bottom: 0,
+              child: Align(
+                alignment: Alignment(0, (_captionY * 2) - 1),
+                child: Text(
+                  _captionText,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.getFont(
+                    _captionFont,
+                    color: _captionColor,
+                    fontSize: 32,
+                    shadows: [
+                      const Shadow(
+                        blurRadius: 8.0,
+                        color: Colors.black54,
+                        offset: Offset(2.0, 2.0),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -2963,11 +3140,10 @@ class _SofiStudioPageState extends State<SofiStudioPage>
               child: Text(
                 text,
                 style: GoogleFonts.poppins(
-                  fontSize: 13,
                   color: isDark ? Colors.white : Colors.black87,
-                  fontStyle: _listening ? FontStyle.italic : FontStyle.normal,
+                  fontSize: 15,
                 ),
-                maxLines: 2,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -2993,211 +3169,271 @@ class _SofiStudioPageState extends State<SofiStudioPage>
     );
   }
 
-  Widget _buildFloatingFooter() {
+  Widget _buildUtilityBar() {
     final theme = ThemeManager.instance.current;
     final bool isDark = theme.type == AppThemeType.black;
     final bool isIOSWeb = kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+    return AnimatedPositioned(
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+      right: _showUI ? 12 : -100,
+      top: MediaQuery.of(context).size.height * 0.15,
+      bottom: MediaQuery.of(context).padding.bottom + 100,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 250),
+        opacity: _showUI ? 1.0 : 0.0,
         child: Container(
-          constraints: const BoxConstraints(minHeight: 64),
+          width: 64,
+          padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            borderRadius: _radius100, // ✅ CONST
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.45)
+                : theme.headerColor.withValues(alpha: 0.78),
+            borderRadius: _radius24,
+            border: Border.all(
+              color: isDark ? Colors.white24 : Colors.black12,
+            ),
             boxShadow: isIOSWeb
                 ? null
-                : const [
+                : [
                     BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 16,
-                      offset: Offset(0, 4),
-                    ),
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    )
                   ],
           ),
-          child: ClipRRect(
-            borderRadius: _radius100, // ✅ CONST
-            child: BackdropFilter(
-              filter: ui.ImageFilter.blur(
-                  sigmaX: isIOSWeb ? 5 : 10, sigmaY: isIOSWeb ? 5 : 10),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.only(left: 8, right: 8),
-                    color: isDark
-                        ? Colors.black.withValues(alpha: 0.6)
-                        : theme.headerColor.withValues(alpha: 0.85),
-                    child: Row(
-                      children: [
-                        // Drawer Toggle
-                        IconButton(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                          tooltip: 'Options',
-                          icon: const Icon(Icons.tune),
-                          color: isDark ? Colors.white70 : Colors.black54,
-                          onPressed: () async {
-                            await AudioService.instance.playClick();
-                            controller.openDrawer();
-                          },
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                _utilityBtn(
+                  icon: Icons.tune,
+                  tooltip: 'Options',
+                  onTap: () async {
+                    await AudioService.instance.playClick();
+                    controller.openDrawer();
+                  },
+                ),
+                _utilityBtn(
+                  icon: Icons.record_voice_over,
+                  tooltip: 'Voice Coach',
+                  onTap: () async {
+                    await AudioService.instance.playClick();
+                    if (!mounted) return;
+                    await showModalBottomSheet(
+                      context: context,
+                      backgroundColor: Colors.transparent,
+                      isScrollControlled: false,
+                      builder: (_) => const VoiceCoachSettingsSheet(),
+                    );
+                  },
+                ),
+                _utilityBtn(
+                  icon: Icons.settings,
+                  tooltip: 'Settings',
+                  onTap: () async {
+                    await AudioService.instance.playClick();
+                    if (!mounted) return;
+                    await showModalBottomSheet(
+                      context: context,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => Theme(
+                        data: ThemeData.light(),
+                        child: SofiSettingsSheet(
+                          autoSave: false,
+                          onAutoSaveChanged: (_) {},
                         ),
-                        // Text Field
-                        Expanded(
-                          child: TextField(
-                            controller: promptController,
-                            style: GoogleFonts.poppins(
-                              color: isDark ? Colors.white : Colors.black87,
-                              fontSize: 15,
-                            ),
-                            maxLines: 1,
-                            decoration: InputDecoration(
-                              hintText: 'Describe outfit…',
-                              hintStyle: GoogleFonts.poppins(
-                                color: isDark ? Colors.white38 : Colors.black38,
-                              ),
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                              isDense: true,
-                            ),
-                            textInputAction: TextInputAction.go,
-                            onSubmitted: (_) {
-                              debugPrint('[UI] Prompt submitted (manual generate only)');
-                            },
-                          ),
-                        ),
-                        // Voice Coach Settings
-                        IconButton(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                          tooltip: 'Voice Coach',
-                          icon: const Icon(Icons.record_voice_over),
-                          color: isDark ? Colors.white70 : Colors.black54,
-                          onPressed: () async {
-                            await AudioService.instance.playClick();
-                            if (!mounted) return;
-                            await showModalBottomSheet(
-                              context: context,
-                              backgroundColor: Colors.transparent,
-                              isScrollControlled: false,
-                              builder: (_) => const VoiceCoachSettingsSheet(),
-                            );
-                          },
-                        ),
-                        // App Settings
-                        IconButton(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                          tooltip: 'Settings',
-                          icon: const Icon(Icons.settings),
-                          color: isDark ? Colors.white70 : Colors.black54,
-                          onPressed: () async {
-                            await AudioService.instance.playClick();
-                            if (!mounted) return;
-                            await showModalBottomSheet(
-                              context: context,
-                              backgroundColor: Colors.transparent,
-                              builder: (_) => Theme(
-                                data: ThemeData.light(),
-                                child: SofiSettingsSheet(
-                                  autoSave: false,
-                                  onAutoSaveChanged: (_) {},
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                        // Mic
-                        IconButton(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                          tooltip: _listening ? 'Stop' : 'Dictate',
-                          icon: Icon(_listening ? Icons.mic : Icons.mic_none),
-                          color: _listening
-                              ? theme.accentColor
-                              : (isDark ? Colors.white70 : Colors.black54),
-                          onPressed: () async {
-                            await AudioService.instance.playClick();
-                            await _onMicPressed();
-                          },
-                        ),
-                        const SizedBox(width: 4),
-                        // Generate Button
-                        ScaleTransition(
-                          scale: _isGenerating
-                              ? const AlwaysStoppedAnimation(1.0)
-                              : (_generateBtnScale ?? const AlwaysStoppedAnimation(1.0)),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: controller.isGenerating
-                                  ? null
-                                  : () async {
-                                      HapticFeedback.mediumImpact();
-                                      if (_outOfCredits) {
-                                        if (!context.mounted) return;
-                                        await PaywallSheet.show(context);
-                                        return;
-                                      }
-                                      await _onGeneratePressed();
-                                    },
-                              borderRadius: _radius24,
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: _isGenerating ? 20 : 16,
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  gradient: _isGenerating ? null : SofiStudioTheme.brandGradient,
-                                  color: _isGenerating ? Colors.grey.shade400 : null,
-                                  borderRadius: _radius24,
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (_isGenerating)
-                                      const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                                    else if (_outOfCredits) ...[
-                                      const Icon(Icons.lock, size: 16, color: Colors.white),
-                                      const SizedBox(width: 6),
-                                      Text('Get Credits', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
-                                    ] else ...[
-                                      const Icon(Icons.auto_awesome, size: 16, color: Colors.white),
-                                      const SizedBox(width: 6),
-                                      Text('Generate', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
-                                    ]
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                      ],
-                    ),
-                  ),
-                  // App Store compliance: EULA/Privacy disclosure below the main action pill
-                  Padding(
-                    padding: const EdgeInsets.only(top: 20, bottom: 12),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'By generating, you agree to our AI Safety Guidelines & EULA.',
-                          style: TextStyle(
-                            fontSize: 9,
-                            color: isDark ? Colors.white38 : Colors.black38,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        SofiLegalLinks(fontSize: 9, textColor: isDark ? Colors.white38 : Colors.black38),
-                      ],
-                    ),
-                  ),
-                ],
+                      ),
+                    );
+                  },
+                ),
+                const Divider(color: Colors.white24, indent: 12, endIndent: 12),
+                _utilityBtn(
+                  icon: Icons.undo_rounded,
+                  tooltip: 'Undo',
+                  enabled: _history.length > 1,
+                  onTap: _undo,
+                ),
+                _utilityBtn(
+                  icon: Icons.redo_rounded,
+                  tooltip: 'Redo',
+                  enabled: _redoStack.isNotEmpty,
+                  onTap: _redo,
+                ),
+                _utilityBtn(
+                  icon: Icons.history_rounded,
+                  tooltip: 'History',
+                  enabled: _history.isNotEmpty,
+                  onTap: _openHistory,
+                ),
+                const Divider(color: Colors.white24, indent: 12, endIndent: 12),
+                _utilityBtn(
+                  icon: Icons.ios_share,
+                  tooltip: 'Share',
+                  onTap: _shareCurrent,
+                ),
+                _utilityBtn(
+                  icon: ThemeManager.instance.current.icon,
+                  tooltip: 'Theme',
+                  onTap: () => ThemeManager.instance.cycleTheme(),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _utilityBtn({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+    bool enabled = true,
+  }) {
+    final theme = ThemeManager.instance.current;
+    final bool isDark = theme.type == AppThemeType.black;
+    return Opacity(
+      opacity: enabled ? 1.0 : 0.35,
+      child: Tooltip(
+        message: tooltip,
+        child: IconButton(
+          icon: Icon(icon),
+          color: isDark ? Colors.white : Colors.black87,
+          onPressed: enabled ? onTap : null,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFloatingFooter() {
+    final theme = ThemeManager.instance.current;
+    final bool isDark = theme.type == AppThemeType.black;
+    final bool isIOSWeb = kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
+    return AnimatedPositioned(
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+      left: 0,
+      right: 0,
+      bottom: _showUI ? 0 : -150, // Duck away downwards
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 250),
+        opacity: _showUI ? 1.0 : 0.0,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottomPadding),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.black.withValues(alpha: 0.85)
+                  : Colors.white.withValues(alpha: 0.95),
+              borderRadius: _radius32,
+              border: Border.all(
+                color: isDark ? Colors.white24 : Colors.black12,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 20,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                // Text Field
+                Expanded(
+                  child: TextField(
+                    controller: promptController,
+                    style: GoogleFonts.poppins(
+                      color: isDark ? Colors.white : Colors.black87,
+                      fontSize: 16,
+                    ),
+                    maxLines: 1,
+                    decoration: InputDecoration(
+                      hintText: 'Describe outfit…',
+                      hintStyle: GoogleFonts.poppins(
+                        color: isDark ? Colors.white38 : Colors.black38,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                    textInputAction: TextInputAction.go,
+                  ),
+                ),
+                // Mic
+                IconButton(
+                  icon: Icon(_listening ? Icons.mic : Icons.mic_none),
+                  color: _listening
+                      ? theme.accentColor
+                      : (isDark ? Colors.white70 : Colors.black54),
+                  onPressed: () async {
+                    await AudioService.instance.playClick();
+                    await _onMicPressed();
+                  },
+                ),
+                const SizedBox(width: 8),
+                // Generate Button
+                ScaleTransition(
+                  scale: _isGenerating
+                      ? const AlwaysStoppedAnimation(1.0)
+                      : (_generateBtnScale ?? const AlwaysStoppedAnimation(1.0)),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: controller.isGenerating
+                          ? null
+                          : () async {
+                              HapticFeedback.mediumImpact();
+                              if (_outOfCredits) {
+                                if (!context.mounted) return;
+                                await PaywallSheet.show(context);
+                                return;
+                              }
+                              await _onGeneratePressed();
+                            },
+                      borderRadius: _radius24,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: _isGenerating ? null : SofiStudioTheme.brandGradient,
+                          color: _isGenerating ? Colors.grey.shade400 : null,
+                          borderRadius: _radius24,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_isGenerating)
+                              const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white))
+                            else ...[
+                              const Icon(Icons.auto_awesome,
+                                  size: 18, color: Colors.white),
+                              const SizedBox(width: 8),
+                              Text('Generate',
+                                  style: GoogleFonts.poppins(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14)),
+                            ]
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -3250,9 +3486,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
     final bool isIOSWeb = kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
     return ClipRRect(
       borderRadius: _radius24, // ✅ CONST
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-        child: Container(
+      child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
           decoration: BoxDecoration(
             color: Colors.black.withValues(alpha: 0.10),
@@ -3700,9 +3934,7 @@ class _FrostyCircleButton extends StatelessWidget {
       message: tooltip,
       child: ClipRRect(
         borderRadius: _SofiStudioPageState._radius24,
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-          child: Container(
+        child: Container(
             width: 44,
             height: 44,
             decoration: BoxDecoration(

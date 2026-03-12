@@ -70,6 +70,6 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1078813120283',
     projectId: 'sofi-saint-app',
     storageBucket: 'sofi-saint-app.firebasestorage.app',
-    iosBundleId: 'com.mycompany.CounterApp',
+    iosBundleId: 'com.sofi.saint',
   );
 }

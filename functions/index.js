@@ -39,6 +39,7 @@ exports.generateImageFunc = onCall({
     initImageBase64,
     width = 1024,
     height = 1024,
+    aspect_ratio, // 🔑 Extract aspect_ratio
     num_inference_steps = 26,
     guidance_scale = 7.5,
     strength, // 🔑 Accept strength from request
@@ -89,12 +90,20 @@ exports.generateImageFunc = onCall({
     model_id: "flux-kontext-pro",
     prompt,
     negative_prompt,
-    width: safeWidth,
-    height: safeHeight,
     num_inference_steps,
     guidance_scale,
     seed,
   };
+
+  // If aspect_ratio is provided and width/height are defaults, use aspect_ratio
+  if (aspect_ratio && width === 1024 && height === 1024) {
+    submitBody.aspect_ratio = aspect_ratio;
+    console.log(`Using aspect_ratio: ${aspect_ratio}`);
+  } else {
+    submitBody.width = safeWidth;
+    submitBody.height = safeHeight;
+    console.log(`Using dimensions: ${safeWidth}x${safeHeight}`);
+  }
 
   if (initImageUrl) {
     submitBody.init_image = initImageUrl;
@@ -118,8 +127,13 @@ exports.generateImageFunc = onCall({
   const submitJson = await submitResponse.json();
 
   if (!submitJson || submitJson.status === "error") {
+    console.error("ModelsLab Submission Failed:", JSON.stringify(submitJson));
     await cleanupTempFile(admin, tempFilePath);
-    return { ok: false, error: submitJson?.message || "ModelsLab submission failed" };
+    return {
+      ok: false,
+      error: submitJson?.message || "ModelsLab submission failed",
+      message: submitJson?.message || "ModelsLab submission failed" // 🔑 Add 'message' for Dart
+    };
   }
 
   if (
@@ -168,8 +182,13 @@ exports.generateImageFunc = onCall({
       }
 
       if (fetchJson.status === "error" || fetchJson.status === "failed") {
+        console.error("ModelsLab Polling Failed:", JSON.stringify(fetchJson));
         await cleanupTempFile(admin, tempFilePath);
-        return { ok: false, error: fetchJson?.message || "Generation failed" };
+        return {
+          ok: false,
+          error: fetchJson?.message || "Generation failed",
+          message: fetchJson?.message || "Generation failed" // 🔑 Add 'message' for Dart
+        };
       }
     } catch (e) {
       console.error("Poll Error:", e.message);

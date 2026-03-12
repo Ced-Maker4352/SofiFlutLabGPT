@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'package:sofi_test_connect/presentation/sofi_studio/sofi_studio_models.dart';
 import 'package:sofi_test_connect/presentation/sofi_studio/sofi_studio_theme.dart';
@@ -25,6 +26,17 @@ class SofiBottomDrawer extends StatefulWidget {
   final SofiDoll? currentDoll;
   final void Function(SofiDoll doll) onDollSelected;
 
+  // Caption props
+  final String captionText;
+  final ValueChanged<String>? onCaptionChanged;
+  final String captionFont;
+  final ValueChanged<String>? onCaptionFontChanged;
+  final Color captionColor;
+  final ValueChanged<Color>? onCaptionColorChanged;
+  final double captionY;
+  final ValueChanged<double>? onCaptionYChanged;
+  final List<String> captionFonts;
+
   const SofiBottomDrawer({
     super.key,
     required this.onGenerate,
@@ -33,7 +45,20 @@ class SofiBottomDrawer extends StatefulWidget {
     this.premiumDolls = const [],
     this.currentDoll,
     required this.onDollSelected,
+    // Caption props
+    this.captionText = '',
+    this.onCaptionChanged,
+    this.captionFont = 'Fredoka',
+    this.onCaptionFontChanged,
+    this.captionColor = Colors.white,
+    this.onCaptionColorChanged,
+    this.captionY = 0.85,
+    this.onCaptionYChanged,
+    this.captionFonts = const [],
+    this.initialCategory,
   });
+
+  final EditCategory? initialCategory;
 
   @override
   State<SofiBottomDrawer> createState() => _SofiBottomDrawerState();
@@ -55,17 +80,17 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
   
   // Premium status
   bool _isPremium = false;
-  
-  // Categories that require premium (Full Outfit, Poses, Premium Characters handled separately)
-  static const Set<EditCategory> _premiumCategories = {
-    EditCategory.fullOutfit,
-    EditCategory.poses,
-  };
+
+  late final TextEditingController _captionController;
 
   @override
   void initState() {
     super.initState();
-    _checkPremiumStatus();
+    _selectedCategory = widget.initialCategory ?? EditCategory.fullOutfit;
+    if (_selectedCategory == EditCategory.caption) {
+      _currentFraction = _midFraction;
+    }
+    _captionController = TextEditingController(text: widget.captionText);
     // Listen for future subscription changes to keep UI in sync
     PremiumService().addListener(_onPremiumChanged);
     // Listen for gender changes
@@ -76,6 +101,7 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
   void dispose() {
     PremiumService().removeListener(_onPremiumChanged);
     UserPreferencesService.instance.removeListener(_onGenderChanged);
+    _captionController.dispose();
     super.dispose();
   }
   
@@ -182,6 +208,8 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
         return 'images/posses/pose_$num.jpg';
       case EditCategory.background:
         return 'images/Background/background_$num.jpg';
+      case EditCategory.caption:
+        return null;
     }
   }
 
@@ -210,6 +238,7 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
       case EditCategory.glasses: return SofiPromptData.glasses;
       case EditCategory.poses: return SofiPromptData.poses;
       case EditCategory.background: return SofiPromptData.backgrounds;
+      case EditCategory.caption: return [];
     }
   }
   
@@ -237,7 +266,13 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
       return;
     }
     if (!mounted) return;
-    setState(() => _selectedCategory = category);
+    setState(() {
+      _selectedCategory = category;
+      // Adjust height for better caption visibility
+      if (category == EditCategory.caption) {
+        _currentFraction = _midFraction;
+      }
+    });
   }
   
   /// Handle option selection with premium check for premium items
@@ -554,9 +589,11 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
   }
 
   Widget _buildCategoryOptions() {
-    // Get options from SofiPromptData
     final options = _getOptionsForCategory(_selectedCategory);
-    final isLocked = _isCategoryLocked(_selectedCategory);
+
+    if (_selectedCategory == EditCategory.caption) {
+      return _buildCaptionEditor();
+    }
 
     return GridView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 0),
@@ -696,6 +733,130 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
     }
     
     return clean;
+  }
+
+  Widget _buildCaptionEditor() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Text Input
+        const Text('Message', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _captionController,
+          autofocus: true,
+          style: const TextStyle(color: Colors.black),
+          decoration: InputDecoration(
+            hintText: 'Type your message...',
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            suffixIcon: widget.captionText.isNotEmpty ? IconButton(
+              icon: const Icon(Icons.clear, color: Colors.grey),
+              onPressed: () {
+                _captionController.clear();
+                widget.onCaptionChanged?.call('');
+              },
+            ) : null,
+          ),
+          onChanged: (val) => widget.onCaptionChanged?.call(val),
+        ),
+        const SizedBox(height: 20),
+        
+        // Font Selection
+        const Text('Font Style', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 60,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: widget.captionFonts.length,
+            itemBuilder: (context, index) {
+              final f = widget.captionFonts[index];
+              final isSelected = f == widget.captionFont;
+              return GestureDetector(
+                onTap: () => widget.onCaptionFontChanged?.call(f),
+                child: Container(
+                  margin: const EdgeInsets.only(right: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: isSelected ? SofiStudioTheme.purple : Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: isSelected ? SofiStudioTheme.purple : Colors.grey[300]!, width: 2),
+                    boxShadow: isSelected ? SofiStudioTheme.softShadow : null,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text('Abc', style: GoogleFonts.getFont(f, color: isSelected ? Colors.white : Colors.black, fontSize: 18)),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Color Selection
+        const Text('Text Color', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 44,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              Colors.white, Colors.black, SofiStudioTheme.yellow, Colors.pinkAccent, 
+              Colors.cyanAccent, Colors.limeAccent, Colors.orangeAccent, Colors.purpleAccent
+            ].map((c) {
+              final isSelected = c.value == widget.captionColor.value;
+              return GestureDetector(
+                onTap: () => widget.onCaptionColorChanged?.call(c),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  margin: const EdgeInsets.only(right: 12),
+                  decoration: BoxDecoration(
+                    color: c,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: isSelected ? SofiStudioTheme.purple : Colors.grey[300]!, width: isSelected ? 3 : 1),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Position Selection
+        const Text('Position', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            _posBtn('Top', 0.1),
+            const SizedBox(width: 8),
+            _posBtn('Middle', 0.5),
+            const SizedBox(width: 8),
+            _posBtn('Bottom', 0.85),
+          ],
+        ),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _posBtn(String label, double y) {
+    final isSelected = (widget.captionY - y).abs() < 0.01;
+    return Expanded(
+      child: ElevatedButton(
+        onPressed: () => widget.onCaptionYChanged?.call(y),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isSelected ? SofiStudioTheme.purple : Colors.white,
+          foregroundColor: isSelected ? Colors.white : Colors.black,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: isSelected ? SofiStudioTheme.purple : Colors.grey[300]!)),
+        ),
+        child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+      ),
+    );
   }
 }
 
