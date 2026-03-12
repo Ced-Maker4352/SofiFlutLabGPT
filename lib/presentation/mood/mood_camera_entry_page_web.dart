@@ -347,7 +347,7 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                                   mood,
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
-                                    color: Colors.white,
+                                    color: mood == 'Happy' ? SofiStudioTheme.charcoal : Colors.white,
                                     fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
                                     fontSize: 16,
                                   ),
