@@ -194,7 +194,7 @@ class _PaywallSheetState extends State<PaywallSheet> {
             height: 4,
             margin: const EdgeInsets.only(top: 16),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.3),
+              color: Colors.white.withOpacity(0.3),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -216,7 +216,7 @@ class _PaywallSheetState extends State<PaywallSheet> {
                           ? null
                           : [
                               BoxShadow(
-                                color: const Color(0xFFFFD700).withValues(alpha: 0.4),
+                                color: const Color(0xFFFFD700).withOpacity(0.4),
                                 blurRadius: 20,
                                 spreadRadius: 2,
                               ),
@@ -256,7 +256,7 @@ class _PaywallSheetState extends State<PaywallSheet> {
                   Text(
                     widget.contextMessage ?? 'Unlimited generations & exclusive styles',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 16),
+                    style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 16),
                   ),
                   const SizedBox(height: 24),
                   // Features list
@@ -298,7 +298,7 @@ class _PaywallSheetState extends State<PaywallSheet> {
                       child: OutlinedButton(
                         onPressed: _isProcessing ? null : _handleSubscribe,
                         style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: Colors.white.withValues(alpha: 0.5)),
+                          side: BorderSide(color: Colors.white.withOpacity(0.5)),
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
                         ),
@@ -310,7 +310,7 @@ class _PaywallSheetState extends State<PaywallSheet> {
                   // Restore purchases
                   TextButton(
                     onPressed: _isProcessing ? null : _handleRestore,
-                    child: Text('Restore Purchases', style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 14)),
+                    child: Text('Restore Purchases', style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14)),
                   ),
                   const SizedBox(height: 16),
                   // Coupon Code Section
@@ -318,9 +318,9 @@ class _PaywallSheetState extends State<PaywallSheet> {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     height: 50,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.05),
+                      color: Colors.white.withOpacity(0.05),
                       borderRadius: BorderRadius.circular(25),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                      border: Border.all(color: Colors.white.withOpacity(0.1)),
                     ),
                     child: Row(
                       children: [
@@ -330,7 +330,7 @@ class _PaywallSheetState extends State<PaywallSheet> {
                             style: const TextStyle(color: Colors.white, fontSize: 14),
                             decoration: InputDecoration(
                               hintText: 'Have a coupon code?',
-                              hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+                              hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
                               border: InputBorder.none,
                             ),
                           ),
@@ -347,7 +347,7 @@ class _PaywallSheetState extends State<PaywallSheet> {
                   Text(
                     'Cancel anytime. Subscription auto-renews unless cancelled at least 24 hours before the end of the current period.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11),
+                    style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 11),
                   ),
                   const SizedBox(height: 16),
                   const SofiLegalLinks(),
@@ -356,7 +356,7 @@ class _PaywallSheetState extends State<PaywallSheet> {
                   // Not now button
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(false),
-                    child: Text('Not Now', style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 16)),
+                    child: Text('Not Now', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 16)),
                   ),
                 ],
               ),
@@ -375,7 +375,7 @@ class _PaywallSheetState extends State<PaywallSheet> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.green.withValues(alpha: 0.2),
+              color: Colors.green.withOpacity(0.2),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: Colors.greenAccent, size: 18),
@@ -409,15 +409,15 @@ class _PaywallSheetState extends State<PaywallSheet> {
           gradient: isSelected
               ? LinearGradient(
                   colors: [
-                    Colors.purple.withValues(alpha: 0.3),
-                    Colors.purple.withValues(alpha: 0.1),
+                    Colors.purple.withOpacity(0.3),
+                    Colors.purple.withOpacity(0.1),
                   ],
                 )
               : null,
-          color: isSelected ? null : Colors.white.withValues(alpha: 0.05),
+          color: isSelected ? null : Colors.white.withOpacity(0.05),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? Colors.purple : Colors.white.withValues(alpha: 0.1),
+            color: isSelected ? Colors.purple : Colors.white.withOpacity(0.1),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -430,7 +430,7 @@ class _PaywallSheetState extends State<PaywallSheet> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? Colors.purple : Colors.white.withValues(alpha: 0.4),
+                  color: isSelected ? Colors.purple : Colors.white.withOpacity(0.4),
                   width: 2,
                 ),
                 color: isSelected ? Colors.purple : Colors.transparent,
@@ -509,7 +509,7 @@ class _PaywallSheetState extends State<PaywallSheet> {
                       TextSpan(
                         text: plan.period,
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.6),
+                          color: Colors.white.withOpacity(0.6),
                           fontSize: 12,
                         ),
                       ),
@@ -519,7 +519,7 @@ class _PaywallSheetState extends State<PaywallSheet> {
                 Text(
                   plan.monthlyEquivalent,
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.5),
+                    color: Colors.white.withOpacity(0.5),
                     fontSize: 11,
                   ),
                 ),

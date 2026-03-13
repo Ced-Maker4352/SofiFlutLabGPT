@@ -132,7 +132,7 @@ class _InstructionalVideoPageState extends State<InstructionalVideoPage> {
           if (_awaitingUserGesture && _isInitialized)
             Positioned.fill(
               child: Material(
-                color: Colors.black.withValues(alpha: 0.5),
+                color: Colors.black.withOpacity(0.5),
                 child: InkWell(
                   onTap: _playWithSound,
                   child: Center(
@@ -158,7 +158,7 @@ class _InstructionalVideoPageState extends State<InstructionalVideoPage> {
             child: TextButton(
               onPressed: _skipVideo,
               style: TextButton.styleFrom(
-                backgroundColor: Colors.black.withValues(alpha: 0.5),
+                backgroundColor: Colors.black.withOpacity(0.5),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               ),
               child: const Text(

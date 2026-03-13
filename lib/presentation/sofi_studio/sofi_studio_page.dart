@@ -114,6 +114,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
 
   final SpeechToText _speech = SpeechToText();
   bool _listening = false;
+  final ImagePicker _picker = ImagePicker();
 
   Uint8List? generatedImageBytes;
   String? _latestImageUrl; // Track the URL for share/download
@@ -794,7 +795,6 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       }));
     }
   }
-
   /// Handler for "Continue Styling" button - safely triggers generation after dismiss
   void _onContinueStylingPressed() {
     // Prevent focus crashes on Flutter Web
@@ -812,6 +812,67 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       if (!mounted) return;
       _triggerGenerate(); // safe, deferred trigger
     });
+  }
+
+  Future<void> _pickSelfie() async {
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => CupertinoActionSheet(
+        title: const Text('Change your selfie'),
+        message: const Text('Taking a clear, front-facing selfie works best.'),
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () async {
+              Navigator.pop(context);
+              final file = await _picker.pickImage(
+                source: ImageSource.camera,
+                imageQuality: 92,
+              );
+              if (file != null) {
+                final bytes = await file.readAsBytes();
+                if (mounted) {
+                  setState(() {
+                    _originalBaseDollBytes = bytes;
+                    generatedImageBytes = bytes;
+                    controller.selfieBytes = bytes;
+                  });
+                  // Auto-trigger generation with current settings
+                  _onGenerate();
+                }
+              }
+            },
+            child: const Text('Take Picture'),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () async {
+              Navigator.pop(context);
+              final file = await _picker.pickImage(
+                source: ImageSource.gallery,
+                imageQuality: 92,
+              );
+              if (file != null) {
+                final bytes = await file.readAsBytes();
+                if (mounted) {
+                  setState(() {
+                    _originalBaseDollBytes = bytes;
+                    generatedImageBytes = bytes;
+                    controller.selfieBytes = bytes;
+                  });
+                  // Auto-trigger generation with current settings
+                  _onGenerate();
+                }
+              }
+            },
+            child: const Text('Choose from Gallery'),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          isDefaultAction: true,
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+      ),
+    );
   }
 
   /// Safely triggers generation if conditions are met
@@ -2504,10 +2565,11 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                     ),
 
                   // Sidebars (They handle their own Positioned/AnimatedPositioned internals)
-                  if (!_isGenerating && !controller.isDrawerOpen) ...[
-                    _buildQuickMoodBar(),
-                    _buildUtilityBar(),
-                  ],
+                if (!_isGenerating && !controller.isDrawerOpen) ...[
+                  _buildQuickMoodBar(),
+                  _buildUtilityBar(),
+                  _buildBottomLeftExtras(),
+                ],
 
                   // Preview Watermark (for free users using premium modes)
                   if (_shouldShowPreviewWatermark())
@@ -2520,7 +2582,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.5),
+                            color: Colors.black.withOpacity(0.5),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: const Text(
@@ -2553,8 +2615,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                             _closeDrawer();
                           },
                           child: Container(
-                            color: Colors.black.withValues(
-                                alpha: 0.25 * _drawerAnimation.value),
+                            color: Colors.black.withOpacity(0.25 * _drawerAnimation.value),
                           ),
                         ),
                       );
@@ -2654,114 +2715,108 @@ class _SofiStudioPageState extends State<SofiStudioPage>
     );
   }
 
-  Widget _buildQuickMoodBar() {
+  Widget _buildFloatingPill({
+    required Widget child,
+    required VoidCallback onTap,
+    bool active = false,
+    String? tooltip,
+    double width = 58,
+    double height = 72,
+  }) {
     final theme = ThemeManager.instance.current;
     final bool isDark = theme.type == AppThemeType.black;
     final bool isIOSWeb = kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
-    return AnimatedPositioned(
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeOutCubic,
-      left: _showUI ? 12 : -100, // Duck away to the left
-      top: MediaQuery.of(context).size.height * 0.2, // Positioned roughly middle-top
-      bottom: MediaQuery.of(context).size.height * 0.25,
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 250),
-        opacity: _showUI ? 1.0 : 0.0,
-        child: Container(
-          width: 72,
-          padding: const EdgeInsets.symmetric(vertical: 12),
+    return Tooltip(
+      message: tooltip ?? '',
+      child: GestureDetector(
+        onTap: () {
+          AudioService.instance.playTick();
+          onTap();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: width,
+          height: height,
           decoration: BoxDecoration(
-            color: isDark
-                ? Colors.black.withValues(alpha: 0.45)
-                : theme.headerColor.withValues(alpha: 0.78),
-            borderRadius: _radius24,
+            color: active
+                ? theme.accentColor.withOpacity(isDark ? 0.85 : 0.9)
+                : (isDark
+                    ? Colors.black.withOpacity(0.5)
+                    : theme.headerColor.withOpacity(0.85)),
+            borderRadius: BorderRadius.circular(width / 2),
             border: Border.all(
-              color: isDark ? Colors.white24 : Colors.black12,
+              color: active
+                  ? Colors.white54
+                  : (isDark ? Colors.white24 : Colors.black12),
+              width: active ? 1.5 : 1,
             ),
             boxShadow: isIOSWeb
                 ? null
                 : [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
+                      color: Colors.black.withOpacity(0.12),
                       blurRadius: 10,
                       offset: const Offset(0, 3),
                     )
                   ],
           ),
+          alignment: Alignment.center,
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickMoodBar() {
+    return AnimatedPositioned(
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+      left: _showUI ? 12 : -80,
+      top: 0,
+      bottom: 0,
+      child: Center(
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 250),
+          opacity: _showUI ? 1.0 : 0.0,
           child: Column(
-            children: [
-              Text(
-                'Mood',
-                style: GoogleFonts.poppins(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white54 : Colors.black54,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  itemCount: _quickMoods.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
-                    final m = _quickMoods[index];
-                    final bool active = m.id == _activeMoodId;
-                    return GestureDetector(
-                      onTap: () => _setQuickMood(m.id),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          borderRadius: _radius16,
+            mainAxisSize: MainAxisSize.min,
+            children: _quickMoods.map((m) {
+              final bool active = m.id == _activeMoodId;
+              final theme = ThemeManager.instance.current;
+              final bool isDark = theme.type == AppThemeType.black;
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: _buildFloatingPill(
+                  active: active,
+                  onTap: () => _setQuickMood(m.id),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        m.icon,
+                        size: 18,
+                        color: active
+                            ? Colors.white
+                            : (isDark ? Colors.white70 : Colors.black54),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        m.label,
+                        style: GoogleFonts.poppins(
+                          fontSize: 9,
+                          fontWeight: active ? FontWeight.w700 : FontWeight.w500,
                           color: active
-                              ? theme.accentColor
-                                  .withValues(alpha: isDark ? 0.28 : 0.18)
-                              : (isDark
-                                  ? Colors.white.withValues(alpha: 0.06)
-                                  : Colors.white.withValues(alpha: 0.60)),
-                          border: Border.all(
-                            color: active
-                                ? theme.accentColor.withValues(alpha: 0.55)
-                                : (isDark ? Colors.white24 : Colors.black12),
-                          ),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              m.icon,
-                              size: 16,
-                              color: active
-                                  ? theme.accentColor
-                                  : (isDark
-                                      ? Colors.white54
-                                      : Colors.black45),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              m.label,
-                              style: GoogleFonts.poppins(
-                                fontSize: 9,
-                                fontWeight: active
-                                    ? FontWeight.w600
-                                    : FontWeight.w500,
-                                color: active
-                                    ? (isDark ? Colors.white : Colors.black87)
-                                    : (isDark
-                                        ? Colors.white70
-                                        : Colors.black54),
-                              ),
-                            ),
-                          ],
+                              ? Colors.white
+                              : (isDark ? Colors.white70 : Colors.black87),
                         ),
                       ),
-                    );
-                  },
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              );
+            }).toList(),
           ),
         ),
       ),
@@ -2792,8 +2847,8 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: isDark
-                        ? Colors.white.withValues(alpha: 0.1)
-                        : Colors.black.withValues(alpha: 0.05),
+                        ? Colors.white.withOpacity(0.1)
+                        : Colors.black.withOpacity(0.05),
                     border: Border.all(
                       color: isDark ? Colors.white24 : Colors.black12,
                     ),
@@ -2937,7 +2992,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           decoration: BoxDecoration(
-                            color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.white,
+                            color: isDark ? Colors.white.withOpacity(0.1) : Colors.white,
                             borderRadius: _radius20,
                             boxShadow: isDark ? null : SofiStudioTheme.softShadow,
                             border: isDark ? Border.all(color: Colors.white24) : null,
@@ -2991,7 +3046,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.bold,
-            color: value ? activeColor : theme.headerTextColor.withValues(alpha: 0.7),
+            color: value ? activeColor : theme.headerTextColor.withOpacity(0.7),
           ),
         ),
         const SizedBox(width: 4),
@@ -3027,8 +3082,8 @@ class _SofiStudioPageState extends State<SofiStudioPage>
         height: 36,
         decoration: BoxDecoration(
           color: isDark
-              ? Colors.white.withValues(alpha: 0.1)
-              : Colors.white.withValues(alpha: 0.5),
+              ? Colors.white.withOpacity(0.1)
+              : Colors.white.withOpacity(0.5),
           borderRadius: _radius10,
           border: Border.all(color: isDark ? Colors.white24 : Colors.black12),
         ),
@@ -3113,15 +3168,15 @@ class _SofiStudioPageState extends State<SofiStudioPage>
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: isDark
-              ? Colors.black.withValues(alpha: 0.75)
-              : Colors.white.withValues(alpha: 0.9),
+              ? Colors.black.withOpacity(0.75)
+              : Colors.white.withOpacity(0.9),
           borderRadius: _radius16, // ✅ CONST
           border: Border.all(
             color: isDark ? Colors.white24 : Colors.black12,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
+              color: Colors.black.withOpacity(0.1),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -3173,136 +3228,159 @@ class _SofiStudioPageState extends State<SofiStudioPage>
   Widget _buildUtilityBar() {
     final theme = ThemeManager.instance.current;
     final bool isDark = theme.type == AppThemeType.black;
-    final bool isIOSWeb = kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
     return AnimatedPositioned(
       duration: const Duration(milliseconds: 350),
       curve: Curves.easeOutCubic,
-      right: _showUI ? 12 : -100,
-      top: MediaQuery.of(context).size.height * 0.15,
-      bottom: MediaQuery.of(context).padding.bottom + 100,
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 250),
-        opacity: _showUI ? 1.0 : 0.0,
-        child: Container(
-          width: 64,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isDark
-                ? Colors.black.withValues(alpha: 0.45)
-                : theme.headerColor.withValues(alpha: 0.78),
-            borderRadius: _radius24,
-            border: Border.all(
-              color: isDark ? Colors.white24 : Colors.black12,
-            ),
-            boxShadow: isIOSWeb
-                ? null
-                : [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    )
-                  ],
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                _utilityBtn(
-                  icon: Icons.tune,
-                  tooltip: 'Options',
-                  onTap: () async {
-                    await AudioService.instance.playClick();
-                    controller.openDrawer();
-                  },
-                ),
-                _utilityBtn(
-                  icon: Icons.record_voice_over,
-                  tooltip: 'Voice Coach',
-                  onTap: () async {
-                    await AudioService.instance.playClick();
-                    if (!mounted) return;
-                    await showModalBottomSheet(
-                      context: context,
-                      backgroundColor: Colors.transparent,
-                      isScrollControlled: false,
-                      builder: (_) => const VoiceCoachSettingsSheet(),
-                    );
-                  },
-                ),
-                _utilityBtn(
-                  icon: Icons.settings,
-                  tooltip: 'Settings',
-                  onTap: () async {
-                    await AudioService.instance.playClick();
-                    if (!mounted) return;
-                    await showModalBottomSheet(
-                      context: context,
-                      backgroundColor: Colors.transparent,
-                      builder: (_) => Theme(
-                        data: ThemeData.light(),
-                        child: SofiSettingsSheet(
-                          autoSave: false,
-                          onAutoSaveChanged: (_) {},
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                const Divider(color: Colors.white24, indent: 12, endIndent: 12),
-                _utilityBtn(
-                  icon: Icons.undo_rounded,
-                  tooltip: 'Undo',
-                  enabled: _history.length > 1,
-                  onTap: _undo,
-                ),
-                _utilityBtn(
-                  icon: Icons.redo_rounded,
-                  tooltip: 'Redo',
-                  enabled: _redoStack.isNotEmpty,
-                  onTap: _redo,
-                ),
-                _utilityBtn(
-                  icon: Icons.history_rounded,
-                  tooltip: 'History',
-                  enabled: _history.isNotEmpty,
-                  onTap: _openHistory,
-                ),
-                const Divider(color: Colors.white24, indent: 12, endIndent: 12),
-                _utilityBtn(
-                  icon: Icons.ios_share,
-                  tooltip: 'Share',
-                  onTap: _shareCurrent,
-                ),
-                _utilityBtn(
-                  icon: ThemeManager.instance.current.icon,
-                  tooltip: 'Theme',
-                  onTap: () => ThemeManager.instance.cycleTheme(),
-                ),
-              ],
-            ),
+      right: _showUI ? 12 : -80,
+      top: 0,
+      bottom: 0,
+      child: Center(
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 250),
+          opacity: _showUI ? 1.0 : 0.0,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildFloatingPill(
+                width: 54,
+                height: 54,
+                tooltip: 'Options',
+                onTap: () async {
+                  await AudioService.instance.playClick();
+                  controller.openDrawer();
+                },
+                child: Icon(Icons.tune,
+                    color: isDark ? Colors.white70 : Colors.black87, size: 22),
+              ),
+              const SizedBox(height: 12),
+              _buildFloatingPill(
+                width: 54,
+                height: 54,
+                tooltip: 'Voice Coach',
+                onTap: () async {
+                  await AudioService.instance.playClick();
+                  if (!mounted) return;
+                  await showModalBottomSheet(
+                    context: context,
+                    backgroundColor: Colors.transparent,
+                    isScrollControlled: false,
+                    builder: (_) => const VoiceCoachSettingsSheet(),
+                  );
+                },
+                child: Icon(Icons.record_voice_over,
+                    color: isDark ? Colors.white70 : Colors.black87, size: 22),
+              ),
+              const SizedBox(height: 12),
+              _buildFloatingPill(
+                width: 54,
+                height: 54,
+                tooltip: 'Undo',
+                active: false,
+                onTap: _undo,
+                child: Icon(Icons.undo_rounded,
+                    color: _history.length > 1
+                        ? (isDark ? Colors.white70 : Colors.black87)
+                        : Colors.grey.withOpacity(0.5),
+                    size: 22),
+              ),
+              const SizedBox(height: 12),
+              _buildFloatingPill(
+                width: 54,
+                height: 54,
+                tooltip: 'Redo',
+                onTap: _redo,
+                child: Icon(Icons.redo_rounded,
+                    color: _redoStack.isNotEmpty
+                        ? (isDark ? Colors.white70 : Colors.black87)
+                        : Colors.grey.withOpacity(0.5),
+                    size: 22),
+              ),
+              const SizedBox(height: 12),
+              _buildFloatingPill(
+                width: 54,
+                height: 54,
+                tooltip: 'History',
+                onTap: _openHistory,
+                child: Icon(Icons.history_rounded,
+                    color: _history.isNotEmpty
+                        ? (isDark ? Colors.white70 : Colors.black87)
+                        : Colors.grey.withOpacity(0.5),
+                    size: 22),
+              ),
+              const SizedBox(height: 12),
+              _buildFloatingPill(
+                width: 54,
+                height: 54,
+                tooltip: 'Camera',
+                onTap: _pickSelfie,
+                child: Icon(Icons.camera_alt_rounded,
+                    color: isDark ? Colors.white70 : Colors.black87, size: 22),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _utilityBtn({
-    required IconData icon,
-    required String tooltip,
-    required VoidCallback onTap,
-    bool enabled = true,
-  }) {
+  Widget _buildBottomLeftExtras() {
     final theme = ThemeManager.instance.current;
     final bool isDark = theme.type == AppThemeType.black;
-    return Opacity(
-      opacity: enabled ? 1.0 : 0.35,
-      child: Tooltip(
-        message: tooltip,
-        child: IconButton(
-          icon: Icon(icon),
-          color: isDark ? Colors.white : Colors.black87,
-          onPressed: enabled ? onTap : null,
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
+    return AnimatedPositioned(
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+      left: 12,
+      bottom: _showUI ? 100 + bottomPadding : -100, // Positioned above the footer
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 250),
+        opacity: _showUI ? 1.0 : 0.0,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildFloatingPill(
+              width: 44,
+              height: 44,
+              tooltip: 'Settings',
+              onTap: () async {
+                await AudioService.instance.playClick();
+                if (!mounted) return;
+                await showModalBottomSheet(
+                  context: context,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => Theme(
+                    data: ThemeData.light(),
+                    child: SofiSettingsSheet(
+                      autoSave: false,
+                      onAutoSaveChanged: (_) {},
+                    ),
+                  ),
+                );
+              },
+              child: Icon(Icons.settings,
+                  color: isDark ? Colors.white54 : Colors.black45, size: 20),
+            ),
+            const SizedBox(width: 8),
+            _buildFloatingPill(
+              width: 44,
+              height: 44,
+              tooltip: 'Share',
+              onTap: _shareCurrent,
+              child: Icon(Icons.ios_share,
+                  color: isDark ? Colors.white54 : Colors.black45, size: 20),
+            ),
+            const SizedBox(width: 8),
+            _buildFloatingPill(
+              width: 44,
+              height: 44,
+              tooltip: 'Theme',
+              onTap: () => ThemeManager.instance.cycleTheme(),
+              child: Icon(ThemeManager.instance.current.icon,
+                  color: isDark ? Colors.white54 : Colors.black45, size: 20),
+            ),
+          ],
         ),
       ),
     );
@@ -3329,15 +3407,15 @@ class _SofiStudioPageState extends State<SofiStudioPage>
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: isDark
-                  ? Colors.black.withValues(alpha: 0.85)
-                  : Colors.white.withValues(alpha: 0.95),
+                  ? Colors.black.withOpacity(0.85)
+                  : Colors.white.withOpacity(0.95),
               borderRadius: _radius32,
               border: Border.all(
                 color: isDark ? Colors.white24 : Colors.black12,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
+                  color: Colors.black.withOpacity(0.15),
                   blurRadius: 20,
                   offset: const Offset(0, 4),
                 ),
@@ -3490,12 +3568,12 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.10),
+          color: Colors.black.withOpacity(0.10),
           borderRadius: _radius24,
           border: isIOSWeb
               ? null
               : Border.all(
-                  color: Colors.black.withValues(alpha: 0.20), width: 1),
+                  color: Colors.black.withOpacity(0.20), width: 1),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -3542,7 +3620,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
         behavior: HitTestBehavior.opaque,
         onTap: _dismissCanvasHint,
         child: Container(
-          color: Colors.black.withValues(alpha: 0.5),
+          color: Colors.black.withOpacity(0.5),
           child: SafeArea(
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
@@ -3700,7 +3778,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
               borderRadius: _radius20,
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF9B59B6).withValues(alpha: 0.4),
+                  color: const Color(0xFF9B59B6).withOpacity(0.4),
                   blurRadius: 16,
                   offset: const Offset(0, 6),
                 ),
@@ -3713,7 +3791,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                   width: 50,
                   height: 50,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
+                    color: Colors.white.withOpacity(0.2),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -3742,7 +3820,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                         'Explore premium features for unlimited creativity',
                         style: GoogleFonts.poppins(
                           fontSize: 12,
-                          color: Colors.white.withValues(alpha: 0.9),
+                          color: Colors.white.withOpacity(0.9),
                         ),
                       ),
                     ],
@@ -3777,7 +3855,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                   onTap: _dismissPremiumReminder,
                   child: Icon(
                     Icons.close,
-                    color: Colors.white.withValues(alpha: 0.7),
+                    color: Colors.white.withOpacity(0.7),
                     size: 20,
                   ),
                 ),
@@ -3938,12 +4016,12 @@ class _FrostyCircleButton extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.10),
+              color: Colors.black.withOpacity(0.10),
               borderRadius: _SofiStudioPageState._radius24, // ✅ CONST
               border: (kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
                   ? null
                   : Border.all(
-                      color: Colors.black.withValues(alpha: 0.20), width: 1),
+                      color: Colors.black.withOpacity(0.20), width: 1),
             ),
             child: IconButton(
               icon: Icon(icon, size: 20, color: Colors.black87),
@@ -4039,11 +4117,11 @@ class _HintButton extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 110),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.95),
+          color: Colors.white.withOpacity(0.95),
           borderRadius: _SofiStudioPageState._radius16, // ✅ CONST
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
+              color: Colors.black.withOpacity(0.15),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -4172,9 +4250,9 @@ class _PremiumEntryButtonState extends State<_PremiumEntryButton>
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            Colors.white.withValues(alpha: 0),
-                            Colors.white.withValues(alpha: 0.4),
-                            Colors.white.withValues(alpha: 0),
+                            Colors.white.withOpacity(0),
+                            Colors.white.withOpacity(0.4),
+                            Colors.white.withOpacity(0),
                           ],
                         ),
                       ),
@@ -4193,7 +4271,7 @@ class _PremiumEntryButtonState extends State<_PremiumEntryButton>
                         color: Colors.white,
                         shadows: [
                           Shadow(
-                            color: Colors.black.withValues(alpha: 0.3),
+                            color: Colors.black.withOpacity(0.3),
                             blurRadius: 2,
                             offset: const Offset(1, 1),
                           ),

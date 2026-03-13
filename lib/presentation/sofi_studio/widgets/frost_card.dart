@@ -55,7 +55,7 @@ class FrostCard extends StatelessWidget {
         borderRadius: borderRadius,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
+            color: Colors.black.withOpacity(0.12),
             blurRadius: elevation,
             offset: const Offset(0, 3),
           ),

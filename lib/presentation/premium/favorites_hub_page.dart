@@ -163,7 +163,7 @@ class _FavoritesHubPageState extends State<FavoritesHubPage> {
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.3),
+              color: Colors.black.withOpacity(0.3),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
@@ -197,7 +197,7 @@ class _FavoritesHubPageState extends State<FavoritesHubPage> {
               icon: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.3),
+                  color: Colors.black.withOpacity(0.3),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.checklist, color: Colors.white, size: 20),
@@ -236,7 +236,7 @@ class _FavoritesHubPageState extends State<FavoritesHubPage> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
+              color: Colors.white.withOpacity(0.05),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.favorite_border, size: 64, color: Colors.white24),
@@ -254,7 +254,7 @@ class _FavoritesHubPageState extends State<FavoritesHubPage> {
           Text(
             'Save your favorite looks from the studio\nto see them here',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 15),
+            style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 15),
           ),
           const SizedBox(height: 32),
           ElevatedButton.icon(
@@ -283,7 +283,7 @@ class _FavoritesHubPageState extends State<FavoritesHubPage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
+                  color: Colors.white.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -401,7 +401,7 @@ class _FavoriteCard extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
+              color: Colors.black.withOpacity(0.3),
               blurRadius: 12,
               offset: const Offset(0, 6),
             ),
@@ -450,7 +450,7 @@ class _FavoriteCard extends StatelessWidget {
                     colors: [
                       Colors.transparent,
                       Colors.transparent,
-                      Colors.black.withValues(alpha: 0.7),
+                      Colors.black.withOpacity(0.7),
                     ],
                     stops: const [0.0, 0.5, 1.0],
                   ),
@@ -467,7 +467,7 @@ class _FavoriteCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: isSelected
                           ? const Color(0xFFe94560)
-                          : Colors.black.withValues(alpha: 0.4),
+                          : Colors.black.withOpacity(0.4),
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 2),
                     ),
@@ -486,7 +486,7 @@ class _FavoriteCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.5),
+                        color: Colors.black.withOpacity(0.5),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -512,7 +512,7 @@ class _FavoriteCard extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.5),
+                            color: Colors.black.withOpacity(0.5),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(Icons.delete_outline, color: Colors.white70, size: 16),
@@ -641,7 +641,7 @@ class _FavoritesGalleryViewState extends State<_FavoritesGalleryView> {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.black.withValues(alpha: 0.7),
+                      Colors.black.withOpacity(0.7),
                       Colors.transparent,
                     ],
                   ),
@@ -723,7 +723,7 @@ class _FavoritesGalleryViewState extends State<_FavoritesGalleryView> {
                     begin: Alignment.bottomCenter,
                     end: Alignment.topCenter,
                     colors: [
-                      Colors.black.withValues(alpha: 0.8),
+                      Colors.black.withOpacity(0.8),
                       Colors.transparent,
                     ],
                   ),

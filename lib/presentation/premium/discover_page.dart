@@ -172,7 +172,7 @@ class _FeaturedBanner extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
+              color: Colors.black.withOpacity(0.1),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -189,7 +189,7 @@ class _FeaturedBanner extends StatelessWidget {
                 height: 150,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.2),
+                  color: Colors.white.withOpacity(0.2),
                 ),
               ),
             ),
@@ -201,7 +201,7 @@ class _FeaturedBanner extends StatelessWidget {
                 height: 80,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.15),
+                  color: Colors.white.withOpacity(0.15),
                 ),
               ),
             ),
@@ -266,7 +266,7 @@ class _FeaturedBanner extends StatelessWidget {
                             theme?.description ?? 'Discover new looks',
                             style: TextStyle(
                               fontSize: subtitleSize,
-                              color: Colors.white.withValues(alpha: 0.9),
+                              color: Colors.white.withOpacity(0.9),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -407,7 +407,7 @@ class _StylePresetChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: colors.first.withValues(alpha: 0.3),
+              color: colors.first.withOpacity(0.3),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -517,7 +517,7 @@ class _ThemeCard extends StatelessWidget {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
+              color: Colors.black.withOpacity(0.06),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
@@ -545,7 +545,7 @@ class _ThemeCard extends StatelessWidget {
                       color: _getColorForTheme(theme.id),
                       child: Icon(
                         _getIconForTheme(theme.id),
-                        color: Colors.white.withValues(alpha: 0.5),
+                        color: Colors.white.withOpacity(0.5),
                         size: 48,
                       ),
                     ),
@@ -562,7 +562,7 @@ class _ThemeCard extends StatelessWidget {
                           end: Alignment.bottomCenter,
                           colors: [
                             Colors.transparent,
-                            Colors.black.withValues(alpha: 0.4),
+                            Colors.black.withOpacity(0.4),
                           ],
                         ),
                       ),
@@ -605,7 +605,7 @@ class _ThemeCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.9),
+                        color: Colors.white.withOpacity(0.9),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -773,7 +773,7 @@ class _FirebaseThemeImageState extends State<_FirebaseThemeImage> {
         child: Center(
           child: CircularProgressIndicator(
             strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation(Colors.white.withValues(alpha: 0.7)),
+            valueColor: AlwaysStoppedAnimation(Colors.white.withOpacity(0.7)),
           ),
         ),
       );
@@ -789,7 +789,7 @@ class _FirebaseThemeImageState extends State<_FirebaseThemeImage> {
             color: widget.fallbackColor,
             child: Icon(
               widget.fallbackIcon,
-              color: Colors.white.withValues(alpha: 0.5),
+              color: Colors.white.withOpacity(0.5),
               size: 48,
             ),
           ),
@@ -799,7 +799,7 @@ class _FirebaseThemeImageState extends State<_FirebaseThemeImage> {
         color: widget.fallbackColor,
         child: Icon(
           widget.fallbackIcon,
-          color: Colors.white.withValues(alpha: 0.5),
+          color: Colors.white.withOpacity(0.5),
           size: 48,
         ),
       );
@@ -812,7 +812,7 @@ class _FirebaseThemeImageState extends State<_FirebaseThemeImage> {
         color: widget.fallbackColor,
         child: Icon(
           widget.fallbackIcon,
-          color: Colors.white.withValues(alpha: 0.5),
+          color: Colors.white.withOpacity(0.5),
           size: 48,
         ),
       ),

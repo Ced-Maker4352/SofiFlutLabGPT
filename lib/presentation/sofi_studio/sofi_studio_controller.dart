@@ -182,41 +182,30 @@ class SofiStudioController extends ChangeNotifier {
       Uint8List resultBytes;
 
       if (isDollMode) {
-        // DOLL MODE: Requires the Two-Step Pipeline to break identity lock
+        // DOLL MODE: Optimized Single-Pass Identity + Body + Style
         final twoStep = TwoStepGenerationService();
-        
-        // Step 1: Force body transformation
-        final genderLabel = isMaleMode ? 'male' : 'female';
-        final lockedBody = await twoStep.runStep1IdentityLock(
+        resultBytes = await twoStep.generateConsolidatedDoll(
           selfieBytes,
-          'Transform this into a full body $genderLabel fashion doll portrait. Show head-to-toe in a stylish pose with clean background. Soft plastic texture. ',
-        );
-
-        // Step 2: Apply the user's outfit/mood prompt
-        resultBytes = await twoStep.generateStyledOnly(
-          lockedBody,
           prompt,
+          isMale: isMaleMode,
         );
       } else {
         // HUMAN MODE: Standard single pass
-        final initImageBase64 = 'data:image/png;base64,${base64Encode(selfieBytes)}';
-        final imageUrl = await ModelsLabService.generateKontextPro(
+        final imageUrl = await ModelsLabService.generateHumanFlux(
+          initImageBytes: selfieBytes,
           prompt: prompt,
-          negativePrompt: 'deformed face, changed identity, different person, '
-              'bad anatomy, worst quality, blurry',
-          initImageBase64: initImageBase64,
-          aspectRatio: '9:16',
         );
 
         resultBytes = await _downloadBytes(imageUrl);
       }
+
 
       generatedImageBytes = resultBytes;
       skipWelcomeOverlay = false;
       return resultBytes;
     } catch (e) {
       generationError = e.toString();
-      debugPrint('[SofiStudio] Generation error: \$e');
+      debugPrint('[SofiStudio] Generation error: $e');
       rethrow;
     } finally {
       isGenerating = false;
@@ -226,18 +215,19 @@ class SofiStudioController extends ChangeNotifier {
 
   /// Robust downloader with retries (CDNs can take a moment to propagate)
   Future<Uint8List> _downloadBytes(String url) async {
-    const maxRetries = 5;
-    const retryDelay = Duration(seconds: 2);
+    const maxRetries = 15;
+    const initialDelay = Duration(milliseconds: 800);
+    const gradualDelay = Duration(milliseconds: 1500);
 
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         final resp = await http.get(Uri.parse(url));
         if (resp.statusCode >= 200 && resp.statusCode < 300) {
-          debugPrint('[Download] ✅ Got ${resp.bodyBytes.length} bytes on attempt $attempt');
+          debugPrint(
+              '[Download] ✅ Got ${resp.bodyBytes.length} bytes on attempt $attempt');
           return resp.bodyBytes;
         }
 
-        // If 404, the CDN file may not have propagated yet — retry
         if (resp.statusCode == 404) {
           debugPrint('[Download] ⏳ 404 on attempt $attempt, retrying...');
         } else {
@@ -248,7 +238,7 @@ class SofiStudioController extends ChangeNotifier {
       }
 
       if (attempt < maxRetries) {
-        await Future.delayed(retryDelay);
+        await Future.delayed(attempt <= 5 ? initialDelay : gradualDelay);
       }
     }
 

@@ -144,20 +144,20 @@ class _ShareHubPageState extends State<ShareHubPage> with SingleTickerProviderSt
               width: 120,
               height: 120,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
+                color: Colors.white.withOpacity(0.05),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.add_photo_alternate_outlined,
                 size: 48,
-                color: Colors.white.withValues(alpha: 0.3),
+                color: Colors.white.withOpacity(0.3),
               ),
             ),
             const SizedBox(height: 24),
             Text(
               'No Image to Share',
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.9),
+                color: Colors.white.withOpacity(0.9),
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
               ),
@@ -167,7 +167,7 @@ class _ShareHubPageState extends State<ShareHubPage> with SingleTickerProviderSt
               'Create something amazing first,\nthen come back to share it!',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.5),
+                color: Colors.white.withOpacity(0.5),
                 fontSize: 14,
               ),
             ),
@@ -229,7 +229,7 @@ class _ShareHubPageState extends State<ShareHubPage> with SingleTickerProviderSt
                     'Show off your style to the world',
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.white.withValues(alpha: 0.6),
+                      color: Colors.white.withOpacity(0.6),
                     ),
                   ),
                 ],
@@ -253,7 +253,7 @@ class _ShareHubPageState extends State<ShareHubPage> with SingleTickerProviderSt
           Text(
             'Frame Style',
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.9),
+              color: Colors.white.withOpacity(0.9),
               fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
@@ -275,21 +275,21 @@ class _ShareHubPageState extends State<ShareHubPage> with SingleTickerProviderSt
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
+              color: Colors.white.withOpacity(0.05),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
               children: [
                 Icon(
                   Icons.branding_watermark_outlined,
-                  color: Colors.white.withValues(alpha: 0.7),
+                  color: Colors.white.withOpacity(0.7),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'Add Sofi Watermark',
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.9),
+                      color: Colors.white.withOpacity(0.9),
                       fontSize: 15,
                     ),
                   ),
@@ -312,7 +312,7 @@ class _ShareHubPageState extends State<ShareHubPage> with SingleTickerProviderSt
           Text(
             'Share To',
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.9),
+              color: Colors.white.withOpacity(0.9),
               fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
@@ -397,7 +397,7 @@ class _ShareHubPageState extends State<ShareHubPage> with SingleTickerProviderSt
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
+                color: Colors.white.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
@@ -408,13 +408,13 @@ class _ShareHubPageState extends State<ShareHubPage> with SingleTickerProviderSt
                       Icon(
                         Icons.auto_awesome,
                         size: 16,
-                        color: Colors.white.withValues(alpha: 0.6),
+                        color: Colors.white.withOpacity(0.6),
                       ),
                       const SizedBox(width: 8),
                       Text(
                         'Style Used',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.6),
+                          color: Colors.white.withOpacity(0.6),
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                         ),
@@ -425,7 +425,7 @@ class _ShareHubPageState extends State<ShareHubPage> with SingleTickerProviderSt
                   Text(
                     widget.prompt!,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.8),
+                      color: Colors.white.withOpacity(0.8),
                       fontSize: 14,
                     ),
                     maxLines: 3,
@@ -464,7 +464,7 @@ class _ShareHubPageState extends State<ShareHubPage> with SingleTickerProviderSt
             borderRadius: BorderRadius.circular(4),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
+                color: Colors.black.withOpacity(0.3),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -520,13 +520,13 @@ class _ShareHubPageState extends State<ShareHubPage> with SingleTickerProviderSt
         width: 70,
         decoration: BoxDecoration(
           color: isSelected
-              ? const Color(0xFF667eea).withValues(alpha: 0.2)
-              : Colors.white.withValues(alpha: 0.05),
+              ? const Color(0xFF667eea).withOpacity(0.2)
+              : Colors.white.withOpacity(0.05),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected
                 ? const Color(0xFF667eea)
-                : Colors.white.withValues(alpha: 0.1),
+                : Colors.white.withOpacity(0.1),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -537,7 +537,7 @@ class _ShareHubPageState extends State<ShareHubPage> with SingleTickerProviderSt
               frame.icon,
               color: isSelected
                   ? const Color(0xFF667eea)
-                  : Colors.white.withValues(alpha: 0.6),
+                  : Colors.white.withOpacity(0.6),
               size: 24,
             ),
             const SizedBox(height: 6),
@@ -546,7 +546,7 @@ class _ShareHubPageState extends State<ShareHubPage> with SingleTickerProviderSt
               style: TextStyle(
                 color: isSelected
                     ? Colors.white
-                    : Colors.white.withValues(alpha: 0.6),
+                    : Colors.white.withOpacity(0.6),
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
@@ -570,7 +570,7 @@ class _WatermarkBadge extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.5),
+          color: Colors.black.withOpacity(0.5),
           borderRadius: BorderRadius.circular(20),
         ),
         child: const Row(
@@ -611,7 +611,7 @@ class _WatermarkBadge extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.25),
+              color: Colors.black.withOpacity(0.25),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.workspace_premium_rounded, size: 12, color: Colors.white),
@@ -669,7 +669,7 @@ class _ShareButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: gradient.first.withValues(alpha: 0.3),
+              color: gradient.first.withOpacity(0.3),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),

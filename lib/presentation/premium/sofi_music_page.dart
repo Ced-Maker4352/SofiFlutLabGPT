@@ -302,12 +302,12 @@ class _SofiMusicPageState extends State<SofiMusicPage> with SingleTickerProvider
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         gradient: isCurrent
-            ? LinearGradient(colors: [const Color(0xFF7C4DFF).withValues(alpha: 0.3), const Color(0xFFE040FB).withValues(alpha: 0.1)])
+            ? LinearGradient(colors: [const Color(0xFF7C4DFF).withOpacity(0.3), const Color(0xFFE040FB).withOpacity(0.1)])
             : null,
-        color: isCurrent ? null : Colors.white.withValues(alpha: 0.05),
+        color: isCurrent ? null : Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isCurrent ? const Color(0xFFE040FB).withValues(alpha: 0.5) : Colors.transparent,
+          color: isCurrent ? const Color(0xFFE040FB).withOpacity(0.5) : Colors.transparent,
           width: isCurrent ? 1 : 0,
         ),
       ),
@@ -319,7 +319,7 @@ class _SofiMusicPageState extends State<SofiMusicPage> with SingleTickerProvider
           height: 48,
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: isActive ? [const Color(0xFFE040FB), const Color(0xFF7C4DFF)] : [Colors.purple.withValues(alpha: 0.3), Colors.purple.withValues(alpha: 0.1)],
+              colors: isActive ? [const Color(0xFFE040FB), const Color(0xFF7C4DFF)] : [Colors.purple.withOpacity(0.3), Colors.purple.withOpacity(0.1)],
             ),
             borderRadius: BorderRadius.circular(12),
           ),
@@ -328,7 +328,7 @@ class _SofiMusicPageState extends State<SofiMusicPage> with SingleTickerProvider
               : const Icon(Icons.music_note_rounded, color: Colors.white70, size: 24),
         ),
         title: Text(track['title']!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: isCurrent ? const Color(0xFFE040FB) : Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
-        subtitle: Text(track['artist']!, style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 13)),
+        subtitle: Text(track['artist']!, style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13)),
         trailing: isLoading
             ? const SizedBox(width: 40, height: 40, child: Padding(padding: EdgeInsets.all(8), child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFE040FB))))
             : IconButton(
@@ -348,8 +348,8 @@ class _SofiMusicPageState extends State<SofiMusicPage> with SingleTickerProvider
       height: 200,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        image: DecorationImage(image: AssetImage(playlist['image']!), fit: BoxFit.cover, colorFilter: ColorFilter.mode(Colors.black.withValues(alpha: 0.3), BlendMode.darken)),
-        boxShadow: [BoxShadow(color: const Color(0xFFE040FB).withValues(alpha: 0.3), blurRadius: 24, offset: const Offset(0, 12))],
+        image: DecorationImage(image: AssetImage(playlist['image']!), fit: BoxFit.cover, colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.3), BlendMode.darken)),
+        boxShadow: [BoxShadow(color: const Color(0xFFE040FB).withOpacity(0.3), blurRadius: 24, offset: const Offset(0, 12))],
       ),
       child: Stack(
         children: [
@@ -360,7 +360,7 @@ class _SofiMusicPageState extends State<SofiMusicPage> with SingleTickerProvider
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Colors.transparent, Colors.black.withValues(alpha: 0.8)],
+                colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
               ),
             ),
           ),
@@ -373,7 +373,7 @@ class _SofiMusicPageState extends State<SofiMusicPage> with SingleTickerProvider
               children: [
                 Text(playlist['title']!, style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold, height: 1.1)),
                 const SizedBox(height: 4),
-                Text(playlist['subtitle']!, style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 14)),
+                Text(playlist['subtitle']!, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14)),
               ],
             ),
           ),
@@ -401,7 +401,7 @@ class _SofiMusicPageState extends State<SofiMusicPage> with SingleTickerProvider
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             image: DecorationImage(image: AssetImage(playlist['image']!), fit: BoxFit.cover),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 6))],
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 6))],
           ),
         ),
         const SizedBox(height: 10),
@@ -409,7 +409,7 @@ class _SofiMusicPageState extends State<SofiMusicPage> with SingleTickerProvider
           width: 140,
           child: Text(playlist['title']!, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
         ),
-        Text(playlist['duration']!, style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12)),
+        Text(playlist['duration']!, style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12)),
       ],
     ),
   );
@@ -424,8 +424,8 @@ class _SofiMusicPageState extends State<SofiMusicPage> with SingleTickerProvider
         decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), image: DecorationImage(image: AssetImage(playlist['image']!), fit: BoxFit.cover)),
       ),
       title: Text(playlist['title']!, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-      subtitle: Text(playlist['subtitle']!, style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 13)),
-      trailing: Text(playlist['duration']!, style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12)),
+      subtitle: Text(playlist['subtitle']!, style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13)),
+      trailing: Text(playlist['duration']!, style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 12)),
     ),
   );
 
@@ -449,7 +449,7 @@ class _SofiMusicPageState extends State<SofiMusicPage> with SingleTickerProvider
         decoration: BoxDecoration(
           gradient: const LinearGradient(colors: [Color(0xFF2D1B4E), Color(0xFF1A1A2E)]),
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: const Color(0xFFE040FB).withValues(alpha: 0.2), blurRadius: 16, offset: const Offset(0, 4))],
+          boxShadow: [BoxShadow(color: const Color(0xFFE040FB).withOpacity(0.2), blurRadius: 16, offset: const Offset(0, 4))],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -457,7 +457,7 @@ class _SofiMusicPageState extends State<SofiMusicPage> with SingleTickerProvider
             // Progress bar
             ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-              child: LinearProgressIndicator(value: progress, backgroundColor: Colors.white.withValues(alpha: 0.1), valueColor: const AlwaysStoppedAnimation(Color(0xFFE040FB)), minHeight: 3),
+              child: LinearProgressIndicator(value: progress, backgroundColor: Colors.white.withOpacity(0.1), valueColor: const AlwaysStoppedAnimation(Color(0xFFE040FB)), minHeight: 3),
             ),
             Padding(
               padding: const EdgeInsets.all(12),
@@ -476,7 +476,7 @@ class _SofiMusicPageState extends State<SofiMusicPage> with SingleTickerProvider
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: const LinearGradient(colors: [Color(0xFFE040FB), Color(0xFF7C4DFF)]),
-                        boxShadow: [BoxShadow(color: const Color(0xFFE040FB).withValues(alpha: 0.4), blurRadius: 8)],
+                        boxShadow: [BoxShadow(color: const Color(0xFFE040FB).withOpacity(0.4), blurRadius: 8)],
                       ),
                       child: const Icon(Icons.music_note_rounded, color: Colors.white, size: 24),
                     ),
@@ -488,7 +488,7 @@ class _SofiMusicPageState extends State<SofiMusicPage> with SingleTickerProvider
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(track['title']!, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
-                        Text(track['artist']!, style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12)),
+                        Text(track['artist']!, style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12)),
                       ],
                     ),
                   ),
@@ -524,7 +524,7 @@ class _SofiMusicPageState extends State<SofiMusicPage> with SingleTickerProvider
             width: 40,
             height: 4,
             margin: const EdgeInsets.only(bottom: 24),
-            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
+            decoration: BoxDecoration(color: Colors.white.withOpacity(0.3), borderRadius: BorderRadius.circular(2)),
           ),
         ),
 
@@ -548,14 +548,14 @@ class _SofiMusicPageState extends State<SofiMusicPage> with SingleTickerProvider
                     end: Alignment.bottomRight,
                     colors: [Color(0xFFE040FB), Color(0xFF7C4DFF), Color(0xFF1A0A2E)],
                   ),
-                  boxShadow: [BoxShadow(color: const Color(0xFFE040FB).withValues(alpha: 0.4), blurRadius: 40, spreadRadius: 4)],
+                  boxShadow: [BoxShadow(color: const Color(0xFFE040FB).withOpacity(0.4), blurRadius: 40, spreadRadius: 4)],
                 ),
                 child: Container(
                   margin: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: const Color(0xFF1A0A2E),
-                    border: Border.all(color: const Color(0xFFE040FB).withValues(alpha: 0.3), width: 2),
+                    border: Border.all(color: const Color(0xFFE040FB).withOpacity(0.3), width: 2),
                   ),
                   child: const Center(child: Icon(Icons.music_note_rounded, color: Colors.white, size: 80)),
                 ),
@@ -570,7 +570,7 @@ class _SofiMusicPageState extends State<SofiMusicPage> with SingleTickerProvider
         if (_currentTrackIndex != -1) ...[
           Text(_tracks[_currentTrackIndex]['title']!, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
           const SizedBox(height: 8),
-          Text(_tracks[_currentTrackIndex]['artist']!, style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 16)),
+          Text(_tracks[_currentTrackIndex]['artist']!, style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 16)),
         ],
 
         const SizedBox(height: 32),
@@ -584,9 +584,9 @@ class _SofiMusicPageState extends State<SofiMusicPage> with SingleTickerProvider
                 thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
                 overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
                 activeTrackColor: const Color(0xFFE040FB),
-                inactiveTrackColor: Colors.white.withValues(alpha: 0.2),
+                inactiveTrackColor: Colors.white.withOpacity(0.2),
                 thumbColor: Colors.white,
-                overlayColor: const Color(0xFFE040FB).withValues(alpha: 0.2),
+                overlayColor: const Color(0xFFE040FB).withOpacity(0.2),
               ),
               child: Slider(
                 value: _duration.inMilliseconds > 0 ? _position.inMilliseconds / _duration.inMilliseconds : 0.0,
@@ -598,8 +598,8 @@ class _SofiMusicPageState extends State<SofiMusicPage> with SingleTickerProvider
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(_formatDuration(_position), style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12)),
-                  Text(_formatDuration(_duration), style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12)),
+                  Text(_formatDuration(_position), style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12)),
+                  Text(_formatDuration(_duration), style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12)),
                 ],
               ),
             ),
@@ -620,7 +620,7 @@ class _SofiMusicPageState extends State<SofiMusicPage> with SingleTickerProvider
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: const LinearGradient(colors: [Color(0xFFE040FB), Color(0xFF7C4DFF)]),
-                boxShadow: [BoxShadow(color: const Color(0xFFE040FB).withValues(alpha: 0.5), blurRadius: 20)],
+                boxShadow: [BoxShadow(color: const Color(0xFFE040FB).withOpacity(0.5), blurRadius: 20)],
               ),
               child: IconButton(
                 icon: Icon(_isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded),

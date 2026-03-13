@@ -203,7 +203,7 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                     child: Container(
                       width: double.infinity,
                       decoration: BoxDecoration(
-                        color: theme.headerColor.withValues(alpha: 0.3),
+                        color: theme.headerColor.withOpacity(0.3),
                       ),
                       child: _selfieBytes != null
                           ? Image.memory(
@@ -221,7 +221,7 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                                   decoration: BoxDecoration(
                                     border: Border.all(
                                       color: SofiStudioTheme.purple
-                                          .withValues(alpha: 0.5),
+                                          .withOpacity(0.5),
                                       width: 2,
                                     ),
                                     borderRadius: BorderRadius.circular(70),
@@ -231,7 +231,7 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                                       Icons.person_outline,
                                       size: 80,
                                       color: SofiStudioTheme.purple
-                                          .withValues(alpha: 0.4),
+                                          .withOpacity(0.4),
                                     ),
                                   ),
                                 ),
@@ -240,7 +240,7 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                                   'Tap to add your selfie',
                                   style: TextStyle(
                                     color: DarkModeColors.darkOnBackground
-                                        .withValues(alpha: 0.7),
+                                        .withOpacity(0.7),
                                     fontSize: 16,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -306,7 +306,7 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                         child: Container(
                           decoration: BoxDecoration(
                             border: Border.all(
-                              color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.1),
+                              color: isSelected ? Colors.white : Colors.white.withOpacity(0.1),
                               width: isSelected ? 2 : 0,
                             ),
                           ),
@@ -336,8 +336,8 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                                     end: Alignment.bottomCenter,
                                     colors: [
                                       Colors.transparent,
-                                      Colors.black.withValues(alpha: 0.4),
-                                      Colors.black.withValues(alpha: 0.7),
+                                      Colors.black.withOpacity(0.4),
+                                      Colors.black.withOpacity(0.7),
                                     ],
                                   ),
                                 ),
@@ -373,8 +373,8 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                       onPressed: _selectedMood == null ? null : _continue,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _selectedMood != null 
-                            ? SofiStudioTheme.purple.withValues(alpha: 0.8)
-                            : SofiStudioTheme.purple.withValues(alpha: 0.3),
+                            ? SofiStudioTheme.purple.withOpacity(0.8)
+                            : SofiStudioTheme.purple.withOpacity(0.3),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -403,7 +403,7 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
           if (_isGenerating)
             Positioned.fill(
               child: Container(
-                color: DarkModeColors.darkBackground.withValues(alpha: 0.85),
+                color: DarkModeColors.darkBackground.withOpacity(0.85),
                 child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,

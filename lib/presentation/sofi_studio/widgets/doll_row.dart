@@ -61,10 +61,10 @@ child: FrostCard(
 padding: EdgeInsets.zero,
 blur: 14,
 elevation: isSelected ? 12 : 6,
-backgroundColor: Colors.white.withValues(alpha: 0.92),
+backgroundColor: Colors.white.withOpacity(0.92),
 borderColor: isSelected
 ? SofiStudioTheme.blue
-: Colors.white.withValues(alpha: 0.5),
+: Colors.white.withOpacity(0.5),
 child: Container(
 width: 70,
 height: 80,

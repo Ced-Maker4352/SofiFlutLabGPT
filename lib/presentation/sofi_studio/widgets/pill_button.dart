@@ -30,12 +30,12 @@ class PillButton extends StatelessWidget {
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: SofiStudioTheme.blue,
-           disabledBackgroundColor: SofiStudioTheme.blue.withValues(alpha: 0.4),
+           disabledBackgroundColor: SofiStudioTheme.blue.withOpacity(0.4),
           foregroundColor: Colors.white,
           shape: const StadiumBorder(),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           elevation: 6,
-           shadowColor: Colors.black.withValues(alpha: 0.3),
+           shadowColor: Colors.black.withOpacity(0.3),
         ),
         child: Text(
           textLabel,
@@ -58,7 +58,7 @@ class PillButton extends StatelessWidget {
           backgroundColor: Colors.white,
           side: BorderSide(
             color: onPressed == null
-                 ? SofiStudioTheme.charcoal.withValues(alpha: 0.3)
+                 ? SofiStudioTheme.charcoal.withOpacity(0.3)
                 : SofiStudioTheme.blue,
             width: 1.2,
           ),

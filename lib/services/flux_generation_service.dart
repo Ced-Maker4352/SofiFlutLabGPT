@@ -38,17 +38,31 @@ class FluxGenerationService {
     return _downloadBytes(imageUrl);
   }
 
-  /// Internal helper to download image bytes from URL
+  /// Optimized downloader with retries
   Future<Uint8List> _downloadBytes(String url) async {
-    final uri = Uri.parse(url);
-    final resp = await http.get(uri);
+    const maxRetries = 15;
+    const initialDelay = Duration(milliseconds: 800);
+    const gradualDelay = Duration(milliseconds: 1500);
 
-    if (resp.statusCode < 200 || resp.statusCode >= 300) {
-      throw Exception(
-        'Failed to download FLUX generated image ($url): ${resp.statusCode}',
-      );
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        final resp = await http.get(Uri.parse(url));
+        if (resp.statusCode >= 200 && resp.statusCode < 300) {
+          return resp.bodyBytes;
+        }
+
+        if (resp.statusCode == 404) {
+          // CDN propagation delay
+        }
+      } catch (e) {
+        // Network error
+      }
+
+      if (attempt < maxRetries) {
+        await Future.delayed(attempt <= 5 ? initialDelay : gradualDelay);
+      }
     }
 
-    return resp.bodyBytes;
+    throw Exception('Failed to download image after $maxRetries attempts');
   }
 }

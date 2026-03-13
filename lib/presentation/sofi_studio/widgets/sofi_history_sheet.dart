@@ -60,7 +60,7 @@ Widget build(BuildContext context) {
 return GestureDetector(
 onTap: () => Navigator.pop(context), // tap outside closes
 child: Container(
-color: Colors.black.withValues(alpha: 0.45),
+color: Colors.black.withOpacity(0.45),
 child: GestureDetector(
 onTap: () {}, // prevent tap-through
 child: DraggableScrollableSheet(
@@ -186,7 +186,7 @@ top: 6,
 right: 6,
 child: Container(
 decoration: BoxDecoration(
-color: isSelected ? Colors.purple : Colors.black.withValues(alpha: 0.4),
+color: isSelected ? Colors.purple : Colors.black.withOpacity(0.4),
 shape: BoxShape.circle,
 border: Border.all(color: Colors.white, width: 2),
 ),
@@ -206,7 +206,7 @@ child: Container(
 width: 26,
 height: 26,
 decoration: BoxDecoration(
-color: Colors.black.withValues(alpha: 0.65),
+color: Colors.black.withOpacity(0.65),
 shape: BoxShape.circle,
 ),
 child: const Icon(

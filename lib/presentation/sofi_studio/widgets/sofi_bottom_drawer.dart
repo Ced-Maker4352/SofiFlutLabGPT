@@ -205,9 +205,9 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
       case EditCategory.glasses:
         return 'images/glasses/glasses_$num.jpg';
       case EditCategory.poses:
-        return 'images/posses/pose_$num.jpg';
+        return 'images/poses/pose_$num.jpg';
       case EditCategory.background:
-        return 'images/Background/background_$num.jpg';
+        return 'images/background/background_$num.jpg';
       case EditCategory.caption:
         return null;
     }
@@ -316,7 +316,7 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
+            color: Colors.black.withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, -4),
           ),
@@ -358,7 +358,7 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.3),
+                  color: Colors.white.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -411,14 +411,14 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                         decoration: BoxDecoration(
-                          color: isSelected ? SofiStudioTheme.purple : Colors.white.withValues(alpha: 0.1),
+                          color: isSelected ? SofiStudioTheme.purple : Colors.white.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                             color: isSelected
                                 ? SofiStudioTheme.purple
                                 : isLocked
-                                    ? Colors.amber.withValues(alpha: 0.5)
-                                    : Colors.white.withValues(alpha: 0.2),
+                                    ? Colors.amber.withOpacity(0.5)
+                                    : Colors.white.withOpacity(0.2),
                           ),
                         ),
                         child: Row(
@@ -465,7 +465,7 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
             child: Text(
               'Choose Your Character',
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.7),
+                color: Colors.white.withOpacity(0.7),
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -494,7 +494,7 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
                 Text(
                   'Premium Characters',
                   style: TextStyle(
-                    color: Colors.amber.withValues(alpha: 0.9),
+                    color: Colors.amber.withOpacity(0.9),
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -546,13 +546,13 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
               color: isSelected 
                   ? SofiStudioTheme.purple 
                   : isPremium 
-                      ? Colors.amber.withValues(alpha: 0.5)
-                      : Colors.white.withValues(alpha: 0.2),
+                      ? Colors.amber.withOpacity(0.5)
+                      : Colors.white.withOpacity(0.2),
               width: isSelected ? 2 : 1,
             ),
             boxShadow: isSelected ? [
               BoxShadow(
-                color: SofiStudioTheme.purple.withValues(alpha: 0.4),
+                color: SofiStudioTheme.purple.withOpacity(0.4),
                 blurRadius: 8,
               ),
             ] : null,
@@ -568,7 +568,7 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
                         doll.thumbPath,
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Container(
-                          color: SofiStudioTheme.purple.withValues(alpha: 0.3),
+                          color: SofiStudioTheme.purple.withOpacity(0.3),
                           child: const Icon(Icons.person, color: Colors.white54),
                         ),
                       ),
@@ -576,7 +576,7 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
                 if (isPremium && !_isPremium)
                   Positioned.fill(
                     child: Container(
-                      color: Colors.black.withValues(alpha: 0.5),
+                      color: Colors.black.withOpacity(0.5),
                       child: const Icon(Icons.lock, color: Colors.amber, size: 20),
                     ),
                   ),
@@ -648,10 +648,10 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
       onTap: () => _onOptionTap(optionIndex),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
+          color: Colors.white.withOpacity(0.1),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.2),
+            color: Colors.white.withOpacity(0.2),
           ),
         ),
         child: Stack(
@@ -672,7 +672,7 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
                             },
                           )
                         : Container(
-                            color: SofiStudioTheme.purple.withValues(alpha: 0.3),
+                            color: SofiStudioTheme.purple.withOpacity(0.3),
                             child: const Icon(
                               Icons.checkroom,
                               color: Colors.white54,
@@ -703,7 +703,7 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
               Positioned.fill(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.6),
+                    color: Colors.black.withOpacity(0.6),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(Icons.lock, color: Colors.amber, size: 24),
@@ -1002,11 +1002,11 @@ class _FirebaseThumbnailState extends State<_FirebaseThumbnail> {
   Widget _buildPlaceholder() {
     // Simple colored placeholder with icon - no images loaded
     return Container(
-      color: SofiStudioTheme.purple.withValues(alpha: 0.25),
+      color: SofiStudioTheme.purple.withOpacity(0.25),
       child: Center(
         child: Icon(
           Icons.checkroom,
-          color: Colors.white.withValues(alpha: 0.4),
+          color: Colors.white.withOpacity(0.4),
           size: 28,
         ),
       ),
@@ -1015,7 +1015,7 @@ class _FirebaseThumbnailState extends State<_FirebaseThumbnail> {
   
   Widget _buildLoadingIndicator() {
     return Container(
-      color: SofiStudioTheme.purple.withValues(alpha: 0.2),
+      color: SofiStudioTheme.purple.withOpacity(0.2),
       child: const Center(
         child: SizedBox(
           width: 20,
@@ -1031,7 +1031,7 @@ class _FirebaseThumbnailState extends State<_FirebaseThumbnail> {
   
   Widget _buildErrorPlaceholder() {
     return Container(
-      color: SofiStudioTheme.purple.withValues(alpha: 0.3),
+      color: SofiStudioTheme.purple.withOpacity(0.3),
       child: const Icon(
         Icons.checkroom,
         color: Colors.white54,
@@ -1129,14 +1129,14 @@ class _DollFirebaseImageState extends State<_DollFirebaseImage> {
         // Placeholder state
         if (_url == null && !_loading) {
           return Container(
-            color: SofiStudioTheme.purple.withValues(alpha: 0.25),
-            child: Icon(Icons.person, size: 20, color: Colors.white.withValues(alpha: 0.4)),
+            color: SofiStudioTheme.purple.withOpacity(0.25),
+            child: Icon(Icons.person, size: 20, color: Colors.white.withOpacity(0.4)),
           );
         }
         
         if (_loading) {
           return Container(
-            color: SofiStudioTheme.purple.withValues(alpha: 0.2),
+            color: SofiStudioTheme.purple.withOpacity(0.2),
             child: const Center(
               child: SizedBox(
                 width: 16,
@@ -1149,7 +1149,7 @@ class _DollFirebaseImageState extends State<_DollFirebaseImage> {
         
         if (_url == null) {
           return Container(
-            color: SofiStudioTheme.purple.withValues(alpha: 0.3),
+            color: SofiStudioTheme.purple.withOpacity(0.3),
             child: const Icon(Icons.person, size: 24, color: Colors.white54),
           );
         }
@@ -1161,7 +1161,7 @@ class _DollFirebaseImageState extends State<_DollFirebaseImage> {
           memCacheHeight: 100,
           fadeInDuration: const Duration(milliseconds: 150),
           placeholder: (context, url) => Container(
-            color: SofiStudioTheme.purple.withValues(alpha: 0.2),
+            color: SofiStudioTheme.purple.withOpacity(0.2),
             child: const Center(
               child: SizedBox(
                 width: 16,
@@ -1171,7 +1171,7 @@ class _DollFirebaseImageState extends State<_DollFirebaseImage> {
             ),
           ),
           errorWidget: (context, url, error) => Container(
-            color: SofiStudioTheme.purple.withValues(alpha: 0.3),
+            color: SofiStudioTheme.purple.withOpacity(0.3),
             child: const Icon(Icons.person, size: 24, color: Colors.white54),
           ),
         );

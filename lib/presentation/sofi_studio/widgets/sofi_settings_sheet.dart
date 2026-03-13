@@ -199,7 +199,7 @@ class _SofiSettingsSheetState extends State<SofiSettingsSheet> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: SofiStudioTheme.purple.withValues(alpha: 0.1),
+              color: SofiStudioTheme.purple.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, size: 20, color: SofiStudioTheme.purple),

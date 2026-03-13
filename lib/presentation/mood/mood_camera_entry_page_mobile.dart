@@ -1,6 +1,8 @@
+import 'dart:ui';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'mood_mode.dart';
 import '../../widgets/mood_icon_row.dart';
@@ -48,16 +50,48 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
   ];
 
   Future<void> _pickSelfie() async {
-    final file = await _picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 92,
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => CupertinoActionSheet(
+        title: const Text('Add your selfie'),
+        message: const Text('Taking a clear, front-facing selfie works best.'),
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () async {
+              Navigator.pop(context);
+              final file = await _picker.pickImage(
+                source: ImageSource.camera,
+                imageQuality: 92,
+              );
+              if (file != null) {
+                final bytes = await file.readAsBytes();
+                if (mounted) setState(() => _selfieBytes = bytes);
+              }
+            },
+            child: const Text('Take Picture'),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () async {
+              Navigator.pop(context);
+              final file = await _picker.pickImage(
+                source: ImageSource.gallery,
+                imageQuality: 92,
+              );
+              if (file != null) {
+                final bytes = await file.readAsBytes();
+                if (mounted) setState(() => _selfieBytes = bytes);
+              }
+            },
+            child: const Text('Choose from Gallery'),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          isDefaultAction: true,
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+      ),
     );
-    if (file == null) return;
-
-    final bytes = await file.readAsBytes();
-    if (!mounted) return;
-
-    setState(() => _selfieBytes = bytes);
   }
 
   Future<void> _continue() async {
@@ -161,7 +195,7 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                                 ),
                               ],
                             ),
-                            const SizedBox(width: 40), // More space between top toggles
+                            const SizedBox(width: 32), // Slightly reduced for more space
                             Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -195,7 +229,7 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                   ),
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 8), 
 
                 // ─────────────── CAMERA PREVIEW AREA (Edge-to-Edge) ───────────────
                 Expanded(
@@ -204,7 +238,7 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                     child: Container(
                       width: double.infinity,
                       decoration: BoxDecoration(
-                        color: theme.headerColor.withValues(alpha: 0.3),
+                        color: theme.headerColor.withOpacity(0.3),
                         // Removed borderRadius, border, and boxShadow for edge-to-edge flat look
                       ),
                       child: _selfieBytes != null
@@ -214,38 +248,89 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                               width: double.infinity,
                               height: double.infinity,
                             )
-                          : Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                          : Stack(
                               children: [
-                                // Face outline guide
-                                Container(
-                                  width: 140,
-                                  height: 180,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: SofiStudioTheme.purple
-                                          .withValues(alpha: 0.5),
-                                      width: 2,
-                                    ),
-                                    borderRadius: BorderRadius.circular(70),
-                                  ),
-                                  child: Center(
-                                    child: Icon(
-                                      Icons.person_outline,
-                                      size: 80,
-                                      color: SofiStudioTheme.purple
-                                          .withValues(alpha: 0.4),
+                                // Lady in red background selection area
+                                Positioned.fill(
+                                  child: Opacity(
+                                    opacity: 0.5,
+                                    child: Image.asset(
+                                      'assets/images/mood_startup_lady.jpg',
+                                      fit: BoxFit.cover,
+                                      alignment: Alignment.topCenter,
+                                      errorBuilder: (_, __, ___) => Container(
+                                        color: Colors.white.withOpacity(0.05),
+                                        child: const Icon(
+                                          Icons.person_outline,
+                                          size: 80,
+                                          color: Colors.white12,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 20),
-                                Text(
-                                  'Tap to add your selfie',
-                                  style: TextStyle(
-                                    color: DarkModeColors.darkOnBackground
-                                        .withValues(alpha: 0.7),
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
+                                // Glassy blur effect
+                                Positioned.fill(
+                                  child: BackdropFilter(
+                                    filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+                                    child: Container(color: Colors.transparent),
+                                  ),
+                                ),
+                                Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Spacer(flex: 3), // Position text roughly 75% down
+                                      Text(
+                                        'Sofi Saint',
+                                        style: GoogleFonts.outfit(
+                                          color: SofiStudioTheme.yellow,
+                                          fontSize: 36,
+                                          fontWeight: FontWeight.w900,
+                                          fontStyle: FontStyle.italic,
+                                          shadows: [
+                                            Shadow(
+                                              blurRadius: 10,
+                                              color: Colors.black.withOpacity(0.3),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Upload Selfie',
+                                        style: GoogleFonts.outfit(
+                                          color: SofiStudioTheme.yellow.withOpacity(0.95),
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.w800,
+                                          fontStyle: FontStyle.italic,
+                                          shadows: [
+                                            Shadow(
+                                              blurRadius: 8,
+                                              color: Colors.black.withOpacity(0.3),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        'Imagine, Create, Become',
+                                        style: GoogleFonts.outfit(
+                                          color: SofiStudioTheme.yellow.withOpacity(0.85),
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          fontStyle: FontStyle.italic,
+                                          letterSpacing: 1.2,
+                                          shadows: [
+                                            Shadow(
+                                              blurRadius: 5,
+                                              color: Colors.black.withOpacity(0.2),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const Spacer(flex: 1),
+                                    ],
                                   ),
                                 ),
                               ],
@@ -254,8 +339,7 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                   ),
                 ),
 
-                // ─────────────── BOTTOM: Seamless Pickers ───────────────
-                /// MODE ICONS
+                /// MODE ICONS (Seamless with Moods below)
                 MoodIconRow(
                   selected: _selectedMode,
                   onSelect: (mode) async {
@@ -274,100 +358,103 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                 ),
 
                 /// MOOD HORIZONTAL LIST (Seamless Cards)
-                SizedBox(
-                  height: 110, // Slightly more compact
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: EdgeInsets.zero, // Removed padding for seamless edge
-                    physics: const BouncingScrollPhysics(),
-                    itemCount: _moods.length,
-                    itemBuilder: (context, index) {
-                      final mood = _moods[index];
-                      final isSelected = mood == _selectedMood;
+                Transform.translate(
+                  offset: const Offset(0, -8),
+                  child: SizedBox(
+                    height: 100,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: EdgeInsets.zero,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: _moods.length,
+                      itemBuilder: (context, index) {
+                        final mood = _moods[index];
+                        final isSelected = mood == _selectedMood;
 
-                      final List<Color> bgGradient;
-                      switch (mood) {
-                        case 'Bold': bgGradient = [Color(0xFFFF512F), Color(0xFFDD2476)]; break;
-                        case 'Happy': bgGradient = [Color(0xFFFFD700), Color(0xFFF7971E)]; break;
-                        case 'Calm': bgGradient = [Color(0xFF4CB8C4), Color(0xFF3CD3AD)]; break;
-                        case 'Confident': bgGradient = [Color(0xFF8A2387), Color(0xFFE94057)]; break;
-                        case 'Creative': bgGradient = [Color(0xFFa18cd1), Color(0xFFfbc2eb)]; break;
-                        case 'Soft': bgGradient = [Color(0xFFff9a9e), Color(0xFFfecfef)]; break;
-                        case 'Powerful': bgGradient = [Color(0xFF00c6fb), Color(0xFF005bea)]; break;
-                        case 'Mysterious': bgGradient = [Color(0xFF304352), Color(0xFFd7d2cc)]; break;
-                        default: bgGradient = [Color(0xFFA770EF), Color(0xFFCF8BF3)];
-                      }
+                        final List<Color> bgGradient;
+                        switch (mood) {
+                          case 'Bold': bgGradient = [Color(0xFFFF512F), Color(0xFFDD2476)]; break;
+                          case 'Happy': bgGradient = [Color(0xFFFFD700), Color(0xFFF7971E)]; break;
+                          case 'Calm': bgGradient = [Color(0xFF4CB8C4), Color(0xFF3CD3AD)]; break;
+                          case 'Confident': bgGradient = [Color(0xFF8A2387), Color(0xFFE94057)]; break;
+                          case 'Creative': bgGradient = [Color(0xFFa18cd1), Color(0xFFfbc2eb)]; break;
+                          case 'Soft': bgGradient = [Color(0xFFff9a9e), Color(0xFFfecfef)]; break;
+                          case 'Powerful': bgGradient = [Color(0xFF00c6fb), Color(0xFF005bea)]; break;
+                          case 'Mysterious': bgGradient = [Color(0xFF304352), Color(0xFFd7d2cc)]; break;
+                          default: bgGradient = [Color(0xFFA770EF), Color(0xFFCF8BF3)];
+                        }
 
-                      return GestureDetector(
-                        onTap: () {
-                          if (!mounted) return;
-                          setState(() => _selectedMood = mood);
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 100, // Slightly wider for seamless look
-                          margin: EdgeInsets.zero, // REMOVED SPACING
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.05),
-                              width: isSelected ? 2 : 0, // Border only on selection
+                        return GestureDetector(
+                          onTap: () {
+                            if (!mounted) return;
+                            setState(() => _selectedMood = mood);
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 100,
+                            margin: EdgeInsets.zero,
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: isSelected ? Colors.white : Colors.white.withOpacity(0.05),
+                                width: isSelected ? 2 : 0,
+                              ),
+                            ),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: MoodImagePaths.paths.containsKey(mood) ? 
+                                          [Colors.transparent, Colors.transparent] : bgGradient,
+                                    ),
+                                  ),
+                                  child: MoodImagePaths.paths.containsKey(mood)
+                                      ? Image.asset(
+                                          MoodImagePaths.paths[mood]!,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : null,
+                                ),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Colors.transparent,
+                                        Colors.black.withOpacity(0.4),
+                                        Colors.black.withOpacity(0.7),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  bottom: 8,
+                                  left: 4,
+                                  right: 4,
+                                  child: Text(
+                                    mood,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: mood == 'Happy' ? SofiStudioTheme.charcoal : Colors.white,
+                                      fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: MoodImagePaths.paths.containsKey(mood) ? 
-                                        [Colors.transparent, Colors.transparent] : bgGradient,
-                                  ),
-                                ),
-                                child: MoodImagePaths.paths.containsKey(mood)
-                                    ? Image.asset(
-                                        MoodImagePaths.paths[mood]!,
-                                        fit: BoxFit.cover,
-                                      )
-                                    : null,
-                              ),
-                              Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      Colors.transparent,
-                                      Colors.black.withValues(alpha: 0.4),
-                                      Colors.black.withValues(alpha: 0.7),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                bottom: 8,
-                                left: 4,
-                                right: 4,
-                                child: Text(
-                                  mood,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: mood == 'Happy' ? SofiStudioTheme.charcoal : Colors.white,
-                                    fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: 0),
 
                 /// Transform Button
                 Padding(
@@ -381,8 +468,8 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                             ? SofiStudioTheme.brandGradient
                             : LinearGradient(
                                 colors: [
-                                  SofiStudioTheme.purple.withValues(alpha: 0.3),
-                                  SofiStudioTheme.blue.withValues(alpha: 0.3),
+                                  SofiStudioTheme.purple.withOpacity(0.3),
+                                  SofiStudioTheme.blue.withOpacity(0.3),
                                 ],
                               ),
                         borderRadius: BorderRadius.circular(16),
@@ -394,7 +481,7 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                           foregroundColor: Colors.white,
                           shadowColor: Colors.transparent,
                           disabledBackgroundColor: Colors.transparent,
-                          disabledForegroundColor: Colors.white.withValues(alpha: 0.5),
+                          disabledForegroundColor: Colors.white.withOpacity(0.5),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -407,8 +494,7 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                     ),
                   ),
                 ),
-
-                const SizedBox(height: 20),
+                const SizedBox(height: 10), // Tightened
               ],
             ),
           ),
@@ -417,7 +503,7 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
           if (_isGenerating)
             Positioned.fill(
               child: Container(
-                color: DarkModeColors.darkBackground.withValues(alpha: 0.85),
+                color: DarkModeColors.darkBackground.withOpacity(0.85),
                 child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,

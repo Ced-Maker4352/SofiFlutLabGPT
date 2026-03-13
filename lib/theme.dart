@@ -57,22 +57,22 @@ final ThemeData lightTheme = ThemeData(
   ),
   inputDecorationTheme: InputDecorationTheme(
     filled: true,
-    fillColor: Colors.black.withValues(alpha: 0.85),
+    fillColor: Colors.black.withOpacity(0.85),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(16),
       borderSide: BorderSide.none,
     ),
-    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+    hintStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
   ),
   chipTheme: ChipThemeData(
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
     selectedColor: BrandColors.maroon,
-    backgroundColor: Colors.white.withValues(alpha: 0.08),
+    backgroundColor: Colors.white.withOpacity(0.08),
     labelStyle: const TextStyle(color: Colors.white),
   ),
   snackBarTheme: SnackBarThemeData(
     behavior: SnackBarBehavior.floating,
-    backgroundColor: Colors.black.withValues(alpha: 0.9),
+    backgroundColor: Colors.black.withOpacity(0.9),
     contentTextStyle: const TextStyle(color: Colors.white),
   ),
   textTheme: const TextTheme(
@@ -115,22 +115,22 @@ final ThemeData darkTheme = ThemeData(
   ),
   inputDecorationTheme: InputDecorationTheme(
     filled: true,
-    fillColor: Colors.black.withValues(alpha: 0.85),
+    fillColor: Colors.black.withOpacity(0.85),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(16),
       borderSide: BorderSide.none,
     ),
-    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+    hintStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
   ),
   chipTheme: ChipThemeData(
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
     selectedColor: BrandColors.neonCyan,
-    backgroundColor: Colors.white.withValues(alpha: 0.12),
+    backgroundColor: Colors.white.withOpacity(0.12),
     labelStyle: const TextStyle(color: Colors.white),
   ),
   snackBarTheme: SnackBarThemeData(
     behavior: SnackBarBehavior.floating,
-    backgroundColor: Colors.black.withValues(alpha: 0.9),
+    backgroundColor: Colors.black.withOpacity(0.9),
     contentTextStyle: const TextStyle(color: Colors.white),
   ),
   textTheme: const TextTheme(

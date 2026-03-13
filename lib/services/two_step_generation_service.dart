@@ -82,6 +82,41 @@ class TwoStepGenerationService {
     return _downloadBytes(imageUrl);
   }
 
+  /// Optimized Single-Pass Doll Mode (Main Studio)
+  Future<Uint8List> generateConsolidatedDoll(
+    Uint8List baseImage,
+    String prompt, {
+    String? negativePrompt,
+    String aspectRatio = '9:16',
+    bool isMale = false,
+  }) async {
+    final initImageBase64 = 'data:image/png;base64,${base64Encode(baseImage)}';
+    final genderLabel = isMale ? 'male' : 'female';
+
+    final consolidatedPrompt = '''
+Transform the person in this photo into a full-body $genderLabel fashion doll portrait. 
+Show head-to-toe in a stylish pose.
+STRICTLY apply a glossy 3D plastic toy skin and hair texture.
+MATCH the original skin tone and facial color of the person in the photo exactly. DO NOT lighten or brighten the skin.
+PRESERVE the facial identity, features, and proportions of the original person exactly.
+Style/Outfit: $prompt
+Background: Professional studio, clean lighting.
+''';
+
+
+    final imageUrl = await ModelsLabService.generateKontextPro(
+      prompt: consolidatedPrompt,
+      negativePrompt: negativePrompt ??
+          'low quality, blurry, pixelated, grainy, noisy, jpeg artifacts, '
+              'changed identity, different person, altered face, warped face, '
+              'bad anatomy, deformed, worst quality, realistic human skin texture',
+      initImageBase64: initImageBase64,
+      aspectRatio: aspectRatio,
+    );
+
+    return _downloadBytes(imageUrl);
+  }
+
   // ---- helpers ----
 
   String _mergePrompt(String prompt, String lockLine, String? negative) {
@@ -89,25 +124,33 @@ class TwoStepGenerationService {
   }
 
   Future<Uint8List> _downloadBytes(String url) async {
-    const maxRetries = 5;
-    const retryDelay = Duration(seconds: 2);
+    const maxRetries = 15; // Increased retries for shorter delays
+    const initialDelay = Duration(milliseconds: 800);
+    const gradualDelay = Duration(milliseconds: 1500);
 
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
-      final resp = await http.get(Uri.parse(url));
-      if (resp.statusCode >= 200 && resp.statusCode < 300) {
-        debugPrint('[Download] ✅ Got ${resp.bodyBytes.length} bytes on attempt $attempt');
-        return resp.bodyBytes;
+      try {
+        final resp = await http.get(Uri.parse(url));
+        if (resp.statusCode >= 200 && resp.statusCode < 300) {
+          debugPrint(
+              '[Download] ✅ Got ${resp.bodyBytes.length} bytes on attempt $attempt');
+          return resp.bodyBytes;
+        }
+
+        // Handle 404 (propagation delay)
+        if (resp.statusCode == 404) {
+          debugPrint('[Download] ⏳ 404 on attempt $attempt, retrying...');
+        } else {
+          debugPrint('[Download] ❌ HTTP ${resp.statusCode} on attempt $attempt');
+        }
+      } catch (e) {
+        debugPrint('[Download] ❌ Error on attempt $attempt: $e');
       }
 
-      // If 404, the CDN file may not have propagated yet — retry
-      if (resp.statusCode == 404 && attempt < maxRetries) {
-        debugPrint('[Download] ⏳ 404 on attempt $attempt, retrying in ${retryDelay.inSeconds}s...');
-        await Future.delayed(retryDelay);
-        continue;
+      if (attempt < maxRetries) {
+        // Faster polling for the first 5 attempts, then slow down
+        await Future.delayed(attempt <= 5 ? initialDelay : gradualDelay);
       }
-
-      throw Exception(
-          'Failed to download generated image ($url): ${resp.statusCode}');
     }
 
     throw Exception('Failed to download image after $maxRetries attempts');

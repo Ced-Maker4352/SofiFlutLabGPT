@@ -165,9 +165,9 @@ class _GenerationLoaderState extends State<GenerationLoader> with TickerProvider
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.black.withValues(alpha: 0.7),
-            Colors.black.withValues(alpha: 0.5),
-            Colors.black.withValues(alpha: 0.7),
+            Colors.black.withOpacity(0.7),
+            Colors.black.withOpacity(0.5),
+            Colors.black.withOpacity(0.7),
           ],
         ),
       ),
@@ -206,20 +206,20 @@ class _GenerationLoaderState extends State<GenerationLoader> with TickerProvider
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  SofiStudioTheme.purple.withValues(alpha: 0.8),
-                  SofiStudioTheme.purple.withValues(alpha: 0.5),
+                  SofiStudioTheme.purple.withOpacity(0.8),
+                  SofiStudioTheme.purple.withOpacity(0.5),
                 ],
               ),
               shape: BoxShape.circle,
               // Disable shadows in performance mode
               boxShadow: disableEffects ? null : [
                 BoxShadow(
-                  color: SofiStudioTheme.purple.withValues(alpha: 0.4),
+                  color: SofiStudioTheme.purple.withOpacity(0.4),
                   blurRadius: 30,
                   spreadRadius: 8,
                 ),
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
+                  color: Colors.black.withOpacity(0.3),
                   blurRadius: 20,
                   spreadRadius: 5,
                 ),
@@ -247,15 +247,15 @@ class _GenerationLoaderState extends State<GenerationLoader> with TickerProvider
             key: ValueKey(_currentMessageIndex),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+              color: Colors.white.withOpacity(0.15),
               borderRadius: GenerationLoader._radius24,
               // Disable borders in performance mode (iOS Web crash guard)
-              border: disableEffects ? null : Border.all(color: Colors.white.withValues(alpha: 0.2)),
+              border: disableEffects ? null : Border.all(color: Colors.white.withOpacity(0.2)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.auto_awesome, size: 16, color: Colors.white.withValues(alpha: 0.9)),
+                Icon(Icons.auto_awesome, size: 16, color: Colors.white.withOpacity(0.9)),
                 const SizedBox(width: 8),
                 Text(
                   _statusMessages[_currentMessageIndex],
@@ -290,7 +290,7 @@ class _GenerationLoaderState extends State<GenerationLoader> with TickerProvider
             // Disable shadows in performance mode
             boxShadow: disableEffects ? null : [
               BoxShadow(
-                color: SofiStudioTheme.purple.withValues(alpha: 0.15 + shimmerValue * 0.1),
+                color: SofiStudioTheme.purple.withOpacity(0.15 + shimmerValue * 0.1),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -314,9 +314,9 @@ class _GenerationLoaderState extends State<GenerationLoader> with TickerProvider
                         begin: Alignment(-1.5 + shimmerValue * 3, 0),
                         end: Alignment(-0.5 + shimmerValue * 3, 0),
                         colors: [
-                          Colors.white.withValues(alpha: 0.0),
-                          Colors.white.withValues(alpha: 0.15),
-                          Colors.white.withValues(alpha: 0.0),
+                          Colors.white.withOpacity(0.0),
+                          Colors.white.withOpacity(0.15),
+                          Colors.white.withOpacity(0.0),
                         ],
                       ),
                     ),

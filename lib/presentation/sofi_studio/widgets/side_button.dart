@@ -41,7 +41,7 @@ class SideButton extends StatelessWidget {
               shape: const CircleBorder(),
               shadows: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
+                  color: Colors.black.withOpacity(0.2),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 )

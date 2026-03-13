@@ -30,7 +30,7 @@ static const Color studioBackground = Color(0xFFDAE8FF);
 // Soft Shadow used in selected tiles
 static List<BoxShadow> get softShadow => [
 BoxShadow(
-color: Colors.black.withValues(alpha: 0.15),
+color: Colors.black.withOpacity(0.15),
 blurRadius: 8,
 offset: const Offset(0, 3),
 ),
