@@ -31,12 +31,14 @@ class _InstructionalVideoPageState extends State<InstructionalVideoPage> {
 
     try {
       final ref = FirebaseStorage.instance.refFromURL(gsUrl);
-      final downloadUrl = await ref.getDownloadURL();
+      final downloadUrl = await ref.getDownloadURL()
+          .timeout(const Duration(seconds: 8));
 
       _controller = VideoPlayerController.networkUrl(Uri.parse(downloadUrl));
       _hasController = true;
 
-      await _controller.initialize();
+      await _controller.initialize()
+          .timeout(const Duration(seconds: 15));
       if (mounted) {
         setState(() => _isInitialized = true);
         _controller.setLooping(false);

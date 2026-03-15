@@ -82,12 +82,14 @@ class _SplashPageState extends State<SplashPage> {
 
     try {
       final ref = FirebaseStorage.instance.refFromURL(gsUrl);
-      final downloadUrl = await ref.getDownloadURL();
+      final downloadUrl = await ref.getDownloadURL()
+          .timeout(const Duration(seconds: 8));
 
       _controller = VideoPlayerController.networkUrl(Uri.parse(downloadUrl));
       _hasController = true;
 
-      await _controller.initialize();
+      await _controller.initialize()
+          .timeout(const Duration(seconds: 15));
       if (!mounted) return;
 
       setState(() => _isInitialized = true);
@@ -96,8 +98,15 @@ class _SplashPageState extends State<SplashPage> {
         ..setVolume(kIsWeb ? 0.0 : 1.0)
         ..play()
         ..addListener(_videoListener);
-    } catch (_) {
-      if (mounted) setState(() => _isInitialized = true);
+    } catch (e) {
+      debugPrint('[Splash] Video load failed: $e');
+      if (mounted) {
+        setState(() => _isInitialized = true);
+      }
+      // Safety: ensure navigation happens if timer is already up
+      if (_minimumTimeElapsed) {
+        await _checkAndNavigate();
+      }
     }
   }
 
