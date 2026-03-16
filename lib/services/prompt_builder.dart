@@ -48,28 +48,28 @@ String _moodToOutfitInstruction(String mood, {bool isMale = false}) {
   switch (mood.toLowerCase()) {
     case 'bold':
       return isMale 
-          ? 'Change the outfit to a bold streetwear look: oversized graphic hoodie, technical cargo pants, and high-top sneakers.'
-          : 'Change the outfit to an edgy, bold fashion look: dark leather jacket or structured power pieces with statement accessories.';
+          ? 'Change the outfit to a fun and energetic hero look: bright graphic hoodie with exciting patterns, colorful cargo shorts, and cool light-up sneakers.'
+          : 'Change the outfit to a vibrant, bold fashion look: sparkly textures, fun statement patterns, and colorful accessories.';
     case 'happy':
-      return 'Change the outfit to bright, joyful colors with fun patterns $genderSuffix. Think sunshine yellows, pops of color, and cheerful prints.';
+      return 'Change the outfit to bright, joyful colors with playful fun patterns $genderSuffix. Think sunshine yellows, rainbow pops of color, and cheerful prints.';
     case 'calm':
-      return 'Change the outfit to soft, muted earth tones in flowing relaxed clothing $genderSuffix. Think linen, soft neutrals, cozy minimalist style.';
+      return 'Change the outfit to soft, cozy textures with friendly pastel colors $genderSuffix. Think fluffy knits, soft clouds, and gentle comfortable styles.';
     case 'confident':
       return isMale
-          ? 'Change the outfit to a sharp, tailored suit or a sophisticated blazer and trousers look for a man.'
-          : 'Change the outfit to a sleek, polished power look with sharp tailored silhouettes. Think blazers, structured pieces, monochrome elegance.';
+          ? 'Change the outfit to a sharp and stylish "little lead" look: a clean blazer over a fun tee or a polished smart-casual outfit.'
+          : 'Change the outfit to a polished and playful lead look: stylish matching sets with bright, clean colors and friendly silhouettes.';
     case 'creative':
-      return 'Change the outfit to a colorful, artsy look with unexpected patterns and expressive accessories $genderSuffix.';
+      return 'Change the outfit to a magical and artsy look with rainbow colors, unexpected fun patterns, and many cute accessories $genderSuffix.';
     case 'soft':
       return isMale
-          ? 'Change the outfit to a soft, cozy knitwear look with light pastel colors and relaxed fit for a boy.'
-          : 'Change the outfit to a soft girl pastel aesthetic: light pinks, creams, lilacs, fluffy textures, bows, and feminine details.';
+          ? 'Change the outfit to a soft, cozy and cute look with friendly pastel colors and a relaxed, cuddly fit for a boy.'
+          : 'Change the outfit to a cute and playful pastel aesthetic: soft pinks, mints, lilacs, fluffy textures, cute bows, and friendly details.';
     case 'powerful':
       return isMale
-          ? 'Change the outfit to a strong, structured military-inspired or high-fashion suit look for a man.'
-          : 'Change the outfit to a commanding power look: structured blazer, sharp lines, strong silhouette, dark bold colors.';
+          ? 'Change the outfit to an exciting and strong superhero-inspired adventure look: bright colors, cool cape-like details, and high-energy gear.'
+          : 'Change the outfit to a commanding and magical royal look: shimmering fabrics, strong but friendly silhouettes, and bright bold colors.';
     case 'mysterious':
-      return 'Change the outfit to a dark, mysterious aesthetic with deep jewel tones and moody styling $genderSuffix.';
+      return 'Change the outfit to an enchanting and magical night-sky aesthetic with deep glowing blues and sparkly star details $genderSuffix.';
     default:
       return 'Change the outfit to a stylish, fashion-forward look $genderSuffix '
           'that matches the mood: $mood.';
@@ -86,7 +86,7 @@ String _modeToStyleInstruction(String mode) {
     case 'artistic':
       return 'Transform the image into an anime illustration, vibrant colors, 2D shading, highly detailed manga art style. ';
     case 'doll':
-      return 'Transform this into a full body fashion doll portrait. Show head-to-toe in a stylish pose with clean background. ';
+      return 'Transform this into a playful 3D toy character or fashion doll portrait. Show head-to-toe in a friendly, stylish pose with a clean, toy-like background. ';
     default:
       return ''; // 'human' uses default realistic styles
   }

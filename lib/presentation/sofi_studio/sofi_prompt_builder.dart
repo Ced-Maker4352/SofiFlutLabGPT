@@ -36,10 +36,10 @@ class SofiPromptBuilder {
       );
     } else {
       // This aligns with your original “Pixar-ish” app feel.
-      // Intentionally avoids “plastic toy joints / twistable head”.
       buffer.write(
-        "High-quality 3D animated Pixar-like $gender character render. Soft shading, smooth gradients, "
-        "cinematic but clean lighting. Maintain a believable human-like face and proportions. "
+        "High-quality, child-friendly 3D animated Pixar-like $gender character render. "
+        "Vibrant and playful colors, soft shading, smooth gradients, cinematic but clean lighting. "
+        "Maintain a friendly, believable human-like character face and playful proportions. "
         "Ensure the character remains clearly $person. ",
       );
     }

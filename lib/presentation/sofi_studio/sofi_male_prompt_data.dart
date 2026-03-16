@@ -18,18 +18,18 @@ class SofiMalePromptData {
   ];
 
   static const List<String> tops = [
-    "oversized boxy hoodie",
-    "structured utility vest",
-    "classic oversized graphic tee",
-    "fitted denim jacket",
-    "modern bomber jacket",
-    "clean flannel button-up shirt",
-    "fashionable turtleneck sweater",
-    "athleisure techwear jacket",
-    "minimalist crewneck sweatshirt",
-    "structured blazer for men",
-    "casual polo shirt with clean collar",
-    "modern puffer vest",
+    "fun heroic graphic hoodie with bright colors",
+    "cool adventure utility vest",
+    "bright exciting oversized graphic tee",
+    "classic cool blue denim jacket",
+    "high-energy colorful racer jacket",
+    "playful colorful plaid button-up shirt",
+    "cozy bright colorful sweater",
+    "superhero style tech adventure jacket",
+    "bright comfy minimalist sweatshirt",
+    "stylish lead blazer for boys",
+    "casual polo shirt with bright clean colors",
+    "modern colorful puffer vest",
   ];
 
   static const List<String> bottoms = [
@@ -64,63 +64,63 @@ class SofiMalePromptData {
 
   static const List<Map<String, dynamic>> fullOutfits = [
     {
-      "label": "Urban Streetwear",
-      "prompt": "[FACE LOCK] clothing-only edit: modern male streetwear with oversized hoodie, cargo pants, and high-top sneakers. Keep face identical.",
+      "label": "Super Kid Street",
+      "prompt": "[FACE LOCK] clothing-only edit: vibrant male hero look with bright graphic hoodie, colorful cargo pants, and high-top sneakers. Keep face identical.",
       "thumb": "images/male/outfits/male_outfit_01.jpg",
     },
     {
-      "label": "Technical Minimal",
-      "prompt": "clothing-only edit: minimalist male techwear with utility vest, tapered joggers, and clean sneakers. Preserve face exactly.",
+      "label": "Adventure Tech",
+      "prompt": "clothing-only edit: cool male adventure look with colorful utility vest, bright tapered joggers, and clean white sneakers. Preserve face exactly.",
       "thumb": "images/male/outfits/male_outfit_02.jpg",
     },
     {
-      "label": "Modern Casual",
-      "prompt": "clothing-only edit: casual male look with flannel shirt over a tee, straight-leg jeans, and canvas shoes.",
+      "label": "Playful Plaid",
+      "prompt": "clothing-only edit: fun male look with colorful plaid shirt over a bright tee, straight-leg blue jeans, and colorful canvas shoes.",
       "thumb": "images/male/outfits/male_outfit_03.jpg",
     },
     {
-      "label": "Sharp Tailored",
-      "prompt": "[FACE LOCK] clothing-only edit: sharp male tailored suit with blazer and matching trousers. Clean professional look.",
+      "label": "Little Lead Style",
+      "prompt": "[FACE LOCK] clothing-only edit: sharp male lead look with stylish blazer and matching bright trousers. Clean playful look.",
       "thumb": "images/male/outfits/male_outfit_04.jpg",
     },
     {
-      "label": "Cozy Knitwear",
-      "prompt": "clothing-only edit: masculine cozy look with thick knit sweater and relaxed trousers.",
+      "label": "Cuddly Knitwear",
+      "prompt": "clothing-only edit: friendly cozy look with bright thick knit sweater and relaxed colorful trousers.",
       "thumb": "images/male/outfits/male_outfit_05.jpg",
     },
     {
-      "label": "Sporty Active",
-      "prompt": "clothing-only edit: athletic male outfit with tech zip-up and performance joggers.",
+      "label": "Heroic Active",
+      "prompt": "clothing-only edit: high-energy male outfit with superhero style tech zip-up and bright performance joggers.",
       "thumb": "images/male/outfits/male_outfit_06.jpg",
     },
     {
-      "label": "Skater Aesthetic",
-      "prompt": "clothing-only edit: male skater style with graphic tee, baggy pants, and retro sneakers.",
+      "label": "Skater Fun",
+      "prompt": "clothing-only edit: colorful male skater style with bright graphic tee, baggy blue pants, and retro colorful sneakers.",
       "thumb": "images/male/outfits/male_outfit_07.jpg",
     },
     {
-      "label": "Winter Layered",
-      "prompt": "clothing-only edit: layered male winter look with puffer jacket and beanie.",
+      "label": "Snow Adventure",
+      "prompt": "clothing-only edit: layered male winter adventure look with bright puffer jacket and colorful beanie.",
       "thumb": "images/male/outfits/male_outfit_08.jpg",
     },
     {
-      "label": "Academia Male",
-      "prompt": "clothing-only edit: male academia look with sweater vest and chinos.",
+      "label": "Academia Play",
+      "prompt": "clothing-only edit: stylish male academia look with bright sweater vest and clean chinos.",
       "thumb": "images/male/outfits/male_outfit_09.jpg",
     },
     {
-      "label": "Denim Classic",
-      "prompt": "clothing-only edit: double denim male look with jacket and matching jeans.",
+      "label": "Blue Denim Fun",
+      "prompt": "clothing-only edit: double denim male look with bright blue jacket and matching jeans.",
       "thumb": "images/male/outfits/male_outfit_10.jpg",
     },
     {
-      "label": "Beach Vibes",
-      "prompt": "clothing-only edit: summer male look with open button-up shirt and swim shorts.",
+      "label": "Island Splash",
+      "prompt": "clothing-only edit: summer male look with bright colorful button-up shirt and swim shorts.",
       "thumb": "images/male/outfits/male_outfit_11.jpg",
     },
     {
-      "label": "Glow High Fashion",
-      "prompt": "clothing-only edit: male high fashion look with avant-garde structured pieces.",
+      "label": "Royal Prince",
+      "prompt": "clothing-only edit: majestic male royal look with gold-accented princely clothing and crown accessories.",
       "thumb": "images/male/outfits/male_outfit_12.jpg",
     },
   ];

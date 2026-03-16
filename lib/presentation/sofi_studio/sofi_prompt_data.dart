@@ -14,18 +14,18 @@ class SofiPromptData {
   // BACKGROUNDS (12)
   // ================================================================
   static const List<String> backgrounds = [
-    "background: modern pastel bedroom with soft neon accents",
-    "background: trendy city rooftop lounge at sunset",
-    "background: cozy reading nook with plush pillows and soft lighting",
-    "background: pastel outdoor park with flowers and warm daylight",
-    "background: vibrant mall interior with modern decor",
-    "background: stylish teen bedroom with LED wall strips",
-    "background: clean photography studio with softbox lighting",
-    "background: modern cafe with warm tones and trendy decor",
-    "background: colorful music studio with LED panels",
-    "background: cute pastel classroom with soft sunlight",
-    "background: minimalist white photo stage with soft shadows",
-    "background: outdoor urban street with colorful shops",
+    "background: magical playful pastel bedroom with soft rainbow accents",
+    "background: colorful city rooftop with floating balloons and sunset",
+    "background: magical reading nook with floating books and fairy lights",
+    "background: playful outdoor park with flowers and magical sunshine",
+    "background: vibrant toy store interior with modern decor",
+    "background: stylish kid's bedroom with glowing neon star wall stickers",
+    "background: magical rainbow photography studio with softbox lighting",
+    "background: candy cafe with warm tones and colorful decor",
+    "background: colorful music studio with glowing LED panels",
+    "background: cute pastel classroom with magical sunlight",
+    "background: minimalist white photo stage with soft rainbow shadows",
+    "background: outdoor urban street with colorful toy shops",
   ];
 
   // ================================================================
@@ -50,18 +50,18 @@ class SofiPromptData {
   // TOPS (12)
   // ================================================================
   static const List<String> tops = [
-    "pastel cropped hoodie",
-    "ribbed tank top",
-    "oversized graphic tee",
-    "fitted long-sleeve top",
-    "cozy knit sweater",
-    "button-up shirt with soft folds",
-    "sleek crop-top jacket",
-    "athleisure zip hoodie",
-    "minimalist halter top",
-    "fashion cardigan with soft fabric",
-    "denim jacket with clean stitching",
-    "soft pastel sweatshirt",
+    "cute pastel cropped hoodie",
+    "playful ribbed tank top",
+    "oversized bright graphic tee",
+    "fitted colorful long-sleeve top",
+    "cozy soft knit sweater",
+    "button-up shirt with fun patterns",
+    "sleek crop-top jacket with sparkly details",
+    "athleisure zip hoodie with bright colors",
+    "minimalist cute halter top",
+    "fashion cardigan with soft colorful fabric",
+    "denim jacket with cute stitching",
+    "soft pastel colorful sweatshirt",
   ];
 
   // ================================================================
@@ -86,36 +86,36 @@ class SofiPromptData {
   // SHOES (12)
   // ================================================================
   static const List<String> shoes = [
-    "chunky sneakers",
-    "platform sandals",
-    "y2k pastel sneakers",
-    "clean white shoes",
-    "ankle boots",
-    "sporty runners",
-    "girly platform boots",
-    "pastel flats",
-    "minimal slides",
-    "lace-up sneakers",
-    "casual slip-ons",
-    "retro chunky shoes",
+    "chunky colorful sneakers",
+    "platform sandals with sparkly straps",
+    "y2k colorful pastel sneakers",
+    "clean white sparkly shoes",
+    "cute ankle boots",
+    "sporty runners with bright colors",
+    "girly platform boots with hearts",
+    "pastel flats with cute bows",
+    "minimal colorful slides",
+    "lace-up sneakers with colorful laces",
+    "casual slip-ons with fun prints",
+    "retro chunky colorful shoes",
   ];
 
   // ================================================================
   // ACCESSORIES (12)
   // ================================================================
   static const List<String> accessories = [
-    "star-shaped purse",
-    "small clutch purse",
-    "round crossbody bag",
-    "ribbon hair bow",
-    "neon bracelet",
-    "pastel scarf",
-    "digital wristwatch",
-    "gamer headset",
-    "sunglasses case",
-    "mini backpack",
-    "pastel shoulder bag",
-    "cute charm keychain",
+    "sparkly star-shaped purse",
+    "cute small clutch purse",
+    "round colorful crossbody bag",
+    "magical ribbon hair bow",
+    "glowing neon bracelet",
+    "candy-colored pastel scarf",
+    "colorful digital wristwatch",
+    "fun gamer headset",
+    "sparkly sunglasses case",
+    "colorful mini backpack",
+    "magical pastel shoulder bag",
+    "cute sparkly charm keychain",
   ];
 
   // ================================================================

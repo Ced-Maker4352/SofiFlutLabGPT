@@ -175,39 +175,38 @@ class _SofiStudioPageState extends State<SofiStudioPage>
   static const List<_QuickMood> _quickMoods = [
     _QuickMood(
       id: 'glow',
-      label: 'Glow',
+      label: 'Magic Glow',
       icon: Icons.auto_awesome,
-      // Warm, upbeat, safe default (no brand/celebrity references).
       promptFragment:
-          'bright joyful mood, warm studio lighting, soft glow, clean cinematic color, high-quality render',
+          'magical sparkly mood, rainbow-tinted lighting, glowing fairy dust, vibrant playful colors, high-quality 3D render',
     ),
     _QuickMood(
       id: 'noir',
-      label: 'Noir',
-      icon: Icons.nights_stay,
+      label: 'Starry Night',
+      icon: Icons.stars,
       promptFragment:
-          'moody noir vibe, low-key lighting, subtle shadows, high contrast, refined cinematic tone',
+          'dreamy night sky vibe, deep blues and purples, glowing stars, magical moonlit atmosphere, soft cinematic render',
     ),
     _QuickMood(
       id: 'pastel',
-      label: 'Pastel',
-      icon: Icons.palette,
+      label: 'Candy Pastel',
+      icon: Icons.icecream,
       promptFragment:
-          'pastel palette, soft airy lighting, gentle gradients, dreamy boutique style, clean background',
+          'bright cotton candy colors, pink and mint and lilac palette, playful sugary aesthetic, soft airy lighting, clean cute background',
     ),
     _QuickMood(
       id: 'street',
-      label: 'Street',
-      icon: Icons.flash_on,
+      label: 'Super Kid',
+      icon: Icons.rocket_launch,
       promptFragment:
-          'urban street style vibe, crisp lighting, modern editorial look, sharp details, confident energy',
+          'high-energy comic styles, bright primary colors, superhero vibrant vibe, sharp clean details, playful powerful energy',
     ),
     _QuickMood(
       id: 'lux',
-      label: 'Lux',
-      icon: Icons.diamond,
+      label: 'Royal',
+      icon: Icons.crown,
       promptFragment:
-          'luxury fashion mood, premium materials, glossy highlights, elegant studio lighting, high-end editorial finish',
+          'royal prince and princess aesthetic, gold sparkles, crown jewels, majestic shimmering details, elegant royal studio lighting',
     ),
   ];
 
