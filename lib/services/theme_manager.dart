@@ -42,10 +42,10 @@ class ThemeManager extends ChangeNotifier {
     AppThemeType.yellow: AppThemeData(
       type: AppThemeType.yellow,
       name: 'Sunshine',
-      headerColor: Color(0xFFFFF3B0),
-      headerTextColor: Color(0xFF5D4037),
-      accentColor: Color(0xFFFFCC00),
-      backgroundColor: Color(0xFFFFF8DC),
+      headerColor: Color(0xFFFFD54F), // Vibrant Sunshine Yellow
+      headerTextColor: Color(0xFF2B0014), // Dark maroon for contrast
+      accentColor: Color(0xFFFFCC00), // Vibrant Gold Yellow
+      backgroundColor: Color(0xFFFFF9C4), // Fresh bright yellow background
       icon: Icons.wb_sunny,
     ),
     AppThemeType.pink: AppThemeData(

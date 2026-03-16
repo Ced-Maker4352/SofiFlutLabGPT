@@ -151,98 +151,103 @@ class _SplashPageState extends State<SplashPage> {
   @override
   Widget build(BuildContext context) {
     if (!_isInitialized && !kIsWeb) {
-       return const Scaffold(
+      return const Scaffold(
         backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator(color: SofiStudioTheme.yellow)),
-      );
-    }
-
-    Widget content = Stack(
-      fit: StackFit.expand,
-      children: [
-        // 1. VIDEO LAYER
-        if (_hasController)
-          ValueListenableBuilder(
-            valueListenable: _controller,
-            builder: (context, VideoPlayerValue value, child) {
-              if (value.isInitialized) {
-                return FittedBox(
-                  fit: BoxFit.cover,
-                  child: SizedBox(
-                    width: value.size.width,
-                    height: value.size.height,
-                    child: VideoPlayer(_controller),
-                  ),
-                );
-              } else {
-                return Container(color: Colors.black);
-              }
-            },
-          )
-        else
-          Container(color: Colors.black),
-
-        // 2. DIMMER/GRADIENT (Optional, but helps text readability)
-        Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.black.withOpacity(0.3),
-                Colors.transparent,
-                Colors.black.withOpacity(0.4),
-              ],
-            ),
-          ),
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFFFFCC00)),
         ),
-
-        // 3. TEXT LAYER
-        Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Sofi Saint',
-                style: TextStyle(
-                  fontSize: 56,
-                  fontWeight: FontWeight.w900,
-                  color: SofiStudioTheme.yellow,
-                  shadows: [
-                    Shadow(
-                      blurRadius: 15,
-                      color: Colors.black.withOpacity(0.5),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Imagine Create Become',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white, // Changed from purple for better contrast
-                  letterSpacing: 1.5,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-
-    if (kIsWeb && _needsWebAudioUnlock) {
-      content = GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: _handleAudioUnlock,
-        child: content,
       );
     }
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: content,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // 1. VIDEO LAYER (Using ValueListenableBuilder for real-time state)
+          if (_hasController)
+            ValueListenableBuilder(
+              valueListenable: _controller,
+              builder: (context, VideoPlayerValue value, child) {
+                if (value.isInitialized) {
+                  return Center(
+                    child: SizedBox.expand(
+                      child: FittedBox(
+                        fit: BoxFit.cover,
+                        clipBehavior: Clip.hardEdge,
+                        child: SizedBox(
+                          width: value.size.width,
+                          height: value.size.height,
+                          child: VideoPlayer(_controller),
+                        ),
+                      ),
+                    ),
+                  );
+                } else {
+                  return Container(color: Colors.black);
+                }
+              },
+            )
+          else
+            Container(color: Colors.black),
+
+          // 2. DIMMER OVERLAY (Ensures text contrast regardless of video)
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.4),
+                    Colors.black.withOpacity(0.1),
+                    Colors.black.withOpacity(0.5),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // 3. BRANDING LAYER
+          SafeArea(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Spacer(flex: 2),
+                  Text(
+                    'Sofi Saint',
+                    style: TextStyle(
+                      fontSize: 64, // Slightly larger for impact
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFFFFCC00),
+                      letterSpacing: -1.0,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black.withOpacity(0.8),
+                          offset: const Offset(2, 2),
+                          blurRadius: 20,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Imagine Create Become',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white70,
+                      letterSpacing: 4.0,
+                    ),
+                  ),
+                  const Spacer(flex: 1),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
