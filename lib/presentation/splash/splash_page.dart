@@ -150,65 +150,99 @@ class _SplashPageState extends State<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
-    Widget body = _isInitialized 
-        ? Stack(
-            children: [
-              if (_hasController && _controller.value.isInitialized)
-                SizedBox.expand(
-                  child: FittedBox(
-                    fit: BoxFit.cover,
-                    child: SizedBox(
-                      width: _controller.value.size.width,
-                      height: _controller.value.size.height,
-                      child: AspectRatio(
-                        aspectRatio: _controller.value.aspectRatio,
-                        child: VideoPlayer(_controller),
-                      ),
-                    ),
+    if (!_isInitialized && !kIsWeb) {
+       return const Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(child: CircularProgressIndicator(color: SofiStudioTheme.yellow)),
+      );
+    }
+
+    Widget content = Stack(
+      fit: StackFit.expand,
+      children: [
+        // 1. VIDEO LAYER
+        if (_hasController)
+          ValueListenableBuilder(
+            valueListenable: _controller,
+            builder: (context, VideoPlayerValue value, child) {
+              if (value.isInitialized) {
+                return FittedBox(
+                  fit: BoxFit.cover,
+                  child: SizedBox(
+                    width: value.size.width,
+                    height: value.size.height,
+                    child: VideoPlayer(_controller),
                   ),
-                )
-              else 
-                // Fallback background color if video fails
-                Container(color: Colors.black),
-              Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Text(
-                      'Sofi Saint',
-                      style: TextStyle(
-                        fontSize: 56,
-                        fontWeight: FontWeight.w900,
-                        color: SofiStudioTheme.yellow,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'Imagine Create Become',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.purpleAccent,
-                      ),
+                );
+              } else {
+                return Container(color: Colors.black);
+              }
+            },
+          )
+        else
+          Container(color: Colors.black),
+
+        // 2. DIMMER/GRADIENT (Optional, but helps text readability)
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.black.withOpacity(0.3),
+                Colors.transparent,
+                Colors.black.withOpacity(0.4),
+              ],
+            ),
+          ),
+        ),
+
+        // 3. TEXT LAYER
+        Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Sofi Saint',
+                style: TextStyle(
+                  fontSize: 56,
+                  fontWeight: FontWeight.w900,
+                  color: SofiStudioTheme.yellow,
+                  shadows: [
+                    Shadow(
+                      blurRadius: 15,
+                      color: Colors.black.withOpacity(0.5),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(height: 12),
+              const Text(
+                'Imagine Create Become',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white, // Changed from purple for better contrast
+                  letterSpacing: 1.5,
+                ),
+              ),
             ],
-          )
-        : const Center(child: CircularProgressIndicator());
+          ),
+        ),
+      ],
+    );
 
     if (kIsWeb && _needsWebAudioUnlock) {
-      body = GestureDetector(
+      content = GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: _handleAudioUnlock,
-        child: body,
+        child: content,
       );
     }
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: body,
+      body: content,
     );
   }
 }

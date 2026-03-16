@@ -44,7 +44,7 @@ class ThemeManager extends ChangeNotifier {
       name: 'Sunshine',
       headerColor: Color(0xFFFFF3B0),
       headerTextColor: Color(0xFF5D4037),
-      accentColor: Color(0xFFFFB300),
+      accentColor: Color(0xFFFFCC00),
       backgroundColor: Color(0xFFFFF8DC),
       icon: Icons.wb_sunny,
     ),
