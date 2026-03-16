@@ -17,6 +17,8 @@ import '../../constants/mood_image_paths.dart';
 import '../../constants/mood_icons.dart';
 import 'package:flutter/cupertino.dart';
 import '../../services/user_preferences_service.dart';
+import '../../services/audio_service.dart';
+import '../sofi_studio/widgets/sofi_settings_sheet.dart';
 
 class MoodCameraEntryPageImpl extends StatefulWidget {
   const MoodCameraEntryPageImpl({super.key});
@@ -541,6 +543,47 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                 ),
               ),
             ),
+
+          // ─────────────── TOP RIGHT: SETTINGS GEAR ───────────────
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            right: 16,
+            child: GestureDetector(
+              onTap: () async {
+                await AudioService.instance.playClick();
+                if (!mounted) return;
+                await showModalBottomSheet(
+                  context: context,
+                  backgroundColor: Colors.transparent,
+                  isScrollControlled: true,
+                  builder: (context) => Theme(
+                    data: ThemeData.light(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.of(context).size.height * 0.8,
+                      ),
+                      child: const SofiSettingsSheet(
+                        autoSave: false,
+                      ),
+                    ),
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: const Icon(
+                  Icons.settings,
+                  color: Colors.white70,
+                  size: 22,
+                ),
+              ),
+            ),
+          ),
 
           // ─────────────── CONFETTI DROP (FRONT LAYER) ───────────────
           Align(
