@@ -27,10 +27,10 @@ class _InstructionalVideoPageState extends State<InstructionalVideoPage> {
   }
 
   Future<void> _initializeVideo() async {
-    const gsUrl = 'gs://sofi-saint-app.firebasestorage.app/videos/Quick_Instructional_Video_Creation.mp4';
+    const videoPath = 'videos/Quick_Instructional_Video_Creation.mp4';
 
     try {
-      final ref = FirebaseStorage.instance.refFromURL(gsUrl);
+      final ref = FirebaseStorage.instance.ref(videoPath);
       final downloadUrl = await ref.getDownloadURL()
           .timeout(const Duration(seconds: 8));
 
@@ -119,11 +119,18 @@ class _InstructionalVideoPageState extends State<InstructionalVideoPage> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          if (_isInitialized && _hasController)
+          if (_isInitialized && _hasController && _controller.value.isInitialized)
             Center(
               child: AspectRatio(
                 aspectRatio: _controller.value.aspectRatio,
                 child: VideoPlayer(_controller),
+              ),
+            )
+          else if (_isInitialized)
+            const Center(
+              child: Text(
+                'Starting Tutorial...',
+                style: TextStyle(color: Colors.white, fontSize: 18),
               ),
             )
           else

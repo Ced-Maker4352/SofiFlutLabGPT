@@ -77,11 +77,10 @@ class _SplashPageState extends State<SplashPage> {
   }
 
   Future<void> _initializeVideo() async {
-    const gsUrl =
-        'gs://sofi-saint-app.firebasestorage.app/videos/Sofi app intro 2.mp4';
+    const videoPath = 'videos/Sofi app intro 2.mp4';
 
     try {
-      final ref = FirebaseStorage.instance.refFromURL(gsUrl);
+      final ref = FirebaseStorage.instance.ref(videoPath);
       final downloadUrl = await ref.getDownloadURL()
           .timeout(const Duration(seconds: 8));
 
@@ -101,7 +100,10 @@ class _SplashPageState extends State<SplashPage> {
     } catch (e) {
       debugPrint('[Splash] Video load failed: $e');
       if (mounted) {
-        setState(() => _isInitialized = true);
+        setState(() {
+          _isInitialized = true;
+          // Even if controller fails, we set initialized to show fallback UI
+        });
       }
       // Safety: ensure navigation happens if timer is already up
       if (_minimumTimeElapsed) {
@@ -153,19 +155,23 @@ class _SplashPageState extends State<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
-    Widget body = _isInitialized && _hasController
+    Widget body = _isInitialized 
         ? Stack(
             children: [
-              SizedBox.expand(
-                child: FittedBox(
-                  fit: BoxFit.cover,
-                  child: SizedBox(
-                    width: _controller.value.size.width,
-                    height: _controller.value.size.height,
-                    child: VideoPlayer(_controller),
+              if (_hasController && _controller.value.isInitialized)
+                SizedBox.expand(
+                  child: FittedBox(
+                    fit: BoxFit.cover,
+                    child: SizedBox(
+                      width: _controller.value.size.width,
+                      height: _controller.value.size.height,
+                      child: VideoPlayer(_controller),
+                    ),
                   ),
-                ),
-              ),
+                )
+              else 
+                // Fallback background color if video fails
+                Container(color: Colors.black),
               Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
