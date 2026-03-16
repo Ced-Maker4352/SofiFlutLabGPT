@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:confetti/confetti.dart';
 
 import 'mood_mode.dart';
 import '../../widgets/mood_icon_row.dart';
@@ -27,6 +28,7 @@ class MoodCameraEntryPageImpl extends StatefulWidget {
 
 class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
   final ImagePicker _picker = ImagePicker();
+  late ConfettiController _confettiController;
 
   bool _isGenerating = false;
 
@@ -34,9 +36,15 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
   String? _selectedMood;
 
   /// VISUAL mode (human / doll / premium)
-  MoodMode _selectedMode = MoodMode.human;
-
-  Uint8List? _selfieBytes;
+  @override
+  void initState() {
+    super.initState();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+    // Trigger confetti drop after a short delay (once splash transition finishes)
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) _confettiController.play();
+    });
+  }
 
   final List<String> _moods = const [
     'Bold',
@@ -131,12 +139,38 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
   }
 
   @override
+  void dispose() {
+    _confettiController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = ThemeManager.instance.current;
     return Scaffold(
       backgroundColor: theme.backgroundColor,
       body: Stack(
         children: [
+          // ─────────────── CONFETTI DROP ───────────────
+          Align(
+            alignment: Alignment.topCenter,
+            child: ConfettiWidget(
+              confettiController: _confettiController,
+              blastDirectionality: BlastDirectionality.explosive,
+              shouldLoop: false,
+              colors: const [
+                SofiStudioTheme.yellow,
+                SofiStudioTheme.purple,
+                Colors.white,
+                Colors.blueAccent,
+                Colors.pinkAccent,
+              ],
+              numberOfParticles: 50,
+              minBlastForce: 20,
+              maxBlastForce: 40,
+              gravity: 0.1,
+            ),
+          ),
           // Gradient background matching Studio page
           Positioned.fill(
             child: Container(

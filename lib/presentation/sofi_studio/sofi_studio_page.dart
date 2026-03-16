@@ -49,6 +49,7 @@ import 'widgets/generation_loader.dart';
 import 'widgets/voice_coach_settings_sheet.dart';
 import 'widgets/sofi_settings_sheet.dart';
 import 'dart:typed_data';
+import 'package:confetti/confetti.dart';
 
 class _QuickMood {
   final String id;
@@ -120,6 +121,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
   String? _latestImageUrl; // Track the URL for share/download
   final List<Uint8List> _history = [];
   final List<Uint8List> _redoStack = [];
+  late ConfettiController _confettiController;
 
   // CRITICAL: Store the ORIGINAL base doll image to prevent generation drift.
   // This ensures we always generate from a clean source, not from previous outputs.
@@ -322,6 +324,8 @@ class _SofiStudioPageState extends State<SofiStudioPage>
     _drawerAnimation =
         CurvedAnimation(parent: _drawerController, curve: Curves.easeOutCubic);
 
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+
     controller.addListener(() {
       try {
         if (controller.isDrawerOpen) {
@@ -471,6 +475,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
         .logInteraction('PAGE_EXIT', {'page': 'SofiStudioPage'}));
     unawaited(
         RemoteDebugLogger.instance.flush()); // Ensure logs are sent before exit
+    _confettiController.dispose();
 
     // Remove lifecycle observer
     WidgetsBinding.instance.removeObserver(this);
@@ -1447,9 +1452,11 @@ class _SofiStudioPageState extends State<SofiStudioPage>
         rethrow;
       }
 
-      // SUCCESS PATH
       final duration = DateTime.now().difference(startTime).inMilliseconds;
       debugPrint('\ud83c\udf89 [Generation] SUCCESS in ${duration}ms');
+
+      // Trigger large confetti drop on success
+      if (mounted) _confettiController.play();
 
       try {
         await RemoteDebugLogger.instance
@@ -2510,6 +2517,26 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       resizeToAvoidBottomInset: true,
       body: Stack(
         children: [
+          // ─────────────── CONFETTI DROP ───────────────
+          Align(
+            alignment: Alignment.topCenter,
+            child: ConfettiWidget(
+              confettiController: _confettiController,
+              blastDirectionality: BlastDirectionality.explosive,
+              shouldLoop: false,
+              colors: const [
+                SofiStudioTheme.yellow,
+                SofiStudioTheme.purple,
+                Colors.white,
+                Colors.blueAccent,
+                Colors.pinkAccent,
+              ],
+              numberOfParticles: 50,
+              minBlastForce: 20,
+              maxBlastForce: 40,
+              gravity: 0.1,
+            ),
+          ),
           // 1. Full Screen Background Layer (if needed, but currently just color)
 
           // 2. Centered Content (Tablet View Constraint)

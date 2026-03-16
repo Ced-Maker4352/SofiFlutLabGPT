@@ -37,6 +37,7 @@ dependencies:
   video_player_web: ^2.4.0
   url_launcher: ^6.3.0
   in_app_purchase: ^3.2.0
+  confetti: ^0.7.0
   web: any
 
 dev_dependencies:
