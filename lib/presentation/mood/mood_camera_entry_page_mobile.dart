@@ -36,6 +36,9 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
   String? _selectedMood;
 
   /// VISUAL mode (human / doll / premium)
+  MoodMode _selectedMode = MoodMode.human;
+
+  Uint8List? _selfieBytes;
   @override
   void initState() {
     super.initState();
