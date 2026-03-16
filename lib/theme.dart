@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 class BrandColors {
   static const Color maroon = Color(0xFF2B0014);
   static const Color neonCyan = Color(0xFF5FF7F3);
-  static const Color yellow = Color(0xFFFFD54F);
+  static const Color yellow = Color(0xFFFFED00);
 }
 
 /// Light-mode specific tokens.
