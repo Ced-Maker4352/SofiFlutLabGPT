@@ -3580,7 +3580,8 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                     ),
                   ),
                 ),
-              ],
+              ),
+            ],
             ),
           ),
         ),
@@ -4360,6 +4361,7 @@ class _PremiumEntryButtonState extends State<_PremiumEntryButton>
           );
         },
       ),
-    );
-  }
+    ),
+  );
+}
 }
