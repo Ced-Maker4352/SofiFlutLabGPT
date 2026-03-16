@@ -2764,35 +2764,38 @@ class _SofiStudioPageState extends State<SofiStudioPage>
           AudioService.instance.playTick();
           onTap();
         },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          width: width,
-          height: height,
-          decoration: BoxDecoration(
-            color: active
-                ? theme.accentColor.withOpacity(isDark ? 0.85 : 0.9)
-                : (isDark
-                    ? Colors.black.withOpacity(0.5)
-                    : theme.headerColor.withOpacity(0.85)),
-            borderRadius: BorderRadius.circular(width / 2),
-            border: Border.all(
+        child: Opacity(
+          opacity: 0.5,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: width,
+            height: height,
+            decoration: BoxDecoration(
               color: active
-                  ? Colors.white54
-                  : (isDark ? Colors.white24 : Colors.black12),
-              width: active ? 1.5 : 1,
+                  ? theme.accentColor.withOpacity(isDark ? 0.85 : 0.9)
+                  : (isDark
+                      ? Colors.black.withOpacity(0.5)
+                      : theme.headerColor.withOpacity(0.85)),
+              borderRadius: BorderRadius.circular(width / 2),
+              border: Border.all(
+                color: active
+                    ? Colors.white54
+                    : (isDark ? Colors.white24 : Colors.black12),
+                width: active ? 1.5 : 1,
+              ),
+              boxShadow: isIOSWeb
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.12),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      )
+                    ],
             ),
-            boxShadow: isIOSWeb
-                ? null
-                : [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.12),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    )
-                  ],
+            alignment: Alignment.center,
+            child: child,
           ),
-          alignment: Alignment.center,
-          child: child,
         ),
       ),
     );
@@ -2831,15 +2834,27 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                             ? Colors.white
                             : (isDark ? Colors.white70 : Colors.black54),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        m.label,
-                        style: GoogleFonts.poppins(
-                          fontSize: 9,
-                          fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                          color: active
-                              ? Colors.white
-                              : (isDark ? Colors.white70 : Colors.black87),
+                      const SizedBox(height: 2),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: SizedBox(
+                          height: 24,
+                          child: Center(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                m.label,
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 9,
+                                  fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                                  color: active
+                                      ? Colors.white
+                                      : (isDark ? Colors.white70 : Colors.black87),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -2871,43 +2886,49 @@ class _SofiStudioPageState extends State<SofiStudioPage>
             children: [
               GestureDetector(
                 onTap: () => Navigator.of(context).pop(),
+                child: Opacity(
+                  opacity: 0.5,
+                  child: Container(
+                    height: 32,
+                    width: 32,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isDark
+                          ? Colors.white.withOpacity(0.1)
+                          : Colors.black.withOpacity(0.05),
+                      border: Border.all(
+                        color: isDark ? Colors.white24 : Colors.black12,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      Icons.arrow_back_ios_new,
+                      size: 16,
+                      color: theme.headerTextColor,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Opacity(
+                opacity: 0.5,
                 child: Container(
                   height: 32,
                   width: 32,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: isDark
-                        ? Colors.white.withOpacity(0.1)
-                        : Colors.black.withOpacity(0.05),
-                    border: Border.all(
-                      color: isDark ? Colors.white24 : Colors.black12,
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFa855f7), Color(0xFFec4899)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
+                    border: Border.all(
+                        color: isDark ? Colors.white54 : Colors.white,
+                        width: 1.5),
                   ),
-                  alignment: Alignment.center,
-                  child: Icon(
-                    Icons.arrow_back_ios_new,
-                    size: 16,
-                    color: theme.headerTextColor,
-                  ),
+                  child: const Icon(Icons.auto_awesome,
+                      color: Colors.white, size: 18),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                height: 32,
-                width: 32,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFa855f7), Color(0xFFec4899)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  border: Border.all(
-                      color: isDark ? Colors.white54 : Colors.white,
-                      width: 1.5),
-                ),
-                child: const Icon(Icons.auto_awesome,
-                    color: Colors.white, size: 18),
               ),
               const Spacer(),
               Row(
@@ -2988,27 +3009,30 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                           setState(() => _drawerInitialCategory = EditCategory.caption);
                           controller.openDrawer();
                         },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                          decoration: BoxDecoration(
-                            gradient: SofiStudioTheme.brandGradient,
-                            borderRadius: _radius20,
-                            boxShadow: SofiStudioTheme.softShadow,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.closed_caption, color: Colors.white, size: 16),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Caption',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                        child: Opacity(
+                          opacity: 0.5,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                            decoration: BoxDecoration(
+                              gradient: SofiStudioTheme.brandGradient,
+                              borderRadius: _radius20,
+                              boxShadow: SofiStudioTheme.softShadow,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.closed_caption, color: Colors.white, size: 16),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Caption',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -3019,20 +3043,23 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                           setState(() => _drawerInitialCategory = EditCategory.fullOutfit);
                           controller.openDrawer();
                         },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: isDark ? Colors.white.withOpacity(0.1) : Colors.white,
-                            borderRadius: _radius20,
-                            boxShadow: isDark ? null : SofiStudioTheme.softShadow,
-                            border: isDark ? Border.all(color: Colors.white24) : null,
-                          ),
-                          child: Text(
-                            'Design Studio',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: theme.accentColor,
+                        child: Opacity(
+                          opacity: 0.5,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white.withOpacity(0.1) : Colors.white,
+                              borderRadius: _radius20,
+                              boxShadow: isDark ? null : SofiStudioTheme.softShadow,
+                              border: isDark ? Border.all(color: Colors.white24) : null,
+                            ),
+                            child: Text(
+                              'Design Studio',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: theme.accentColor,
+                              ),
                             ),
                           ),
                         ),
@@ -3068,31 +3095,34 @@ class _SofiStudioPageState extends State<SofiStudioPage>
     required Color activeColor,
   }) {
     final theme = ThemeManager.instance.current;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: value ? activeColor : theme.headerTextColor.withOpacity(0.7),
-          ),
-        ),
-        const SizedBox(width: 4),
-        SizedBox(
-          height: 20,
-          width: 32,
-          child: FittedBox(
-            fit: BoxFit.contain,
-            child: CupertinoSwitch(
-              value: value,
-              activeColor: activeColor,
-              onChanged: onChanged,
+    return Opacity(
+      opacity: 0.5,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: value ? activeColor : theme.headerTextColor.withOpacity(0.7),
             ),
           ),
-        ),
-      ],
+          const SizedBox(width: 4),
+          SizedBox(
+            height: 20,
+            width: 32,
+            child: FittedBox(
+              fit: BoxFit.contain,
+              child: CupertinoSwitch(
+                value: value,
+                activeColor: activeColor,
+                onChanged: onChanged,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -3107,18 +3137,21 @@ class _SofiStudioPageState extends State<SofiStudioPage>
         await AudioService.instance.playClick();
         onTap();
       },
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: isDark
-              ? Colors.white.withOpacity(0.1)
-              : Colors.white.withOpacity(0.5),
-          borderRadius: _radius10,
-          border: Border.all(color: isDark ? Colors.white24 : Colors.black12),
+      child: Opacity(
+        opacity: 0.5,
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.white.withOpacity(0.1)
+                : Colors.white.withOpacity(0.5),
+            borderRadius: _radius10,
+            border: Border.all(color: isDark ? Colors.white24 : Colors.black12),
+          ),
+          alignment: Alignment.center,
+          child: Icon(icon, size: 20, color: effectiveColor),
         ),
-        alignment: Alignment.center,
-        child: Icon(icon, size: 20, color: effectiveColor),
       ),
     );
   }
@@ -3474,15 +3507,18 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                   ),
                 ),
                 // Mic
-                IconButton(
-                  icon: Icon(_listening ? Icons.mic : Icons.mic_none),
-                  color: _listening
-                      ? theme.accentColor
-                      : (isDark ? Colors.white70 : Colors.black54),
-                  onPressed: () async {
-                    await AudioService.instance.playClick();
-                    await _onMicPressed();
-                  },
+                Opacity(
+                  opacity: 0.5,
+                  child: IconButton(
+                    icon: Icon(_listening ? Icons.mic : Icons.mic_none),
+                    color: _listening
+                        ? theme.accentColor
+                        : (isDark ? Colors.white70 : Colors.black54),
+                    onPressed: () async {
+                      await AudioService.instance.playClick();
+                      await _onMicPressed();
+                    },
+                  ),
                 ),
                 const SizedBox(width: 8),
                 // Generate Button
@@ -3505,17 +3541,19 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                               await _onGeneratePressed();
                             },
                       borderRadius: _radius24,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: _isGenerating ? null : SofiStudioTheme.brandGradient,
-                          color: _isGenerating ? Colors.grey.shade400 : null,
-                          borderRadius: _radius24,
-                        ),
+                      child: Opacity(
+                        opacity: 0.5,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: _isGenerating ? null : SofiStudioTheme.brandGradient,
+                            color: _isGenerating ? Colors.grey.shade400 : null,
+                            borderRadius: _radius24,
+                          ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -4236,36 +4274,38 @@ class _PremiumEntryButtonState extends State<_PremiumEntryButton>
         await AudioService.instance.playClick();
         widget.onTap();
       },
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) {
-          return Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              borderRadius: _SofiStudioPageState._radius12, // ✅ CONST
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: const [
-                  Color(0xFF9B59B6), // Purple
-                  Color(0xFFE91E63), // Pink
-                  Color(0xFFFF9800), // Gold/Orange
-                ],
-                stops: [
-                  (_controller.value - 0.3).clamp(0.0, 1.0),
-                  _controller.value,
-                  (_controller.value + 0.3).clamp(0.0, 1.0),
+      child: Opacity(
+        opacity: 0.5,
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            return Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                borderRadius: _SofiStudioPageState._radius12, // ✅ CONST
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: const [
+                    Color(0xFF9B59B6), // Purple
+                    Color(0xFFE91E63), // Pink
+                    Color(0xFFFF9800), // Gold/Orange
+                  ],
+                  stops: [
+                    (_controller.value - 0.3).clamp(0.0, 1.0),
+                    _controller.value,
+                    (_controller.value + 0.3).clamp(0.0, 1.0),
+                  ],
+                ),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x669B59B6), // ✅ CONST (40% opacity)
+                    blurRadius: 8,
+                    spreadRadius: 1,
+                  ),
                 ],
               ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x669B59B6), // ✅ CONST (40% opacity)
-                  blurRadius: 8,
-                  spreadRadius: 1,
-                ),
-              ],
-            ),
             child: Stack(
               alignment: Alignment.center,
               children: [

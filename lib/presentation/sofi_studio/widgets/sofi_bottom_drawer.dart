@@ -382,18 +382,21 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
             mainAxisSize: MainAxisSize.min,
             children: [
               // Generate button
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: widget.onGenerate,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: SofiStudioTheme.purple,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-                    elevation: 4,
+              Opacity(
+                opacity: 0.5,
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: widget.onGenerate,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: SofiStudioTheme.purple,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                      elevation: 4,
+                    ),
+                    child: const Text('Generate', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                   ),
-                  child: const Text('Generate', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                 ),
               ),
               // Doll Picker Section
