@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 class SofiStudioTheme {
 // Brand Colors
-static const Color yellow = Color(0xFFFFED00);
+static const Color yellow = Color(0xFFFFFF00); // More vibrant yellow
 static const Color purple = Color(0xFF5A2DFF);
 
 // NEW (required everywhere)

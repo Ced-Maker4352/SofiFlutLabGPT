@@ -10,6 +10,7 @@ import 'package:sofi_test_connect/services/audio_service.dart';
 
 // Mood entry
 import 'package:sofi_test_connect/presentation/mood/mood_camera_entry_page.dart';
+import 'package:sofi_test_connect/presentation/sofi_studio/sofi_studio_theme.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -76,13 +77,13 @@ class _SplashPageState extends State<SplashPage> {
     try {
       final ref = FirebaseStorage.instance.ref(videoPath);
       final downloadUrl = await ref.getDownloadURL()
-          .timeout(const Duration(seconds: 8));
+          .timeout(const Duration(seconds: 15));
 
       _controller = VideoPlayerController.networkUrl(Uri.parse(downloadUrl));
       _hasController = true;
 
       await _controller.initialize()
-          .timeout(const Duration(seconds: 15));
+          .timeout(const Duration(seconds: 25));
       if (!mounted) return;
 
       setState(() => _isInitialized = true);
@@ -159,7 +160,10 @@ class _SplashPageState extends State<SplashPage> {
                     child: SizedBox(
                       width: _controller.value.size.width,
                       height: _controller.value.size.height,
-                      child: VideoPlayer(_controller),
+                      child: AspectRatio(
+                        aspectRatio: _controller.value.aspectRatio,
+                        child: VideoPlayer(_controller),
+                      ),
                     ),
                   ),
                 )
@@ -175,7 +179,7 @@ class _SplashPageState extends State<SplashPage> {
                       style: TextStyle(
                         fontSize: 56,
                         fontWeight: FontWeight.w900,
-                        color: Color(0xFFFFD700),
+                        color: SofiStudioTheme.yellow,
                       ),
                     ),
                     SizedBox(height: 8),
