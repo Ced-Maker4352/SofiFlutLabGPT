@@ -186,16 +186,24 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
     switch (category) {
       case EditCategory.fullOutfit:
         return isMale 
-          ? 'images/male/outfits/male_outfit_$num.jpg'
+          ? 'images/male/outfits/male_outfit_$num.png'
           : 'images/full outfit/full_outfit_$num.jpg';
       case EditCategory.hair:
-        return 'images/${folder}hair/hair_$num.jpg';
+        return isMale
+          ? 'images/male/hair/hair_$num.png'
+          : 'images/hair/hair_$num.jpg';
       case EditCategory.top:
-        return 'images/${folder}top/top_$num.jpg';
+        return isMale
+          ? 'images/male/top/top_$num.png'
+          : 'images/top/top_$num.jpg';
       case EditCategory.bottom:
-        return 'images/${folder}bottom/bottom_$num.jpg';
+        return isMale
+          ? 'images/male/bottom/bottom_$num.png'
+          : 'images/bottom/bottom_$num.jpg';
       case EditCategory.shoes:
-        return 'images/${folder}shoes/shoes_$num.jpg';
+        return isMale
+          ? 'images/male/shoes/shoes_$num.png'
+          : 'images/shoes/shoes_$num.jpg';
       case EditCategory.accessories:
         return 'images/accessories/accessories_$num.jpg';
       case EditCategory.hats:

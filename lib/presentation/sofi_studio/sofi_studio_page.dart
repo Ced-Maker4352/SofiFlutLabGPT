@@ -204,7 +204,7 @@ class _SofiStudioPageState extends State<SofiStudioPage>
     _QuickMood(
       id: 'lux',
       label: 'Royal',
-      icon: Icons.crown,
+      icon: Icons.workspace_premium,
       promptFragment:
           'royal prince and princess aesthetic, gold sparkles, crown jewels, majestic shimmering details, elegant royal studio lighting',
     ),

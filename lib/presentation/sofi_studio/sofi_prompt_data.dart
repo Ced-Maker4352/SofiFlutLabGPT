@@ -32,18 +32,18 @@ class SofiPromptData {
   // HAIR (12)
   // ================================================================
   static const List<String> hair = [
-    "textured curly puff with natural volume",
-    "long wavy hair with soft layered curls",
-    "silky straight hair with center part",
-    "high ponytail with light texture",
-    "braided buns with natural texture",
-    "long box braids with soft shine",
+    "cute textured curly puff with natural volume",
+    "long wavy hair with sparkly layers",
+    "silky straight hair with cute center part",
+    "high ponytail with fun texture",
+    "braided buns with colorful ribbons",
+    "long box braids with sparkly shine",
     "afro-textured curls, medium volume",
-    "shoulder-length blowout with movement",
-    "two-strand twists with gentle sheen",
-    "long wavy half-up style",
-    "textured bob with natural curls",
-    "sleek low ponytail with light texture",
+    "shoulder-length blowout with playful movement",
+    "two-strand twists with gentle sparkly sheen",
+    "long wavy half-up style with cute clip",
+    "textured bob with natural playful curls",
+    "sleek low ponytail with colorful texture",
   ];
 
   // ================================================================

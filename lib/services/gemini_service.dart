@@ -31,8 +31,10 @@ class GeminiService {
 
       // Construct content
       final content = [
-        Content.text(prompt),
-        if (initImage != null) DataPart('image/png', initImage),
+        Content.multi([
+          TextPart(prompt),
+          if (initImage != null) DataPart('image/png', initImage),
+        ])
       ];
 
       // Note: Full Imagen API integration in google_generative_ai may require 

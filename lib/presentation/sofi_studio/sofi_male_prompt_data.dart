@@ -66,62 +66,62 @@ class SofiMalePromptData {
     {
       "label": "Super Kid Street",
       "prompt": "[FACE LOCK] clothing-only edit: vibrant male hero look with bright graphic hoodie, colorful cargo pants, and high-top sneakers. Keep face identical.",
-      "thumb": "images/male/outfits/male_outfit_01.jpg",
+      "thumb": "images/male/outfits/male_outfit_01.png",
     },
     {
       "label": "Adventure Tech",
       "prompt": "clothing-only edit: cool male adventure look with colorful utility vest, bright tapered joggers, and clean white sneakers. Preserve face exactly.",
-      "thumb": "images/male/outfits/male_outfit_02.jpg",
+      "thumb": "images/male/outfits/male_outfit_02.png",
     },
     {
       "label": "Playful Plaid",
       "prompt": "clothing-only edit: fun male look with colorful plaid shirt over a bright tee, straight-leg blue jeans, and colorful canvas shoes.",
-      "thumb": "images/male/outfits/male_outfit_03.jpg",
+      "thumb": "images/male/outfits/male_outfit_03.png",
     },
     {
       "label": "Little Lead Style",
       "prompt": "[FACE LOCK] clothing-only edit: sharp male lead look with stylish blazer and matching bright trousers. Clean playful look.",
-      "thumb": "images/male/outfits/male_outfit_04.jpg",
+      "thumb": "images/male/outfits/male_outfit_04.png",
     },
     {
       "label": "Cuddly Knitwear",
       "prompt": "clothing-only edit: friendly cozy look with bright thick knit sweater and relaxed colorful trousers.",
-      "thumb": "images/male/outfits/male_outfit_05.jpg",
+      "thumb": "images/male/outfits/male_outfit_05.png",
     },
     {
       "label": "Heroic Active",
       "prompt": "clothing-only edit: high-energy male outfit with superhero style tech zip-up and bright performance joggers.",
-      "thumb": "images/male/outfits/male_outfit_06.jpg",
+      "thumb": "images/male/outfits/male_outfit_06.png",
     },
     {
       "label": "Skater Fun",
       "prompt": "clothing-only edit: colorful male skater style with bright graphic tee, baggy blue pants, and retro colorful sneakers.",
-      "thumb": "images/male/outfits/male_outfit_07.jpg",
+      "thumb": "images/male/outfits/male_outfit_07.png",
     },
     {
       "label": "Snow Adventure",
       "prompt": "clothing-only edit: layered male winter adventure look with bright puffer jacket and colorful beanie.",
-      "thumb": "images/male/outfits/male_outfit_08.jpg",
+      "thumb": "images/male/outfits/male_outfit_08.png",
     },
     {
       "label": "Academia Play",
       "prompt": "clothing-only edit: stylish male academia look with bright sweater vest and clean chinos.",
-      "thumb": "images/male/outfits/male_outfit_09.jpg",
+      "thumb": "images/male/outfits/male_outfit_09.png",
     },
     {
       "label": "Blue Denim Fun",
       "prompt": "clothing-only edit: double denim male look with bright blue jacket and matching jeans.",
-      "thumb": "images/male/outfits/male_outfit_10.jpg",
+      "thumb": "images/male/outfits/male_outfit_10.png",
     },
     {
       "label": "Island Splash",
       "prompt": "clothing-only edit: summer male look with bright colorful button-up shirt and swim shorts.",
-      "thumb": "images/male/outfits/male_outfit_11.jpg",
+      "thumb": "images/male/outfits/male_outfit_11.png",
     },
     {
       "label": "Royal Prince",
       "prompt": "clothing-only edit: majestic male royal look with gold-accented princely clothing and crown accessories.",
-      "thumb": "images/male/outfits/male_outfit_12.jpg",
+      "thumb": "images/male/outfits/male_outfit_12.png",
     },
   ];
 
