@@ -2507,6 +2507,9 @@ class _SofiStudioPageState extends State<SofiStudioPage>
           _awaitingMoodFlowContinue = false;
         });
         debugPrint('[Studio] Force-dismissed canvas hint (skipWelcomeOverlay)');
+
+        // Celebration on first entry from mood flow
+        _confettiController.play();
       }
     });
 
@@ -2517,26 +2520,6 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       resizeToAvoidBottomInset: true,
       body: Stack(
         children: [
-          // ─────────────── CONFETTI DROP ───────────────
-          Align(
-            alignment: Alignment.topCenter,
-            child: ConfettiWidget(
-              confettiController: _confettiController,
-              blastDirectionality: BlastDirectionality.explosive,
-              shouldLoop: false,
-              colors: const [
-                SofiStudioTheme.yellow,
-                SofiStudioTheme.purple,
-                Colors.white,
-                Colors.blueAccent,
-                Colors.pinkAccent,
-              ],
-              numberOfParticles: 50,
-              minBlastForce: 20,
-              maxBlastForce: 40,
-              gravity: 0.1,
-            ),
-          ),
           // 1. Full Screen Background Layer (if needed, but currently just color)
 
           // 2. Centered Content (Tablet View Constraint)
@@ -2733,6 +2716,27 @@ class _SofiStudioPageState extends State<SofiStudioPage>
                       !_isGenerating &&
                       !controller.isDrawerOpen)
                     _buildPremiumReminderOverlay(),
+
+                  // ─────────────── CONFETTI DROP (TOP LAYER) ───────────────
+                  Align(
+                    alignment: Alignment.topCenter,
+                    child: ConfettiWidget(
+                      confettiController: _confettiController,
+                      blastDirectionality: BlastDirectionality.explosive,
+                      shouldLoop: false,
+                      colors: const [
+                        SofiStudioTheme.yellow,
+                        SofiStudioTheme.purple,
+                        Colors.white,
+                        Colors.blueAccent,
+                        Colors.pinkAccent,
+                      ],
+                      numberOfParticles: 50,
+                      minBlastForce: 20,
+                      maxBlastForce: 40,
+                      gravity: 0.1,
+                    ),
+                  ),
                 ],
               ),
             ),

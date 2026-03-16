@@ -154,26 +154,6 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
       backgroundColor: theme.backgroundColor,
       body: Stack(
         children: [
-          // ─────────────── CONFETTI DROP ───────────────
-          Align(
-            alignment: Alignment.topCenter,
-            child: ConfettiWidget(
-              confettiController: _confettiController,
-              blastDirectionality: BlastDirectionality.explosive,
-              shouldLoop: false,
-              colors: const [
-                SofiStudioTheme.yellow,
-                SofiStudioTheme.purple,
-                Colors.white,
-                Colors.blueAccent,
-                Colors.pinkAccent,
-              ],
-              numberOfParticles: 50,
-              minBlastForce: 20,
-              maxBlastForce: 40,
-              gravity: 0.1,
-            ),
-          ),
           // Gradient background matching Studio page
           Positioned.fill(
             child: Container(
@@ -561,6 +541,27 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                 ),
               ),
             ),
+
+          // ─────────────── CONFETTI DROP (FRONT LAYER) ───────────────
+          Align(
+            alignment: Alignment.topCenter,
+            child: ConfettiWidget(
+              confettiController: _confettiController,
+              blastDirectionality: BlastDirectionality.explosive,
+              shouldLoop: false,
+              colors: const [
+                SofiStudioTheme.yellow,
+                SofiStudioTheme.purple,
+                Colors.white,
+                Colors.blueAccent,
+                Colors.pinkAccent,
+              ],
+              numberOfParticles: 50,
+              minBlastForce: 20,
+              maxBlastForce: 40,
+              gravity: 0.1,
+            ),
+          ),
         ],
       ),
     );

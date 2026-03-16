@@ -1,6 +1,3 @@
-import 'dart:async';
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 
@@ -12,10 +9,6 @@ import 'package:sofi_test_connect/services/audio_service.dart';
 
 // Mood entry
 import 'package:sofi_test_connect/presentation/mood/mood_camera_entry_page.dart';
-import 'package:sofi_test_connect/presentation/mood/mood_mode.dart';
-
-// 🚀 FINAL DESTINATION
-import 'package:sofi_test_connect/presentation/sofi_studio/sofi_studio_page.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -98,11 +91,11 @@ class _SplashPageState extends State<SplashPage> {
         ..play()
         ..addListener(_videoListener);
     } catch (e) {
-      debugPrint('[Splash] Video load failed: $e');
+      debugPrint('[Splash] Video load failed or timed out: $e');
       if (mounted) {
         setState(() {
           _isInitialized = true;
-          // Even if controller fails, we set initialized to show fallback UI
+          _hasController = false; // Ensure we go to fallback
         });
       }
       // Safety: ensure navigation happens if timer is already up
