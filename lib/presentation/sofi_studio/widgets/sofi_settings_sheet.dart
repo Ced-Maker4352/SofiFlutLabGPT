@@ -21,6 +21,9 @@ class SofiSettingsSheet extends StatefulWidget {
 class _SofiSettingsSheetState extends State<SofiSettingsSheet> {
   late bool _performanceMode;
   late TextEditingController _geminiKeyController;
+  late TextEditingController _baseUrlController;
+  late TextEditingController _modelController;
+  late AiProvider _activeProvider;
   late bool _useCustomAi;
   
   @override
@@ -32,6 +35,13 @@ class _SofiSettingsSheetState extends State<SofiSettingsSheet> {
     _geminiKeyController = TextEditingController(
       text: UserPreferencesService.instance.geminiApiKey,
     );
+    _baseUrlController = TextEditingController(
+      text: UserPreferencesService.instance.customBaseUrl,
+    );
+    _modelController = TextEditingController(
+      text: UserPreferencesService.instance.customModel,
+    );
+    _activeProvider = UserPreferencesService.instance.activeAiProvider;
     _useCustomAi = UserPreferencesService.instance.useCustomAiProvider;
     UserPreferencesService.instance.addListener(_onPrefsChanged);
   }
@@ -41,6 +51,8 @@ class _SofiSettingsSheetState extends State<SofiSettingsSheet> {
     PerformanceService.instance.removeListener(_onPerformanceChanged);
     UserPreferencesService.instance.removeListener(_onPrefsChanged);
     _geminiKeyController.dispose();
+    _baseUrlController.dispose();
+    _modelController.dispose();
     super.dispose();
   }
   
@@ -58,6 +70,13 @@ class _SofiSettingsSheetState extends State<SofiSettingsSheet> {
         if (_geminiKeyController.text != UserPreferencesService.instance.geminiApiKey) {
           _geminiKeyController.text = UserPreferencesService.instance.geminiApiKey;
         }
+        if (_baseUrlController.text != UserPreferencesService.instance.customBaseUrl) {
+          _baseUrlController.text = UserPreferencesService.instance.customBaseUrl;
+        }
+        if (_modelController.text != UserPreferencesService.instance.customModel) {
+          _modelController.text = UserPreferencesService.instance.customModel;
+        }
+        _activeProvider = UserPreferencesService.instance.activeAiProvider;
         _useCustomAi = UserPreferencesService.instance.useCustomAiProvider;
       });
     }
@@ -172,8 +191,8 @@ class _SofiSettingsSheetState extends State<SofiSettingsSheet> {
                   ),
                   _buildSettingRow(
                     icon: Icons.key,
-                    label: "Use Custom Gemini AI",
-                    subtitle: "Uses your own Google AI Studio credits",
+                    label: "Use Custom AI Provider",
+                    subtitle: "Connect your own API (Gemini, Ollama, Qwen)",
                     trailing: Switch(
                       value: _useCustomAi,
                       onChanged: (val) {
@@ -185,38 +204,109 @@ class _SofiSettingsSheetState extends State<SofiSettingsSheet> {
                   ),
                   if (_useCustomAi) ...[
                     const SizedBox(height: 12),
-                    TextField(
-                      controller: _geminiKeyController,
-                      decoration: InputDecoration(
-                        labelText: 'Gemini API Key',
-                        labelStyle: const TextStyle(color: SofiStudioTheme.purple),
-                        hintText: 'Enter your API key from AI Studio',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: SofiStudioTheme.purple),
-                        ),
-                        suffixIcon: IconButton(
-                          icon: const Icon(Icons.check, color: SofiStudioTheme.purple),
-                          onPressed: () {
-                            UserPreferencesService.instance.setGeminiApiKey(_geminiKeyController.text);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Gemini API Key saved!')),
-                            );
+                    // Provider selector
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<AiProvider>(
+                          value: _activeProvider == AiProvider.none ? AiProvider.gemini : _activeProvider,
+                          isExpanded: true,
+                          items: const [
+                            DropdownMenuItem(
+                              value: AiProvider.gemini,
+                              child: Text('Google Gemini (AI Studio)'),
+                            ),
+                            DropdownMenuItem(
+                              value: AiProvider.generic,
+                              child: Text('Generic AI (Ollama/Qwen/OpenAI)'),
+                            ),
+                          ],
+                          onChanged: (AiProvider? val) {
+                            if (val != null) {
+                              UserPreferencesService.instance.setActiveAiProvider(val);
+                            }
                           },
                         ),
                       ),
-                      onChanged: (val) {
-                         UserPreferencesService.instance.setGeminiApiKey(val);
-                      },
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Get your key at aistudio.google.com",
-                      style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                    ),
+                    const SizedBox(height: 16),
+                    // Conditional fields
+                    if (_activeProvider == AiProvider.gemini || (_activeProvider == AiProvider.none && _useCustomAi)) ...[
+                       TextField(
+                        controller: _geminiKeyController,
+                        decoration: InputDecoration(
+                          labelText: 'Gemini API Key',
+                          labelStyle: const TextStyle(color: SofiStudioTheme.purple),
+                          hintText: 'Enter your API key from AI Studio',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: SofiStudioTheme.purple),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.check, color: SofiStudioTheme.purple),
+                            onPressed: () {
+                              UserPreferencesService.instance.setGeminiApiKey(_geminiKeyController.text);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Gemini API Key saved!')),
+                              );
+                            },
+                          ),
+                        ),
+                        onChanged: (val) {
+                           UserPreferencesService.instance.setGeminiApiKey(val);
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        "Get your key at aistudio.google.com",
+                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                      ),
+                    ] else if (_activeProvider == AiProvider.generic) ...[
+                      // Base URL
+                      TextField(
+                        controller: _baseUrlController,
+                        decoration: InputDecoration(
+                          labelText: 'Base URL',
+                          hintText: 'e.g. http://localhost:11434/v1',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onChanged: (val) => UserPreferencesService.instance.setCustomBaseUrl(val),
+                      ),
+                      const SizedBox(height: 12),
+                      // API Key (optional for Ollama)
+                      TextField(
+                        controller: _geminiKeyController, // Reuse the key controller as it maps to the same setting conceptually 
+                        decoration: InputDecoration(
+                          labelText: 'API Key (Optional)',
+                          hintText: 'Required for Qwen/Groq/etc',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onChanged: (val) => UserPreferencesService.instance.setGeminiApiKey(val),
+                      ),
+                      const SizedBox(height: 12),
+                      // Model Name
+                      TextField(
+                        controller: _modelController,
+                        decoration: InputDecoration(
+                          labelText: 'Model Name',
+                          hintText: 'e.g. qwen2.5:7b or llama3',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onChanged: (val) => UserPreferencesService.instance.setCustomModel(val),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        "Point to your local Ollama or any OpenAI-compatible API.",
+                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                      ),
+                    ],
                   ],
                   const Divider(height: 32),
                   // Legal Section

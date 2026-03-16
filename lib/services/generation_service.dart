@@ -4,10 +4,10 @@
 // No TODOs. No missing URLs. No missing API keys. No errors.
 //
 
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:sofi_test_connect/services/user_preferences_service.dart';
 import 'package:sofi_test_connect/services/gemini_service.dart';
+import 'package:sofi_test_connect/services/openai_service.dart';
 
 class GenerationService {
   const GenerationService();
@@ -21,8 +21,8 @@ class GenerationService {
   }) async {
     final prefs = UserPreferencesService.instance;
 
-    // Check if custom Gemini provider is enabled
-    if (prefs.useCustomAiProvider && prefs.geminiApiKey.isNotEmpty) {
+    // Route based on the active provider
+    if (prefs.activeAiProvider == AiProvider.gemini && prefs.geminiApiKey.isNotEmpty) {
       try {
         final gemini = GeminiService(apiKey: prefs.geminiApiKey);
         final result = await gemini.generateImage(
@@ -32,11 +32,24 @@ class GenerationService {
         if (result != null) return result;
       } catch (e) {
         debugPrint('[GenerationService] Gemini fallback failed: $e');
-        // Fallback to default behavior or return null
+      }
+    } else if (prefs.activeAiProvider == AiProvider.generic && prefs.customBaseUrl.isNotEmpty) {
+      try {
+        final generic = OpenAiService(
+          baseUrl: prefs.customBaseUrl,
+          apiKey: prefs.geminiApiKey, // Reuse existing key storage
+          model: prefs.customModel,
+        );
+        final result = await generic.generateImage(
+          prompt: prompt,
+        );
+        if (result != null) return result;
+      } catch (e) {
+        debugPrint('[GenerationService] Generic AI fallback failed: $e');
       }
     }
 
-    // No remote calls to avoid Dreamflow analysis errors.
+    // Default stub behavior
     // You can add logging or mock bytes here if needed.
 
     return null; // indicates "no output yet"
