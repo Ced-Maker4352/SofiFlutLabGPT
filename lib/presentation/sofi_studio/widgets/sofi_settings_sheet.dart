@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sofi_test_connect/services/performance_service.dart';
 import 'package:sofi_test_connect/presentation/sofi_studio/sofi_studio_theme.dart';
 import 'package:sofi_test_connect/presentation/shared/sofi_legal_links.dart';
+import 'package:sofi_test_connect/services/user_preferences_service.dart';
 
 class SofiSettingsSheet extends StatefulWidget {
   final bool autoSave;
@@ -19,17 +20,27 @@ class SofiSettingsSheet extends StatefulWidget {
 
 class _SofiSettingsSheetState extends State<SofiSettingsSheet> {
   late bool _performanceMode;
+  late TextEditingController _geminiKeyController;
+  late bool _useCustomAi;
   
   @override
   void initState() {
     super.initState();
     _performanceMode = PerformanceService.instance.performanceMode;
     PerformanceService.instance.addListener(_onPerformanceChanged);
+    
+    _geminiKeyController = TextEditingController(
+      text: UserPreferencesService.instance.geminiApiKey,
+    );
+    _useCustomAi = UserPreferencesService.instance.useCustomAiProvider;
+    UserPreferencesService.instance.addListener(_onPrefsChanged);
   }
   
   @override
   void dispose() {
     PerformanceService.instance.removeListener(_onPerformanceChanged);
+    UserPreferencesService.instance.removeListener(_onPrefsChanged);
+    _geminiKeyController.dispose();
     super.dispose();
   }
   
@@ -37,6 +48,17 @@ class _SofiSettingsSheetState extends State<SofiSettingsSheet> {
     if (mounted) {
       setState(() {
         _performanceMode = PerformanceService.instance.performanceMode;
+      });
+    }
+  }
+
+  void _onPrefsChanged() {
+    if (mounted) {
+      setState(() {
+        if (_geminiKeyController.text != UserPreferencesService.instance.geminiApiKey) {
+          _geminiKeyController.text = UserPreferencesService.instance.geminiApiKey;
+        }
+        _useCustomAi = UserPreferencesService.instance.useCustomAiProvider;
       });
     }
   }
@@ -129,6 +151,73 @@ class _SofiSettingsSheetState extends State<SofiSettingsSheet> {
                     trailing: _comingSoonBadge(),
                   ),
                   const SizedBox(height: 16),
+                  const Divider(height: 32),
+                  // AI Provider Settings (Gemini)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      children: [
+                        Icon(Icons.auto_awesome_rounded, color: SofiStudioTheme.purple, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'AI Provider Settings',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: SofiStudioTheme.charcoal,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _buildSettingRow(
+                    icon: Icons.key,
+                    label: "Use Custom Gemini AI",
+                    subtitle: "Uses your own Google AI Studio credits",
+                    trailing: Switch(
+                      value: _useCustomAi,
+                      onChanged: (val) {
+                        setState(() => _useCustomAi = val);
+                        UserPreferencesService.instance.setUseCustomAiProvider(val);
+                      },
+                      activeColor: SofiStudioTheme.purple,
+                    ),
+                  ),
+                  if (_useCustomAi) ...[
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _geminiKeyController,
+                      decoration: InputDecoration(
+                        labelText: 'Gemini API Key',
+                        labelStyle: const TextStyle(color: SofiStudioTheme.purple),
+                        hintText: 'Enter your API key from AI Studio',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: SofiStudioTheme.purple),
+                        ),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.check, color: SofiStudioTheme.purple),
+                          onPressed: () {
+                            UserPreferencesService.instance.setGeminiApiKey(_geminiKeyController.text);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Gemini API Key saved!')),
+                            );
+                          },
+                        ),
+                      ),
+                      onChanged: (val) {
+                         UserPreferencesService.instance.setGeminiApiKey(val);
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Get your key at aistudio.google.com",
+                      style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                    ),
+                  ],
                   const Divider(height: 32),
                   // Legal Section
                   const Padding(
