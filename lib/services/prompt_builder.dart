@@ -15,30 +15,45 @@ String buildMoodEditInstruction(String mood, {String userText = '', String mode 
   
   final isDoll = mode.toLowerCase() == 'doll';
   final genderLabel = isMale ? 'male' : 'female';
-  final personLabel = isMale ? 'boy/man' : 'girl/woman';
+  final personLabel = isMale ? 'boy' : 'girl';
+  final ageLabel = '8-12 year old';
+
+  final proportionConstraint = isDoll 
+      ? 'STRICTLY render as a $ageLabel $personLabel with youthful child proportions. No adult features, no female curves on boys, no male features on girls. Clean child-friendly body style.'
+      : 'Keep the $genderLabel person\'s age as a $ageLabel $personLabel.';
+
+  final modestyConstraint = 'Clothing must be modest, age-appropriate, and not tight or revealing. No "sexy" or "adult" styles. Strictly follow $genderLabel clothing styles.';
 
   final preservation = isDoll
-      ? 'Keep the $genderLabel person\'s underlying facial identity and pose identical, but apply the doll aesthetic to their skin, hair, and entire body.'
+      ? 'Keep the $personLabel\'s underlying facial identity and pose identical, but apply the doll aesthetic to their skin, hair, and entire body. STRICTLY ensure $genderLabel facial features and hair style.'
       : 'Keep the $genderLabel person\'s face, skin tone, body structure, and pose '
         'identical to the original photo. '
         'Only change the clothing, accessories, hair styling, and background. '
-        'Ensure the person remains clearly $personLabel.';
+        'Ensure the person remains clearly a $ageLabel $personLabel, strictly avoiding any mixed-gender features.';
 
-  return '$outfitInstruction $styleClause$userEdits $preservation';
+  return '$outfitInstruction $styleClause $proportionConstraint $modestyConstraint $userEdits $preservation';
 }
 
-/// Builds a custom-text edit instruction (e.g. from a user's typed prompt in Studio).
 String buildCustomEditInstruction(String userText, {String mood = '', String mode = 'human', bool isMale = false}) {
   final genderLabel = isMale ? 'male' : 'female';
   final moodClause = mood.isNotEmpty ? ' Mood: $mood.' : '';
   final styleClause = _modeToStyleInstruction(mode);
   
   final isDoll = mode.toLowerCase() == 'doll';
-  final preservation = isDoll
-      ? 'Keep the $genderLabel person\'s underlying facial identity identical, but cleanly apply the 3D doll plastic aesthetic to their skin and body without distortion.'
-      : 'Keep the $genderLabel person\'s face, skin tone, and body structure identical to the original photo.';
+  final personLabel = isMale ? 'boy' : 'girl';
+  final ageLabel = '8-12 year old';
 
-  return 'Edit this $genderLabel photo: $userText$moodClause $styleClause $preservation';
+  final proportionConstraint = isDoll
+      ? 'STRICTLY render as a $ageLabel $personLabel with youthful child proportions. No adult features, no female curves on boys, no male features on girls. Clean child-friendly body style.'
+      : 'Keep the $genderLabel person\'s age as a $ageLabel $personLabel.';
+
+  final modestyConstraint = 'Clothing must be modest, age-appropriate, and not tight or revealing. Strictly follow $genderLabel clothing styles.';
+
+  final preservation = isDoll
+      ? 'Keep the $personLabel\'s underlying facial identity identical, but cleanly apply the 3D doll plastic aesthetic to their skin and body without distortion. STRICTLY ensure $genderLabel facial features and hair style.'
+      : 'Keep the $genderLabel person\'s face, skin tone, and body structure identical to the original photo. Strictly avoid any mixed-gender features.';
+
+  return 'Edit this $genderLabel child photo: $userText$moodClause $styleClause $proportionConstraint $modestyConstraint $preservation';
 }
 
 /// Maps a mood name to a specific outfit-change instruction.
@@ -86,7 +101,7 @@ String _modeToStyleInstruction(String mode) {
     case 'artistic':
       return 'Transform the image into an anime illustration, vibrant colors, 2D shading, highly detailed manga art style. ';
     case 'doll':
-      return 'Transform this into a playful 3D toy character or fashion doll portrait. Show head-to-toe in a friendly, stylish pose with a clean, toy-like background. ';
+      return 'Transform this into a playful 3D toy character or fashion doll portrait. Show head-to-toe in a friendly, stylish pose with a clean, toy-like background. Use modest child-appropriate fashion only. ';
     default:
       return ''; // 'human' uses default realistic styles
   }

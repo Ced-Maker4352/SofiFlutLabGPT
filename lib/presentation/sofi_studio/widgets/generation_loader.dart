@@ -39,6 +39,15 @@ class _GenerationLoaderState extends State<GenerationLoader> with TickerProvider
   // Combine sources into a unified list (NOT late final - can be rebuilt)
   List<_LoaderItem> _items = [];
   bool _itemsPrepared = false;
+
+  // Floating keywords
+  final List<String> _magicWords = [
+    'MAGICAL', 'FASHION', 'STYLING', 'GLOW', 'DREAM', 
+    'PIXAR', 'CINEMATIC', 'SHIMMER', 'SPARKLE', 'SOFT', 
+    'BOLD', 'CREATIVE', 'STUNNING', 'CHIC', 'GLITTER'
+  ];
+  final List<Widget> _activeKeywords = [];
+  Timer? _keywordTimer;
   
   // Status messages that cycle
   final List<String> _statusMessages = [
@@ -78,6 +87,36 @@ class _GenerationLoaderState extends State<GenerationLoader> with TickerProvider
     // Start auto-scroll after build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startAutoScroll();
+      _startKeywordSpawning();
+    });
+  }
+
+  void _startKeywordSpawning() {
+    _keywordTimer = Timer.periodic(const Duration(milliseconds: 1200), (_) {
+      if (mounted) {
+        _spawnKeyword();
+      }
+    });
+  }
+
+  void _spawnKeyword() {
+    final word = _magicWords[DateTime.now().millisecondsSinceEpoch % _magicWords.length];
+    final key = UniqueKey();
+    
+    setState(() {
+      _activeKeywords.add(
+        _FloatingKeyword(
+          key: key,
+          text: word,
+          onComplete: () {
+            if (mounted) {
+              setState(() {
+                _activeKeywords.removeWhere((w) => w.key == key);
+              });
+            }
+          },
+        ),
+      );
     });
   }
 
@@ -136,6 +175,7 @@ class _GenerationLoaderState extends State<GenerationLoader> with TickerProvider
   void dispose() {
     _timer?.cancel();
     _messageTimer?.cancel();
+    _keywordTimer?.cancel();
     _pulseController.dispose();
     _shimmerController.dispose();
     _scrollController.dispose();
@@ -186,6 +226,7 @@ class _GenerationLoaderState extends State<GenerationLoader> with TickerProvider
               },
             ),
           ),
+          ..._activeKeywords,
           _buildSpinnerSection(),
         ],
       ),
@@ -419,6 +460,102 @@ class _StorageImageState extends State<_StorageImage> {
         color: Colors.grey.shade300,
         child: const Center(child: Icon(Icons.broken_image, size: 24, color: Colors.grey)),
       ),
+    );
+  }
+}
+
+class _FloatingKeyword extends StatefulWidget {
+  final String text;
+  final VoidCallback onComplete;
+
+  const _FloatingKeyword({
+    super.key,
+    required this.text,
+    required this.onComplete,
+  });
+
+  @override
+  State<_FloatingKeyword> createState() => _FloatingKeywordState();
+}
+
+class _FloatingKeywordState extends State<_FloatingKeyword> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _opacity;
+  late Animation<double> _scale;
+  late Animation<Offset> _position;
+  
+  late double _startX;
+  late double _endX;
+
+  @override
+  void initState() {
+    super.initState();
+    final random = DateTime.now().microsecondsSinceEpoch;
+    _startX = (random % 300) / 300.0; // 0.0 to 1.0 screen width
+    _endX = _startX + ((random % 100) - 50) / 200.0; // slight drift left/right
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 2500 + (random % 1000)),
+    );
+
+    _opacity = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 0.8), weight: 20),
+      TweenSequenceItem(tween: ConstantTween(0.8), weight: 60),
+      TweenSequenceItem(tween: Tween(begin: 0.8, end: 0.0), weight: 20),
+    ]).animate(_controller);
+
+    _scale = Tween<double>(begin: 0.8, end: 1.2).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+
+    _position = Tween<Offset>(
+      begin: Offset(_startX, 0.8), // Start low
+      end: Offset(_endX, 0.2),    // Float high
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.linear));
+
+    _controller.forward().then((_) => widget.onComplete());
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Positioned(
+          left: MediaQuery.of(context).size.width * _position.value.dx - 50,
+          top: MediaQuery.of(context).size.height * _position.value.dy,
+          child: Opacity(
+            opacity: _opacity.value,
+            child: Transform.scale(
+              scale: _scale.value,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: SofiStudioTheme.purple.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white.withOpacity(0.2)),
+                ),
+                child: Text(
+                  widget.text,
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

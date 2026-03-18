@@ -27,6 +27,7 @@ import 'package:sofi_test_connect/presentation/premium/discover_page.dart';
 import 'package:sofi_test_connect/services/storage_service.dart';
 import 'package:sofi_test_connect/services/sofi_export_service.dart';
 import 'package:sofi_test_connect/presentation/premium/paywall_sheet.dart';
+import 'package:sofi_test_connect/presentation/sofi_studio/sofi_studio_theme.dart';
 
 class PremiumStudioPage extends StatefulWidget {
   /// If null, user can upload from within Premium page
@@ -541,11 +542,11 @@ class _PremiumStudioPageState extends State<PremiumStudioPage> {
                   children: [
                     Colors.white,
                     Colors.black,
-                    Colors.yellow,
+                    SofiStudioTheme.yellow,
                     Colors.pink,
                     Colors.cyan,
                     Colors.lime
-                  ].map((c) {
+                  ].map((Color c) {
                     final isSelected = c.value == _captionColor.value;
                     return GestureDetector(
                       onTap: () {

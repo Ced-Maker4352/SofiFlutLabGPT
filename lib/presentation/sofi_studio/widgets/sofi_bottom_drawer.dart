@@ -205,17 +205,29 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
           ? 'images/male/shoes/shoes_$num.png'
           : 'images/shoes/shoes_$num.jpg';
       case EditCategory.accessories:
-        return 'images/accessories/accessories_$num.jpg';
+        return isMale 
+          ? 'images/male/accessories/accessories_$num.png'
+          : 'images/accessories/accessories_$num.jpg';
       case EditCategory.hats:
-        return 'images/hats/hats_$num.jpg';
+        return isMale 
+          ? 'images/male/hats/hats_$num.png'
+          : 'images/hats/hats_$num.jpg';
       case EditCategory.jewelry:
-        return 'images/jewelry/jewelry_$num.jpg';
+        return isMale 
+          ? 'images/male/jewelry/jewelry_$num.png'
+          : 'images/jewelry/jewelry_$num.jpg';
       case EditCategory.glasses:
-        return 'images/glasses/glasses_$num.jpg';
+        return isMale 
+          ? 'images/male/glasses/glasses_$num.png'
+          : 'images/glasses/glasses_$num.jpg';
       case EditCategory.poses:
-        return 'images/poses/pose_$num.jpg';
+        return isMale 
+          ? 'images/male/pose/pose_$num.png'
+          : 'images/poses/pose_$num.jpg';
       case EditCategory.background:
-        return 'images/background/background_$num.jpg';
+        return isMale 
+          ? 'images/male/background/background_$num.png'
+          : 'images/background/background_$num.jpg';
       case EditCategory.caption:
         return null;
     }
@@ -230,7 +242,13 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
         case EditCategory.top: return SofiMalePromptData.tops;
         case EditCategory.bottom: return SofiMalePromptData.bottoms;
         case EditCategory.shoes: return SofiMalePromptData.shoes;
-        default: break; // Fall through to standard data for others
+        case EditCategory.background: return SofiMalePromptData.backgrounds;
+        case EditCategory.accessories: return SofiMalePromptData.accessories;
+        case EditCategory.hats: return SofiMalePromptData.hats;
+        case EditCategory.jewelry: return SofiMalePromptData.jewelry;
+        case EditCategory.glasses: return SofiMalePromptData.glasses;
+        case EditCategory.poses: return SofiMalePromptData.poses;
+        default: break;
       }
     }
 
@@ -417,21 +435,23 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
                     final cat = EditCategory.values[index];
                     final isSelected = cat == _selectedCategory;
                     final isLocked = _isCategoryLocked(cat);
-                    return GestureDetector(
-                      onTap: () => _onCategoryTap(cat),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: isSelected ? SofiStudioTheme.purple : Colors.white.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: isSelected
-                                ? SofiStudioTheme.purple
-                                : isLocked
-                                    ? Colors.amber.withOpacity(0.5)
-                                    : Colors.white.withOpacity(0.2),
+                    return Expanded(
+                      child: GestureDetector(
+                        onTap: () => _onCategoryTap(cat),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: isSelected ? SofiStudioTheme.purple : Colors.white.withOpacity(0.1),
+                            border: Border(
+                              bottom: BorderSide(
+                                color: isSelected
+                                    ? SofiStudioTheme.purple
+                                    : isLocked
+                                        ? SofiStudioTheme.yellow.withOpacity(0.5)
+                                        : Colors.white.withOpacity(0.2),
+                                width: 2,
+                              ),
+                            ),
                           ),
-                        ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -445,13 +465,14 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
                             ),
                             if (isLocked) ...[
                               const SizedBox(width: 4),
-                              const Icon(Icons.lock, size: 14, color: Colors.amber),
+                              const Icon(Icons.lock, size: 14, color: SofiStudioTheme.yellow),
                             ],
                           ],
                         ),
                       ),
-                    );
-                  },
+                    ),
+                  );
+                },
                 ),
               ),
               const SizedBox(height: 16),
@@ -505,13 +526,13 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
                 Text(
                   'Premium Characters',
                   style: TextStyle(
-                    color: Colors.amber.withOpacity(0.9),
+                    color: SofiStudioTheme.yellow.withOpacity(0.9),
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(width: 4),
-                const Icon(Icons.star, size: 14, color: Colors.amber),
+                const Icon(Icons.star, size: 14, color: SofiStudioTheme.yellow),
               ],
             ),
           ),
@@ -588,7 +609,7 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
                   Positioned.fill(
                     child: Container(
                       color: Colors.black.withOpacity(0.5),
-                      child: const Icon(Icons.lock, color: Colors.amber, size: 20),
+                      child: const Icon(Icons.lock, color: SofiStudioTheme.yellow, size: 20),
                     ),
                   ),
               ],
@@ -717,7 +738,7 @@ class _SofiBottomDrawerState extends State<SofiBottomDrawer> {
                     color: Colors.black.withOpacity(0.6),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.lock, color: Colors.amber, size: 24),
+                  child: const Icon(Icons.lock, color: SofiStudioTheme.yellow, size: 24),
                 ),
               ),
           ],
@@ -975,7 +996,23 @@ class _FirebaseThumbnailState extends State<_FirebaseThumbnail> {
 
   @override
   Widget build(BuildContext context) {
-    // Use VisibilityDetector pattern via LayoutBuilder to trigger lazy load
+    // 🔑 NEW: Local Asset Fallback for Male Assets
+    if (widget.path.startsWith('images/male/')) {
+      final localAssetPath = 'assets/${widget.path}';
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          return Image.asset(
+            localAssetPath,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              // Fallback to original Firebase logic if local asset is missing
+              return _buildFirebaseContent(context);
+            },
+          );
+        },
+      );
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         // If we have constraints, the widget is being laid out = visible
@@ -984,29 +1021,33 @@ class _FirebaseThumbnailState extends State<_FirebaseThumbnail> {
           WidgetsBinding.instance.addPostFrameCallback((_) => _triggerLazyLoad());
         }
         
-        // Show placeholder if not yet loaded
-        if (_url == null && !_loading && !_error) {
-          return _buildPlaceholder();
-        }
-        
-        if (_loading) {
-          return _buildLoadingIndicator();
-        }
-
-        if (_error || _url == null) {
-          return _buildErrorPlaceholder();
-        }
-
-        return CachedNetworkImage(
-          imageUrl: _url!,
-          fit: BoxFit.cover,
-          // Reduce memory usage with smaller cache
-          memCacheWidth: 150,
-          memCacheHeight: 180,
-          placeholder: (context, url) => _buildLoadingIndicator(),
-          errorWidget: (context, url, error) => _buildErrorPlaceholder(),
-        );
+        return _buildFirebaseContent(context);
       },
+    );
+  }
+
+  Widget _buildFirebaseContent(BuildContext context) {
+    // Show placeholder if not yet loaded
+    if (_url == null && !_loading && !_error) {
+      return _buildPlaceholder();
+    }
+    
+    if (_loading) {
+      return _buildLoadingIndicator();
+    }
+
+    if (_error || _url == null) {
+      return _buildErrorPlaceholder();
+    }
+
+    return CachedNetworkImage(
+      imageUrl: _url!,
+      fit: BoxFit.cover,
+      // Reduce memory usage with smaller cache
+      memCacheWidth: 150,
+      memCacheHeight: 180,
+      placeholder: (context, url) => _buildLoadingIndicator(),
+      errorWidget: (context, url, error) => _buildErrorPlaceholder(),
     );
   }
   
@@ -1164,7 +1205,7 @@ class _DollFirebaseImageState extends State<_DollFirebaseImage> {
             child: const Icon(Icons.person, size: 24, color: Colors.white54),
           );
         }
-        
+
         return CachedNetworkImage(
           imageUrl: _url!,
           fit: BoxFit.cover,

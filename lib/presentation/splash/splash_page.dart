@@ -11,6 +11,7 @@ import 'package:sofi_test_connect/services/audio_service.dart';
 // Mood entry
 import 'package:sofi_test_connect/presentation/mood/mood_camera_entry_page.dart';
 import 'package:sofi_test_connect/presentation/sofi_studio/sofi_studio_theme.dart';
+import 'package:sofi_test_connect/services/remote_debug_logger.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -64,9 +65,19 @@ class _SplashPageState extends State<SplashPage> {
   }
 
   void _startMinimumTimer() {
-    Timer(const Duration(seconds: 10), () async {
+    // Show splash for at least 3 seconds, then navigate once ready.
+    Timer(const Duration(seconds: 3), () async {
       if (!mounted) return;
       setState(() => _minimumTimeElapsed = true);
+      // If video failed or initialized, we can move on.
+      if (!_hasController || _isInitialized) {
+        await _checkAndNavigate();
+      }
+    });
+
+    // Safety: absolute maximum splash time is 8 seconds.
+    Timer(const Duration(seconds: 8), () async {
+      if (!mounted || _hasNavigated) return;
       await _checkAndNavigate();
     });
   }
@@ -77,13 +88,13 @@ class _SplashPageState extends State<SplashPage> {
     try {
       final ref = FirebaseStorage.instance.ref(videoPath);
       final downloadUrl = await ref.getDownloadURL()
-          .timeout(const Duration(seconds: 15));
+          .timeout(const Duration(seconds: 4)); // Fast or fallback
 
       _controller = VideoPlayerController.networkUrl(Uri.parse(downloadUrl));
       _hasController = true;
 
       await _controller.initialize()
-          .timeout(const Duration(seconds: 25));
+          .timeout(const Duration(seconds: 6)); // Fast or fallback
       if (!mounted) return;
 
       setState(() => _isInitialized = true);
@@ -92,8 +103,12 @@ class _SplashPageState extends State<SplashPage> {
         ..setVolume(kIsWeb ? 0.0 : 1.0)
         ..play()
         ..addListener(_videoListener);
+        
+      debugPrint('[Splash] Video playing');
+      RemoteDebugLogger.instance.logInfo('SPLASH_VIDEO', 'Video playing');
     } catch (e) {
       debugPrint('[Splash] Video load failed or timed out: $e');
+      RemoteDebugLogger.instance.logError('[Splash] Video failure', e);
       if (mounted) {
         setState(() {
           _isInitialized = true;
@@ -150,14 +165,8 @@ class _SplashPageState extends State<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_isInitialized && !kIsWeb) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(
-          child: CircularProgressIndicator(color: Color(0xFFFFCC00)),
-        ),
-      );
-    }
+    // We no longer return a black screen with a spinner.
+    // We always return the Scaffold with branding, and the video/spinner happens inside the Stack.
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -184,12 +193,22 @@ class _SplashPageState extends State<SplashPage> {
                     ),
                   );
                 } else {
-                  return Container(color: Colors.black);
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      color: Color(0xFFFFCC00),
+                      strokeWidth: 2,
+                    ),
+                  );
                 }
               },
             )
-          else
-            Container(color: Colors.black),
+          else if (!_isInitialized)
+            const Center(
+              child: CircularProgressIndicator(
+                color: Color(0xFFFFCC00),
+                strokeWidth: 2,
+              ),
+            ),
 
           // 2. DIMMER OVERLAY (Ensures text contrast regardless of video)
           Positioned.fill(
@@ -199,9 +218,9 @@ class _SplashPageState extends State<SplashPage> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withOpacity(0.4),
-                    Colors.black.withOpacity(0.1),
-                    Colors.black.withOpacity(0.5),
+                    Colors.black.withOpacity(0.6),
+                    Colors.black.withOpacity(0.2),
+                    Colors.black.withOpacity(0.7),
                   ],
                 ),
               ),
@@ -214,34 +233,36 @@ class _SplashPageState extends State<SplashPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Spacer(flex: 2),
+                  const Spacer(flex: 3),
+                  // App Title
                   Text(
                     'Sofi Saint',
                     style: TextStyle(
-                      fontSize: 64, // Slightly larger for impact
+                      fontSize: 68,
                       fontWeight: FontWeight.w900,
                       color: const Color(0xFFFFCC00),
-                      letterSpacing: -1.0,
+                      letterSpacing: -1.5,
                       shadows: [
                         Shadow(
-                          color: Colors.black.withOpacity(0.8),
-                          offset: const Offset(2, 2),
-                          blurRadius: 20,
+                          color: Colors.black.withOpacity(0.9),
+                          offset: const Offset(0, 4),
+                          blurRadius: 30,
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
+                  // Tagline
                   const Text(
-                    'Imagine Create Become',
+                    'IMAGINE • CREATE • BECOME',
                     style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white70,
-                      letterSpacing: 4.0,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      letterSpacing: 5.0,
                     ),
                   ),
-                  const Spacer(flex: 1),
+                  const Spacer(flex: 2),
                 ],
               ),
             ),

@@ -28,10 +28,9 @@ void main() {
       expect(prompt.toLowerCase(), contains('soft'));
     });
 
-    test('includes dark aesthetic for Mysterious mood', () {
+    test('includes night-sky aesthetic for Mysterious mood', () {
       final prompt = buildMoodEditInstruction('Mysterious');
-      expect(prompt.toLowerCase(), contains('dark'));
-      expect(prompt.toLowerCase(), contains('mysterious'));
+      expect(prompt.toLowerCase(), contains('night-sky'));
     });
 
     test('handles unknown mood gracefully', () {

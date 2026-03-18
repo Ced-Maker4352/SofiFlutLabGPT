@@ -19,7 +19,7 @@ class SofiMalePromptData {
 
   static const List<String> tops = [
     "fun heroic graphic hoodie with bright colors",
-    "cool adventure utility vest",
+    "cool adventure utility vest for boys",
     "bright exciting oversized graphic tee",
     "classic cool blue denim jacket",
     "high-energy colorful racer jacket",
@@ -36,8 +36,8 @@ class SofiMalePromptData {
     "relaxed fit cargo pants",
     "modern tapered joggers",
     "classic straight-leg jeans",
-    "structured utility shorts",
-    "wide-leg trousers for men",
+    "structured utility shorts for boys",
+    "wide-leg trousers for boys",
     "clean chino pants",
     "distressed denim jeans",
     "modern techwear joggers",
@@ -62,10 +62,100 @@ class SofiMalePromptData {
     "outdoor trail runners",
   ];
 
+  static const List<String> backgrounds = [
+    "colorful studio backdrop with soft gradients",
+    "high-tech futuristic holographic bedroom for boys",
+    "sunny outdoor skate park with vibrant graffiti",
+    "cozy modern attic with gaming setup and neon lights",
+    "magical starry night sky with glowing floating lanterns",
+    "urban street scene with colorful storefronts",
+    "lush green adventure forest with sun rays",
+    "bright school hallway with colorful lockers",
+    "snowy mountain landscape with warm sunset",
+    "underwater fantasy reef with glowing corals",
+    "retro arcade with colorful glowing machines",
+    "superhero city skyline at sunset",
+  ];
+
+  static const List<String> hats = [
+    "bright colorful snapback cap with graphic logo",
+    "cozy chunky knit beanie in vibrant primary colors",
+    "cool urban bucket hat with fun patterns",
+    "high-tech futuristic pilot headset for kids",
+    "adventurous explorer safari hat",
+    "royal golden crown with colorful gems",
+    "sporty headband with vibrant stripes",
+    "magical glowing wizard hat for boys",
+    "classic newsboy cap in modern textures",
+    "superhero themed helmet mask",
+    "casual straw sun hat for vacation",
+    "trendy wide-brim fedora for boys",
+  ];
+
+  static const List<String> accessories = [
+    "vibrant colorful backpack with tech straps",
+    "sleek silver futuristic wrist comm device",
+    "cool skateboard with personalized decals",
+    "magical glowing crystal staff for boys",
+    "high-end pro gaming headphones",
+    "colorful cross-body bag for kids",
+    "robotic pet companion",
+    "shiny golden superhero belt",
+    "fun colorful digital camera for kids",
+    "glowing light-up hoverboard",
+    "adventurous treasure map scroll",
+    "sleek musical electric guitar for boys",
+  ];
+
+  static const List<String> jewelry = [
+    "chunky silver chain necklace for boys",
+    "colorful beaded friendship bracelet",
+    "magical glowing amulet on a leather cord",
+    "sleek obsidian ring with glowing runes",
+    "bright silicone sports watch for kids",
+    "shiny golden royal signet ring",
+    "braided leather wristband for boys",
+    "futuristic tech-ring with blue neon",
+    "cool whistle pendant on a cord",
+    "small silver ear stud for boys",
+    "colorful woven paracord bracelet",
+    "shiny star-shaped medal on a ribbon",
+  ];
+
+  static const List<String> glasses = [
+    "classic thick-rimmed black frames",
+    "cool blue mirrored sunglasses for kids",
+    "futuristic VR-style visor with neon effects",
+    "sleek round clear glasses for boys",
+    "high-tech glowing transparent HUD goggles",
+    "trendy colorful aviator sunglasses",
+    "protective sports goggles for athletics",
+    "retro 8-bit blocky novelty glasses",
+    "thin silver wireframe glasses",
+    "cool orange-tinted adventure goggles",
+    "star-shaped party glasses",
+    "sleek black rectangle frames",
+  ];
+
+  static const List<String> poses = [
+    "standing confidently with hands on hips",
+    "casual relaxed pose with one hand in pocket",
+    "dynamic walking pose mid-stride",
+    "playful peace sign with bright smile",
+    "leaning casually against invisible wall",
+    "energetic jumping pose with joy",
+    "sitting cross-legged with relaxed posture",
+    "thoughtful pose with hand near chin",
+    "fashion model pose with hand on hip",
+    "friendly wave with warm expression",
+    "cool arms-crossed confident stance",
+    "candid laughing moment captured naturally",
+  ];
+
   static const List<Map<String, dynamic>> fullOutfits = [
     {
       "label": "Super Kid Street",
-      "prompt": "[FACE LOCK] clothing-only edit: vibrant male hero look with bright graphic hoodie, colorful cargo pants, and high-top sneakers. Keep face identical.",
+      "prompt": "[FACE LOCK] clothing-only edit: strictly male vibrant hero look with bright graphic hoodie, colorful cargo pants, and high-top sneakers. Keep face identical. Proportions of an 8-12 year old boy.",
       "thumb": "images/male/outfits/male_outfit_01.png",
     },
     {
@@ -80,7 +170,7 @@ class SofiMalePromptData {
     },
     {
       "label": "Little Lead Style",
-      "prompt": "[FACE LOCK] clothing-only edit: sharp male lead look with stylish blazer and matching bright trousers. Clean playful look.",
+      "prompt": "[FACE LOCK] clothing-only edit: strictly male sharp lead look with stylish blazer and matching bright trousers. Clean playful boy look.",
       "thumb": "images/male/outfits/male_outfit_04.png",
     },
     {
@@ -115,12 +205,12 @@ class SofiMalePromptData {
     },
     {
       "label": "Island Splash",
-      "prompt": "clothing-only edit: summer male look with bright colorful button-up shirt and swim shorts.",
+      "prompt": "clothing-only edit: strictly male summer look with bright colorful button-up shirt and modest board shorts. 8-12 year old boy style.",
       "thumb": "images/male/outfits/male_outfit_11.png",
     },
     {
       "label": "Royal Prince",
-      "prompt": "clothing-only edit: majestic male royal look with gold-accented princely clothing and crown accessories.",
+      "prompt": "clothing-only edit: strictly male majestic royal look with gold-accented princely clothing and crown accessories. Child prince style for 8-12 year old boy.",
       "thumb": "images/male/outfits/male_outfit_12.png",
     },
   ];
@@ -131,6 +221,12 @@ class SofiMalePromptData {
       case EditCategory.top: return tops;
       case EditCategory.bottom: return bottoms;
       case EditCategory.shoes: return shoes;
+      case EditCategory.background: return backgrounds;
+      case EditCategory.accessories: return accessories;
+      case EditCategory.hats: return hats;
+      case EditCategory.jewelry: return jewelry;
+      case EditCategory.glasses: return glasses;
+      case EditCategory.poses: return poses;
       default: return [];
     }
   }

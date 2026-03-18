@@ -142,7 +142,7 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
-                                    color: isDollMode ? SofiStudioTheme.purple : Colors.white70,
+                                    color: isDollMode ? SofiStudioTheme.purple : SofiStudioTheme.charcoal.withOpacity(0.7),
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -165,11 +165,11 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  isMaleMode ? 'Male' : 'Fem',
+                                  isMaleMode ? 'Boy' : 'Girl',
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
-                                    color: isMaleMode ? Colors.blueAccent : Colors.white70,
+                                    color: isMaleMode ? Colors.blueAccent : SofiStudioTheme.charcoal.withOpacity(0.7),
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -288,7 +288,7 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                       final List<Color> bgGradient;
                       switch (mood) {
                         case 'Bold': bgGradient = [Color(0xFFFF512F), Color(0xFFDD2476)]; break;
-                        case 'Happy': bgGradient = [Color(0xFFFFD700), Color(0xFFF7971E)]; break;
+                        case 'Happy': bgGradient = [SofiStudioTheme.yellow, Color(0xFFF7971E)]; break;
                         case 'Calm': bgGradient = [Color(0xFF4CB8C4), Color(0xFF3CD3AD)]; break;
                         case 'Confident': bgGradient = [Color(0xFF8A2387), Color(0xFFE94057)]; break;
                         case 'Creative': bgGradient = [Color(0xFFa18cd1), Color(0xFFfbc2eb)]; break;
@@ -302,6 +302,12 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                         onTap: () {
                           if (!mounted) return;
                           setState(() => _selectedMood = mood);
+                          // 🚀 AUTO-GEN: If selfie is present, auto-continue
+                          if (_selfieBytes != null && _selfieBytes!.isNotEmpty) {
+                            Future.delayed(const Duration(milliseconds: 150), () {
+                              if (mounted) _continue();
+                            });
+                          }
                         },
                         child: Container(
                           decoration: BoxDecoration(

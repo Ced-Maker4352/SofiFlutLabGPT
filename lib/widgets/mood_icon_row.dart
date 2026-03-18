@@ -19,77 +19,64 @@ class MoodIconRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final modes = MoodMode.values;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: modes.map((mode) {
-          final isSelected = mode == selected;
+    final itemWidth = MediaQuery.of(context).size.width / modes.length;
 
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () => onSelect(mode),
-              child: AnimatedScale(
-                scale: isSelected ? 1.08 : 1.0,
-                duration: const Duration(milliseconds: 160),
-                curve: Curves.easeOut,
-                child: Stack(
-                  children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isSelected
-                              ? Colors.white
-                              : Colors.white.withOpacity(0.3),
-                          width: isSelected ? 2 : 1,
-                        ),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: Colors.white.withOpacity(0.35),
-                                  blurRadius: 14,
-                                  spreadRadius: 1,
-                                )
-                              ]
-                            : [],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: _FirebaseMoodIcon(
-                          mode: mode,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                    ListenableBuilder(
-                      listenable: PremiumService(),
-                      builder: (context, _) {
-                        final isPremiumUser = PremiumService().isPremium;
-                        if (!mode.isPremium || isPremiumUser) return const SizedBox.shrink();
-                        return const Positioned(
-                          top: 6,
-                          right: 6,
-                          child: Icon(
-                            Icons.lock,
-                            size: 16,
-                            color: Colors.white,
-                          ),
-                        );
-                      },
-                    ),
-                  ],
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: modes.map((mode) {
+        final isSelected = mode == selected;
+
+        return InkWell(
+          onTap: () => onSelect(mode),
+          child: Stack(
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: itemWidth,
+                height: itemWidth, // Kept square
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: isSelected
+                        ? Colors.white
+                        : Colors.white.withOpacity(0.1),
+                    width: isSelected ? 3 : 0.5,
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.zero,
+                  child: _FirebaseMoodIcon(
+                    mode: mode,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
-            ),
-          );
-        }).toList(),
-      ),
+              ListenableBuilder(
+                listenable: PremiumService(),
+                builder: (context, _) {
+                  final isPremiumUser = PremiumService().isPremium;
+                  if (!mode.isPremium || isPremiumUser) return const SizedBox.shrink();
+                  return Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.lock,
+                        size: 14,
+                        color: Colors.white,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 }

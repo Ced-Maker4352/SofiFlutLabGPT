@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 
 import '../../services/two_step_generation_service.dart';
+import '../../services/user_preferences_service.dart';
 
 class PremiumStudioController extends ChangeNotifier {
   final TwoStepGenerationService _service;
@@ -29,9 +30,11 @@ class PremiumStudioController extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final isMale = UserPreferencesService.instance.isMaleMode;
       _identityLockedImage = await _service.runStep1IdentityLock(
         baseImage,
         prompt,
+        isMale: isMale,
       );
       _bodyLocked = true;
     } catch (e) {
@@ -49,9 +52,11 @@ class PremiumStudioController extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final isMale = UserPreferencesService.instance.isMaleMode;
       _finalStyledImage = await _service.generateStyledOnly(
         _identityLockedImage!,
         prompt,
+        isMale: isMale,
       );
     } catch (e) {
       debugPrint('❌ PremiumStudioController.runStep2 failed: $e');

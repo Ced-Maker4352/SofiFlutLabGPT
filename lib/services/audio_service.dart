@@ -24,10 +24,10 @@ class AudioService {
     'music_notimeleft': 'audio/Sofi Saint NO TIME LEFT - No Time Left.mp3',
     // Generation tracks (rotating)
     'gen_track_0': 'audio/Sofi Saint - Power Mode (ft. Top Adlerman) (Power Soca 2026).mp3',
-    'gen_track_1': 'audio/Under Songs/111no-copyright-music-181373.mp3',
-    'gen_track_2': 'audio/Under Songs/background-corporate-music-short-version-65sec-no-copyright-music-378978.mp3',
-    'gen_track_3': 'audio/Under Songs/pop-402324.mp3',
-    'gen_track_4': 'audio/Under Songs/trap-drums-loop-sound-effect-311578.mp3',
+    'gen_track_1': 'audio/Sofi Saint - Power Mode (ft. Top Adlerman) (Power Soca 2026).mp3',
+    'gen_track_2': 'audio/Sofi Saint - Power Mode (ft. Top Adlerman) (Power Soca 2026).mp3',
+    'gen_track_3': 'audio/Sofi Saint - Power Mode (ft. Top Adlerman) (Power Soca 2026).mp3',
+    'gen_track_4': 'audio/Sofi Saint - Power Mode (ft. Top Adlerman) (Power Soca 2026).mp3',
   };
 
   // Cached download URLs

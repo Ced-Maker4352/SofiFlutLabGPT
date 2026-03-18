@@ -11,8 +11,11 @@ No doll, toy, or plastic features.
 
 const String dollBasePrompt = '''
 Transform this into a full-body fashion doll portrait.
-Show head-to-toe in a stylish pose with clean background.
-Soft plastic texture.
+Show head-to-toe in a playful, stylish pose with clean background.
+Proportions of an 8-12 year old child. 
+Kid-friendly body style: not overly curvy, not sexy, no tight revealing clothing.
+Modest and age-appropriate fashion for kids.
+Soft plastic doll texture.
 ''';
 
 const String cinematicBasePrompt = '''

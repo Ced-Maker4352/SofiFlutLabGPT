@@ -191,9 +191,14 @@ class SofiStudioController extends ChangeNotifier {
         );
       } else {
         // HUMAN MODE: Standard single pass
+        final genderNegatives = isMaleMode
+            ? 'female, feminine, girl, woman, dress, skirt, makeup, long eyelashes, feminine hair, feminine facial features'
+            : 'male, masculine, boy, man, facial hair, masculine hair, masculine facial features';
+            
         final imageUrl = await ModelsLabService.generateHumanFlux(
           initImageBytes: selfieBytes,
           prompt: prompt,
+          negativePrompt: genderNegatives,
         );
 
         resultBytes = await _downloadBytes(imageUrl);

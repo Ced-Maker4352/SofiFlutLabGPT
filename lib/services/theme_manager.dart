@@ -42,10 +42,10 @@ class ThemeManager extends ChangeNotifier {
     AppThemeType.yellow: AppThemeData(
       type: AppThemeType.yellow,
       name: 'Sunshine',
-      headerColor: Color(0xFFFFD54F), // Vibrant Sunshine Yellow
+      headerColor: Color(0xFFFFCC00), // Vibrant Gold Yellow (matching SofiStudioTheme.yellow)
       headerTextColor: Color(0xFF2B0014), // Dark maroon for contrast
       accentColor: Color(0xFFFFCC00), // Vibrant Gold Yellow
-      backgroundColor: Color(0xFFFFF9C4), // Fresh bright yellow background
+      backgroundColor: Color(0xFFFFCC00), // Deep vibrant yellow (requested everywhere)
       icon: Icons.wb_sunny,
     ),
     AppThemeType.pink: AppThemeData(

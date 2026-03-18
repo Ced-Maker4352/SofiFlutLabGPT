@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 /// iPhone-safe stage image renderer.
 /// DreamFlow / Flutter-stable compatible (NO Dart 3 records)
@@ -191,21 +192,15 @@ class _StageImageState extends State<StageImage> {
         },
       );
     } else if (widget.url != null && widget.url!.isNotEmpty) {
-      child = Image.network(
-        widget.url!,
+      child = CachedNetworkImage(
+        imageUrl: widget.url!,
         width: widget.width,
         height: widget.height,
         fit: widget.fit,
         alignment: widget.alignment,
-        gaplessPlayback: true,
         filterQuality: widget.filterQuality,
-        isAntiAlias: true,
-        semanticLabel: widget.semanticLabel,
-        loadingBuilder: (context, image, progress) {
-          if (progress == null) return image;
-          return _buildPlaceholder();
-        },
-        errorBuilder: (context, error, stackTrace) {
+        placeholder: (context, url) => _buildPlaceholder(),
+        errorWidget: (context, url, error) {
           debugPrint('StageImage: network image error: $error');
           return _buildError();
         },

@@ -32,7 +32,7 @@ class SofiPromptBuilder {
       buffer.write(
         "Photorealistic $gender human portrait. Natural human anatomy and facial proportions. "
         "Realistic skin texture, pores, and lighting. No cartoon features. "
-        "Ensure the person remains clearly $person. ",
+        "STRICTLY ensure the person remains clearly $person, with no feminine features for boys or masculine features for girls. ",
       );
     } else {
       // This aligns with your original “Pixar-ish” app feel.
@@ -40,7 +40,7 @@ class SofiPromptBuilder {
         "High-quality, child-friendly 3D animated Pixar-like $gender character render. "
         "Vibrant and playful colors, soft shading, smooth gradients, cinematic but clean lighting. "
         "Maintain a friendly, believable human-like character face and playful proportions. "
-        "Ensure the character remains clearly $person. ",
+        "STRICTLY ensure the character remains clearly $person, with no mixed-gender features. ",
       );
     }
 

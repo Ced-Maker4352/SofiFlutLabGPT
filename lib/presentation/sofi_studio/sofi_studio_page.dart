@@ -178,35 +178,35 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       label: 'Magic Glow',
       icon: Icons.auto_awesome,
       promptFragment:
-          'magical sparkly mood, rainbow-tinted lighting, glowing fairy dust, vibrant playful colors, high-quality 3D render',
+          'magical sparkly mood, rainbow-tinted lighting, glowing fairy dust, vibrant playful colors, modest child-friendly clothing for a {gender}, high-quality 3D render, whimsical magical girl/boy room background',
     ),
     _QuickMood(
       id: 'noir',
       label: 'Starry Night',
       icon: Icons.stars,
       promptFragment:
-          'dreamy night sky vibe, deep blues and purples, glowing stars, magical moonlit atmosphere, soft cinematic render',
+          'dreamy night sky vibe, deep blues and purples, glowing stars, magical moonlit atmosphere, cozy modest {gender} kid wear, soft cinematic render, cosmic starry night background',
     ),
     _QuickMood(
       id: 'pastel',
       label: 'Candy Pastel',
       icon: Icons.icecream,
       promptFragment:
-          'bright cotton candy colors, pink and mint and lilac palette, playful sugary aesthetic, soft airy lighting, clean cute background',
+          'bright cotton candy colors, pink and mint and lilac palette, playful sugary aesthetic, cute modest {gender} child outfits, soft airy lighting, clean cute candy-themed background',
     ),
     _QuickMood(
       id: 'street',
       label: 'Super Kid',
       icon: Icons.rocket_launch,
       promptFragment:
-          'high-energy comic styles, bright primary colors, superhero vibrant vibe, sharp clean details, playful powerful energy',
+          'high-energy comic styles, bright primary colors, superhero vibrant vibe, heroic modest {gender} kid costume, sharp clean details, playful powerful energy, action-packed comic book background',
     ),
     _QuickMood(
       id: 'lux',
       label: 'Royal',
       icon: Icons.workspace_premium,
       promptFragment:
-          'royal prince and princess aesthetic, gold sparkles, crown jewels, majestic shimmering details, elegant royal studio lighting',
+          'royal {gender} child aesthetic, gold sparkles, crown jewels, majestic shimmering details, modest formal royal attire for a {gender}, elegant royal golden studio lighting, grand palace background',
     ),
   ];
 
@@ -273,7 +273,17 @@ class _SofiStudioPageState extends State<SofiStudioPage>
   String _selectedRatio = 'portrait';
 
   final Map<EditCategory, int?> selectedOptions = {
+    EditCategory.fullOutfit: null,
+    EditCategory.hair: null,
+    EditCategory.top: null,
+    EditCategory.bottom: null,
+    EditCategory.shoes: null,
     EditCategory.background: null,
+    EditCategory.accessories: null,
+    EditCategory.hats: null,
+    EditCategory.jewelry: null,
+    EditCategory.glasses: null,
+    EditCategory.poses: null,
   };
 
   // --- TEXT CAPTION STATE ---
@@ -344,6 +354,19 @@ class _SofiStudioPageState extends State<SofiStudioPage>
             });
           }
         }
+
+        // 🚀 AUTO-GEN TRIGGER: If a mood was selected (re-arming hasPendingGeneration)
+        // trigger the actual generation method.
+        if (controller.hasPendingGeneration &&
+            !_isGenerating &&
+            !controller.isGenerating) {
+          debugPrint('[SofiStudio] 🚀 Auto-triggering generation from listener');
+          // Small delay to ensure any synchronous state updates finish
+          Future.microtask(() {
+            if (mounted) _onGeneratePressed();
+          });
+        }
+
         // Only rebuild if mounted and drawer state actually needs UI update
         if (mounted) setState(() {});
       } catch (e) {
@@ -1198,10 +1221,20 @@ class _SofiStudioPageState extends State<SofiStudioPage>
           return idx < SofiMalePromptData.shoes.length ? SofiMalePromptData.shoes[idx] : 'stylish shoes';
         case EditCategory.fullOutfit:
           return idx < SofiMalePromptData.fullOutfits.length ? SofiMalePromptData.fullOutfits[idx]['prompt'] : 'full outfit';
+        case EditCategory.background:
+          return idx < SofiMalePromptData.backgrounds.length ? SofiMalePromptData.backgrounds[idx] : 'studio background';
+        case EditCategory.accessories:
+          return idx < SofiMalePromptData.accessories.length ? SofiMalePromptData.accessories[idx] : 'accessory';
+        case EditCategory.hats:
+          return idx < SofiMalePromptData.hats.length ? SofiMalePromptData.hats[idx] : 'hat';
+        case EditCategory.jewelry:
+          return idx < SofiMalePromptData.jewelry.length ? SofiMalePromptData.jewelry[idx] : 'jewelry';
+        case EditCategory.glasses:
+          return idx < SofiMalePromptData.glasses.length ? SofiMalePromptData.glasses[idx] : 'glasses';
+        case EditCategory.poses:
+          return idx < SofiMalePromptData.poses.length ? SofiMalePromptData.poses[idx] : 'pose';
         case EditCategory.caption:
           return '';
-        default:
-          break; // Fall back to female data for backgrounds/accessories if missing
       }
     }
 
@@ -1235,8 +1268,20 @@ class _SofiStudioPageState extends State<SofiStudioPage>
 
   String _buildFinalPrompt() {
     final bool isDollMode = UserPreferencesService.instance.isDollMode;
+    final bool isMale = UserPreferencesService.instance.isMaleMode;
+    final String genderToken = isMale ? 'boy' : 'girl';
 
-    // 1. Start with the mode-specific base intent
+    // 1. Start with a mandatory Gender Anchor to lock identity
+    // This prevents crossover even if the mood or manual prompt is vague.
+    String anchor;
+    final String strictlyGender = isMale ? 'strictly male, no feminine features' : 'strictly female, no masculine features';
+    if (isDollMode) {
+      anchor = 'STRICTLY a 3D Disney Pixar $genderToken character. $strictlyGender. ';
+    } else {
+      anchor = 'STRICTLY a photorealistic 8-12 year old $genderToken. $strictlyGender. ';
+    }
+
+    // 2. Mode-specific base intent
     String base;
     if (_activeBaseStylePrompt != null) {
       base = isDollMode ? dollBasePrompt : _activeBaseStylePrompt!;
@@ -1253,21 +1298,23 @@ class _SofiStudioPageState extends State<SofiStudioPage>
       };
     }
 
-    final buffer = StringBuffer(base.trim());
+    final buffer = StringBuffer(anchor);
+    buffer.write(base.trim());
     if (!base.endsWith(' ')) buffer.write(' ');
 
-    // 2. Add Mood layer
+    // 3. Add Mood layer
     if (_activeMood.id != 'neutral') {
-      buffer.write('Mood style: ${_activeMood.promptFragment}. ');
+      final moodFragment = _activeMood.promptFragment.replaceAll('{gender}', genderToken);
+      buffer.write('Mood style: $moodFragment. ');
     }
 
-    // 3. Add Manual edits from the text box
+    // 4. Add Manual edits from the text box
     final manual = promptController.text.trim();
     if (manual.isNotEmpty) {
       buffer.write('Outfit/Scene details: $manual ');
     }
 
-    // 4. Final polish
+    // 5. Final polish
     return buffer.toString().trim();
   }
 

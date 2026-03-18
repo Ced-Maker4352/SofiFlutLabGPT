@@ -35,7 +35,7 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
   bool _isGenerating = false;
 
   /// FUNCTIONAL mood (this triggers auto-generation)
-  String? _selectedMood;
+  String? _selectedMood = 'Magic Glow';
 
   /// VISUAL mode (human / doll / premium)
   MoodMode _selectedMode = MoodMode.human;
@@ -52,14 +52,11 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
   }
 
   final List<String> _moods = const [
-    'Bold',
-    'Happy',
-    'Calm',
-    'Confident',
-    'Creative',
-    'Soft',
-    'Powerful',
-    'Mysterious',
+    'Magic Glow',
+    'Starry Night',
+    'Candy Pastel',
+    'Super Kid',
+    'Royal',
   ];
 
   Future<void> _pickSelfie() async {
@@ -196,7 +193,7 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
-                                    color: isDollMode ? SofiStudioTheme.purple : Colors.white70,
+                                    color: isDollMode ? SofiStudioTheme.purple : SofiStudioTheme.charcoal.withOpacity(0.7),
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -219,11 +216,11 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  isMaleMode ? 'Male' : 'Fem',
+                                  isMaleMode ? 'Boy' : 'Girl',
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
-                                    color: isMaleMode ? Colors.blueAccent : Colors.white70,
+                                    color: isMaleMode ? Colors.blueAccent : SofiStudioTheme.charcoal.withOpacity(0.7),
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -377,100 +374,102 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                 ),
 
                 /// MOOD HORIZONTAL LIST (Seamless Cards)
-                Transform.translate(
-                  offset: const Offset(0, -8),
-                  child: SizedBox(
-                    height: 100,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: EdgeInsets.zero,
-                      physics: const BouncingScrollPhysics(),
-                      itemCount: _moods.length,
-                      itemBuilder: (context, index) {
-                        final mood = _moods[index];
-                        final isSelected = mood == _selectedMood;
+                Builder(
+                  builder: (context) {
+                    final itemWidth = MediaQuery.of(context).size.width / _moods.length;
+                    return SizedBox(
+                      height: itemWidth,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: _moods.map((mood) {
+                          final isSelected = mood == _selectedMood;
 
-                        final List<Color> bgGradient;
-                        switch (mood) {
-                          case 'Bold': bgGradient = [Color(0xFFFF512F), Color(0xFFDD2476)]; break;
-                          case 'Happy': bgGradient = [Color(0xFFFFD700), Color(0xFFF7971E)]; break;
-                          case 'Calm': bgGradient = [Color(0xFF4CB8C4), Color(0xFF3CD3AD)]; break;
-                          case 'Confident': bgGradient = [Color(0xFF8A2387), Color(0xFFE94057)]; break;
-                          case 'Creative': bgGradient = [Color(0xFFa18cd1), Color(0xFFfbc2eb)]; break;
-                          case 'Soft': bgGradient = [Color(0xFFff9a9e), Color(0xFFfecfef)]; break;
-                          case 'Powerful': bgGradient = [Color(0xFF00c6fb), Color(0xFF005bea)]; break;
-                          case 'Mysterious': bgGradient = [Color(0xFF304352), Color(0xFFd7d2cc)]; break;
-                          default: bgGradient = [Color(0xFFA770EF), Color(0xFFCF8BF3)];
-                        }
+                          final List<Color> bgGradient;
+                          switch (mood) {
+                            case 'Magic Glow': bgGradient = [Color(0xFFa18cd1), Color(0xFFfbc2eb)]; break;
+                            case 'Starry Night': bgGradient = [Color(0xFF304352), Color(0xFFd7d2cc)]; break;
+                            case 'Candy Pastel': bgGradient = [Color(0xFFff9a9e), Color(0xFFfecfef)]; break;
+                            case 'Super Kid': bgGradient = [Color(0xFFFF512F), Color(0xFFDD2476)]; break;
+                            case 'Royal': bgGradient = [Color(0xFF8A2387), Color(0xFFE94057)]; break;
+                            default: bgGradient = [Color(0xFFA770EF), Color(0xFFCF8BF3)];
+                          }
 
-                        return GestureDetector(
-                          onTap: () {
-                            if (!mounted) return;
-                            setState(() => _selectedMood = mood);
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            width: 100,
-                            margin: EdgeInsets.zero,
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: isSelected ? Colors.white : Colors.white.withOpacity(0.05),
-                                width: isSelected ? 2 : 0,
+                          return GestureDetector(
+                            onTap: () {
+                              if (!mounted) return;
+                              setState(() => _selectedMood = mood);
+                              // 🚀 AUTO-GEN: If selfie is present, auto-continue
+                              if (_selfieBytes != null && _selfieBytes!.isNotEmpty) {
+                                Future.delayed(const Duration(milliseconds: 150), () {
+                                  if (mounted) _continue();
+                                });
+                              }
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              width: itemWidth,
+                              height: itemWidth,
+                              margin: EdgeInsets.zero,
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: isSelected ? Colors.white : Colors.white.withOpacity(0.05),
+                                  width: isSelected ? 2 : 0.5,
+                                ),
+                              ),
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: MoodImagePaths.paths.containsKey(mood) ? 
+                                          [Colors.transparent, Colors.transparent] : bgGradient,
+                                      ),
+                                    ),
+                                    child: MoodImagePaths.paths.containsKey(mood)
+                                        ? Image.asset(
+                                            MoodImagePaths.paths[mood]!,
+                                            fit: BoxFit.cover,
+                                          )
+                                        : null,
+                                  ),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                        colors: [
+                                          Colors.transparent,
+                                          Colors.black.withOpacity(0.4),
+                                          Colors.black.withOpacity(0.7),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    bottom: 8,
+                                    left: 4,
+                                    right: 4,
+                                    child: Text(
+                                      mood,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                Container(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: MoodImagePaths.paths.containsKey(mood) ? 
-                                          [Colors.transparent, Colors.transparent] : bgGradient,
-                                    ),
-                                  ),
-                                  child: MoodImagePaths.paths.containsKey(mood)
-                                      ? Image.asset(
-                                          MoodImagePaths.paths[mood]!,
-                                          fit: BoxFit.cover,
-                                        )
-                                      : null,
-                                ),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                      colors: [
-                                        Colors.transparent,
-                                        Colors.black.withOpacity(0.4),
-                                        Colors.black.withOpacity(0.7),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  bottom: 8,
-                                  left: 4,
-                                  right: 4,
-                                  child: Text(
-                                    mood,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: mood == 'Happy' ? SofiStudioTheme.charcoal : Colors.white,
-                                      fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
+                          );
+                        }).toList(),
+                      ),
+                    );
+                  }
                 ),
 
                 const SizedBox(height: 0),
@@ -576,9 +575,9 @@ class _MoodCameraEntryPageImplState extends State<MoodCameraEntryPageImpl> {
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white12),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.settings,
-                  color: Colors.white70,
+                  color: SofiStudioTheme.charcoal.withOpacity(0.6),
                   size: 22,
                 ),
               ),

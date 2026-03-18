@@ -54,30 +54,30 @@ class SofiPromptData {
     "playful ribbed tank top",
     "oversized bright graphic tee",
     "fitted colorful long-sleeve top",
-    "cozy soft knit sweater",
-    "button-up shirt with fun patterns",
-    "sleek crop-top jacket with sparkly details",
+    "cozy soft child-sized knit sweater",
+    "button-up shirt with fun playful patterns",
+    "sleek bomber jacket with sparkly details",
     "athleisure zip hoodie with bright colors",
-    "minimalist cute halter top",
+    "minimalist cute layered tank top",
     "fashion cardigan with soft colorful fabric",
-    "denim jacket with cute stitching",
-    "soft pastel colorful sweatshirt",
+    "denim jacket with cute playful stitching",
+    "soft pastel colorful child-sized sweatshirt",
   ];
 
   // ================================================================
   // BOTTOMS (12)
   // ================================================================
   static const List<String> bottoms = [
-    "pleated skirt",
-    "high-waisted jeans",
-    "wide-leg pants",
-    "athleisure leggings",
-    "denim shorts",
-    "cargo pants",
-    "mini skirt",
-    "y2k flared jeans",
+    "modest pleated skirt over leggings",
+    "high-waisted child-style jeans",
+    "comfortable wide-leg pants",
+    "modest athleisure leggings",
+    "denim shorts layered over tights",
+    "playful cargo pants",
+    "modest layered mini skirt",
+    "cute flared jeans",
     "pastel joggers",
-    "soft lounge shorts",
+    "soft comfortable lounge shorts",
     "sporty track pants",
     "high-waisted trousers",
   ];
@@ -197,7 +197,7 @@ class SofiPromptData {
     {
       "label": "Pastel Y2K Set",
       "prompt":
-          "[FACE LOCK] clothing-only edit: pastel Y2K outfit with crop top, pleated skirt, platform sneakers, and small pastel accessories. CRITICAL: Preserve face EXACTLY - do not modify eyes, nose, lips, skin tone, or any facial features. Face must be pixel-identical to source.",
+          "[FACE LOCK] clothing-only edit: strictly female modest pastel Y2K outfit with playful top, layered pleated skirt, platform sneakers, and small pastel accessories. CRITICAL: Preserve face EXACTLY - do not modify eyes, nose, lips, skin tone, or any facial features. Face must be pixel-identical to source. Proportions of an 8-12 year old female child.",
       "thumb": "images/full outfit/full_outfit_01.jpg",
     },
     {
@@ -215,7 +215,7 @@ class SofiPromptData {
     {
       "label": "TikTok Influencer Fit",
       "prompt":
-          "clothing-only edit: trendy influencer outfit with crop top, denim jacket, wide-leg jeans, and stylish sneakers. Keep face, skin, hair unchanged.",
+          "clothing-only edit: strictly female trendy modest influencer outfit with stylish tee, high-waisted cargo pants, and clean sneakers. Keep face, skin, hair unchanged. 8-12 year old girl proportions.",
       "thumb": "images/full outfit/full_outfit_04.jpg",
     },
     {
@@ -251,7 +251,7 @@ class SofiPromptData {
     {
       "label": "Kawaii Pastel",
       "prompt":
-          "clothing-only edit: cute pastel mini skirt outfit with soft sweater and girly shoes. Keep all doll features identical.",
+          "clothing-only edit: strictly female cute modest pastel layered skirt outfit with soft sweater and girly shoes. Keep all doll features identical. 8-12 year old female child proportions.",
       "thumb": "images/full outfit/full_outfit_10.jpg",
     },
     {
@@ -263,7 +263,7 @@ class SofiPromptData {
     {
       "label": "Summer Casual",
       "prompt":
-          "clothing-only edit: cropped tank top, denim shorts, and sandals. Do not alter any body or facial details.",
+          "clothing-only edit: strictly female modest stylish tee, denim shorts with leggings, and sandals. Do not alter any body or facial details. Proportions of an 8-12 year old girl.",
       "thumb": "images/full outfit/full_outfit_12.jpg",
     },
 
@@ -308,7 +308,7 @@ class SofiPromptData {
     {
       "label": "Summer Festival Look",
       "prompt":
-          "[FACE LOCK] clothing-only edit: crop top, high-waisted shorts, and festival boots. CRITICAL: Preserve face EXACTLY - do not modify eyes, nose, lips, skin tone, or any facial features.",
+          "[FACE LOCK] clothing-only edit: modest stylish top, high-waisted shorts with leggings, and festival boots. CRITICAL: Preserve face EXACTLY - do not modify eyes, nose, lips, skin tone, or any facial features. 8-12 year old child body style.",
       "thumb": "images/full outfit/full_outfit_19.jpg",
     },
     {
@@ -332,7 +332,7 @@ class SofiPromptData {
     {
       "label": "Soft Girl Aesthetic",
       "prompt":
-          "[FACE LOCK] clothing-only edit: pastel sweater, mini skirt, and cute platform shoes. CRITICAL: Preserve face EXACTLY - do not modify eyes, nose, lips, skin tone, or any facial features.",
+          "[FACE LOCK] clothing-only edit: modest pastel sweater, layered skirt, and cute platform shoes. CRITICAL: Preserve face EXACTLY - do not modify eyes, nose, lips, skin tone, or any facial features. Proportions of an 8-12 year old child.",
       "thumb": "images/full outfit/full_outfit_23.jpg",
     },
     {

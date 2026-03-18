@@ -57,6 +57,17 @@ flutter:
   assets:
     - assets/images/
     - assets/images/moods/
+    - assets/images/male/hair/
+    - assets/images/male/top/
+    - assets/images/male/bottom/
+    - assets/images/male/shoes/
+    - assets/images/male/pose/
+    - assets/images/male/outfits/
+    - assets/images/male/background/
+    - assets/images/male/accessories/
+    - assets/images/male/hats/
+    - assets/images/male/jewelry/
+    - assets/images/male/glasses/
     - assets/dolls/
     - assets/dolls/base/
     - assets/dolls/base/stage/

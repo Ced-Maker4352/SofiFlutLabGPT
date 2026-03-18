@@ -153,6 +153,10 @@ class RemoteDebugLogger {
     }
   }
   
+  /// Log an info message
+  Future<void> logInfo(String event, String message, [Map<String, dynamic>? details]) =>
+      log(LogLevel.info, event, message, details);
+
   /// Log a user interaction
   Future<void> logInteraction(String action, [Map<String, dynamic>? details]) =>
       log(LogLevel.info, 'USER_INTERACTION', action, details);

@@ -12,6 +12,7 @@ class ModelsLabService {
   static Future<String> generateHumanFlux({
     required Uint8List initImageBytes,
     required String prompt,
+    String? negativePrompt,
     int width = 768,
     int height = 1024,
   }) async {
@@ -27,6 +28,7 @@ class ModelsLabService {
 
     final result = await callable.call({
       'prompt': prompt,
+      if (negativePrompt != null) 'negative_prompt': negativePrompt,
       'initImageBase64': initImageBase64,
       'width': width,
       'height': height,
